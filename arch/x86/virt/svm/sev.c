@@ -70,6 +70,11 @@ static DEFINE_SPINLOCK(snp_leaked_pages_list_lock);
 
 static unsigned long snp_nr_leaked_pages;
 
+/* For synchronizing TCB updates with extended guest requests */
+static DEFINE_MUTEX(snp_transaction_lock);
+static u64 snp_transaction_id;
+static bool snp_transaction_pending;
+
 #undef pr_fmt
 #define pr_fmt(fmt)	"SEV-SNP: " fmt
 
@@ -604,3 +609,29 @@ void kdump_sev_callback(void)
 	if (cc_platform_has(CC_ATTR_HOST_SEV_SNP))
 		wbinvd();
 }
+
+u64 snp_config_transaction_start(void)
+{
+	u64 id;
+
+	mutex_lock(&snp_transaction_lock);
+	snp_transaction_pending = true;
+	id = ++snp_transaction_id;
+	mutex_unlock(&snp_transaction_lock);
+
+	return id;
+}
+EXPORT_SYMBOL_GPL(snp_config_transaction_start);
+
+u64 snp_config_transaction_end(void)
+{
+	u64 id;
+
+	mutex_lock(&snp_transaction_lock);
+	snp_transaction_pending = false;
+	id = snp_transaction_id;
+	mutex_unlock(&snp_transaction_lock);
+
+	return id;
+}
+EXPORT_SYMBOL_GPL(snp_config_transaction_end);
