@@ -275,6 +275,8 @@ void kdump_sev_callback(void);
 void snp_fixup_e820_tables(void);
 u64 snp_config_transaction_start(void);
 u64 snp_config_transaction_end(void);
+u64 snp_config_transaction_get_id(void);
+bool snp_config_transaction_is_stale(u64 id);
 #else
 static inline bool snp_probe_rmptable_info(void) { return false; }
 static inline int snp_lookup_rmpentry(u64 pfn, bool *assigned, int *level) { return -ENODEV; }
@@ -291,6 +293,8 @@ static inline void kdump_sev_callback(void) { }
 static inline void snp_fixup_e820_tables(void) {}
 static inline u64 snp_config_transaction_start(void) { return 0; }
 static inline u64 snp_config_transaction_end(void) { return 0; }
+static inline u64 snp_config_transaction_get_id(void) { return 0; }
+static inline bool snp_config_transaction_is_stale(u64 id) { return false; }
 #endif
 
 #endif

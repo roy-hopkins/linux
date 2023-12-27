@@ -7067,6 +7067,79 @@ Please note that the kernel is allowed to use the kvm_run structure as the
 primary storage for certain register types. Therefore, the kernel may use the
 values in kvm_run even if the corresponding bit in kvm_dirty_regs is not set.
 
+::
+
+		/* KVM_EXIT_VMGEXIT */
+		struct kvm_user_vmgexit {
+		#define KVM_USER_VMGEXIT_PSC_MSR	1
+		#define KVM_USER_VMGEXIT_PSC		2
+		#define KVM_USER_VMGEXIT_EXT_GUEST_REQ	3
+			__u32 type; /* KVM_USER_VMGEXIT_* type */
+			union {
+				struct {
+					__u64 gpa;
+		#define KVM_USER_VMGEXIT_PSC_MSR_OP_PRIVATE	1
+		#define KVM_USER_VMGEXIT_PSC_MSR_OP_SHARED	2
+					__u8 op;
+					__u32 ret;
+				} psc_msr;
+				struct {
+					__u64 shared_gpa;
+					__u64 ret;
+				} psc;
+				struct {
+					__u64 data_gpa;
+					__u64 data_npages;
+					__u32 ret;
+				} ext_guest_req;
+			};
+		};
+
+
+If exit reason is KVM_EXIT_VMGEXIT then it indicates that an SEV-SNP guest
+has issued a VMGEXIT instruction (as documented by the AMD Architecture
+Programmer's Manual (APM)) to the hypervisor that needs to be serviced by
+userspace. These are generally handled by the host kernel, but in some
+cases some aspects handling a VMGEXIT are handled by userspace.
+
+A kvm_user_vmgexit structure is defined to encapsulate the data to be
+sent to or returned by userspace. The type field defines the specific type
+of exit that needs to be serviced, and that type is used as a discriminator
+to determine which union type should be used for input/output.
+
+For the KVM_USER_VMGEXIT_PSC_MSR type, the psc_msr union type is used. The
+kernel will supply the 'gpa' and 'op' fields, and userspace is expected to
+update the private/shared state of the GPA using the corresponding
+KVM_SET_MEMORY_ATTRIBUTES ioctl. The 'ret' field is to be set to 0 by
+userpace on success, or some non-zero value on failure.
+
+For the KVM_USER_VMGEXIT_PSC type, the psc union type is used. The kernel
+will supply the GPA of the Page State Structure defined in the GHCB spec.
+Userspace will process this structure as defined by the GHCB, and issue
+KVM_SET_MEMORY_ATTRIBUTES ioctls to set the GPAs therein to the expected
+private/shared state. Userspace will return a value in 'ret' that is in
+agreement with the GHCB-defined return values that the guest will expect
+in the SW_EXITINFO2 field of the GHCB in response to these requests.
+
+For the KVM_USER_VMGEXIT_EXT_GUEST_REQ type, the ext_guest_req union type
+is used. The kernel will supply in 'data_gpa' the value the guest supplies
+via the RAX field of the GHCB when issued extended guest requests.
+'data_npages' will similarly contain the value the guest supplies in RBX
+denoting the number of shared pages available to write the certificate
+data into.
+
+  - If the supplied number of pages is sufficient, userspace should write
+    the certificate data blob (in the format defined by the GHCB spec) in
+    the address indicated by 'data_gpa' and set 'ret' to 0.
+
+  - If the number of pages supplied is not sufficient, userspace must write
+    the required number of pages in 'data_npages' and then set 'ret' to 1.
+
+  - If userspace is temporarily unable to handle the request, 'ret' should
+    be set to 2 to inform the guest to retry later.
+
+  - If some other error occurred, userspace should set 'ret' to a non-zero
+    value that is distinct from the specific return values mentioned above.
 
 6. Capabilities that can be enabled on vCPUs
 ============================================
