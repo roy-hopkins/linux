@@ -39,7 +39,14 @@
 #define GHCB_VERSION_DEFAULT	2ULL
 #define GHCB_VERSION_MIN	1ULL
 
-#define GHCB_HV_FT_SUPPORTED	(GHCB_HV_FT_SNP | GHCB_HV_FT_SNP_AP_CREATION)
+#define GHCB_HV_FT_SUPPORTED	(GHCB_HV_FT_SNP |		\
+				 GHCB_HV_FT_SNP_AP_CREATION |	\
+				 GHCB_HV_FT_APIC_ID_LIST |	\
+				 GHCB_HV_FT_SNP_MULTI_VMPL)
+
+
+/* Supported init feature flags */
+#define SEV_SNP_SUPPORTED_FLAGS		KVM_SEV_SNP_SVSM
 
 /* enable/disable SEV support */
 static bool sev_enabled = true;
@@ -2368,38 +2375,56 @@ out:
 	return ret;
 }
 
+static int __snp_launch_update_vmsa(struct kvm *kvm, struct vcpu_svm *svm,
+				    struct kvm_sev_info *sev,
+				    struct kvm_sev_cmd *argp)
+{
+	struct sev_data_snp_launch_update data = {};
+	u64 pfn = __pa(svm->sev_es.vmsa) >> PAGE_SHIFT;
+	int ret;
+
+	/* Perform some pre-encryption checks against the VMSA */
+	ret = sev_es_sync_vmsa(svm);
+	if (ret)
+		return ret;
+
+	/* Transition the VMSA page to a firmware state. */
+	ret = rmp_make_private(pfn, INITIAL_VMSA_GPA, PG_LEVEL_4K, sev->asid, true);
+	if (ret)
+		return ret;
+
+	/* Issue the SNP command to encrypt the VMSA */
+	data.gctx_paddr = __psp_pa(sev->snp_context);
+	data.page_type = SNP_PAGE_TYPE_VMSA;
+	data.address = __sme_pa(svm->sev_es.vmsa);
+	ret = __sev_issue_cmd(argp->sev_fd, SEV_CMD_SNP_LAUNCH_UPDATE,
+			      &data, &argp->error);
+	if (ret) {
+		snp_page_reclaim(kvm, pfn);
+		return ret;
+	}
+
+	return 0;
+}
+
 static int snp_launch_update_vmsa(struct kvm *kvm, struct kvm_sev_cmd *argp)
 {
 	struct kvm_sev_info *sev = &to_kvm_svm(kvm)->sev_info;
-	struct sev_data_snp_launch_update data = {};
 	struct kvm_vcpu *vcpu;
 	unsigned long i;
 	int ret;
 
-	data.gctx_paddr = __psp_pa(sev->snp_context);
-	data.page_type = SNP_PAGE_TYPE_VMSA;
-
 	kvm_for_each_vcpu(i, vcpu, kvm) {
 		struct vcpu_svm *svm = to_svm(vcpu);
-		u64 pfn = __pa(svm->sev_es.vmsa) >> PAGE_SHIFT;
 
-		ret = sev_es_sync_vmsa(svm);
-		if (ret)
-			return ret;
-
-		/* Transition the VMSA page to a firmware state. */
-		ret = rmp_make_private(pfn, INITIAL_VMSA_GPA, PG_LEVEL_4K, sev->asid, true);
-		if (ret)
-			return ret;
-
-		/* Issue the SNP command to encrypt the VMSA */
-		data.address = __sme_pa(svm->sev_es.vmsa);
-		ret = __sev_issue_cmd(argp->sev_fd, SEV_CMD_SNP_LAUNCH_UPDATE,
-				      &data, &argp->error);
-		if (ret) {
-			snp_page_reclaim(kvm, pfn);
-
-			return ret;
+		/*
+		 * If SVSM support is requested, only perform the LAUNCH_UPDATE
+		 * on the first vCPU, otherwise, perform it on all vCPUs.
+		 */
+		if (!(sev->vmsa_features & SVM_SEV_FEAT_SVSM) || !i) {
+			ret = __snp_launch_update_vmsa(kvm, svm, sev, argp);
+			if (ret)
+				return ret;
 		}
 
 		svm->vcpu.arch.guest_state_protected = true;
@@ -2436,7 +2461,7 @@ static int snp_launch_finish(struct kvm *kvm, struct kvm_sev_cmd *argp)
 	if (params.flags)
 		return -EINVAL;
 
-	/* Measure all vCPUs using LAUNCH_UPDATE before finalizing the launch flow. */
+	/* Measure vCPUs using LAUNCH_UPDATE before we finalize the launch flow. */
 	ret = snp_launch_update_vmsa(kvm, argp);
 	if (ret)
 		return ret;
@@ -2999,6 +3024,8 @@ out:
 	sev_supported_vmsa_features = 0;
 	if (sev_es_debug_swap_enabled)
 		sev_supported_vmsa_features |= SVM_SEV_FEAT_DEBUG_SWAP;
+	if (sev_snp_enabled)
+		sev_supported_vmsa_features |= SVM_SEV_FEAT_SVSM;
 }
 
 void sev_hardware_unsetup(void)
