@@ -45,9 +45,6 @@
 				 GHCB_HV_FT_SNP_MULTI_VMPL)
 
 
-/* Supported init feature flags */
-#define SEV_SNP_SUPPORTED_FLAGS		KVM_SEV_SNP_SVSM
-
 /* enable/disable SEV support */
 static bool sev_enabled = true;
 module_param_named(sev, sev_enabled, bool, 0444);
@@ -820,6 +817,11 @@ static int sev_es_sync_vmsa(struct vcpu_svm *svm)
 		else
 			memset(save->fpreg_ymm, 0, 256);
 	}
+	/*
+	 * Save the VMSA synced SEV features. For now, they are the same for
+	 * all vCPUs at the same VMPL, so just save each time.
+	 */
+	sev->sev_features[save->vmpl] = save->sev_features;
 
 	pr_debug("Virtual Machine Save Area (VMSA):\n");
 	print_hex_dump_debug("", DUMP_PREFIX_NONE, 16, 1, save, sizeof(*save), false);
@@ -3961,8 +3963,16 @@ static int sev_snp_ap_creation(struct vcpu_svm *svm)
 
 		/* Interrupt injection mode shouldn't change for AP creation */
 		sev_features = vcpu->arch.regs[VCPU_REGS_RAX];
-		sev_features ^= sev->vmsa_features;
 
+		/*
+		 * At least, the SNPActive feature must be set. If the SEV
+		 * features of this AP are zero, this is the first vCPU created at
+		 * this VMPL.
+		 */
+		if (!sev->sev_features[vmpl])
+			sev->sev_features[vmpl] = sev_features | SVM_SEV_FEAT_SNP_ACTIVE;
+
+		sev_features ^= sev->sev_features[vmpl];
 		if (sev_features & SVM_SEV_FEAT_INT_INJ_MODES) {
 			vcpu_unimpl(vcpu, "vmgexit: invalid AP injection mode [%#lx] from guest\n",
 				    vcpu->arch.regs[VCPU_REGS_RAX]);

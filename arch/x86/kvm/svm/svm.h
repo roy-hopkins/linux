@@ -95,6 +95,7 @@ struct kvm_sev_info {
 	struct misc_cg *misc_cg; /* For misc cgroup accounting */
 	atomic_t migration_in_progress;
 	void *snp_context;      /* SNP guest context page */
+	u64 sev_features[SVM_SEV_VMPL_MAX]; /* Features set at VMSA creation */
 };
 
 struct kvm_svm {
