@@ -3027,7 +3027,7 @@ out:
 	if (sev_es_debug_swap_enabled)
 		sev_supported_vmsa_features |= SVM_SEV_FEAT_DEBUG_SWAP;
 	if (sev_snp_enabled)
-		sev_supported_vmsa_features |= SVM_SEV_FEAT_SVSM;
+		sev_supported_vmsa_features |= SVM_SEV_FEAT_SVSM | SVM_SEV_FEAT_RESTRICTED_INJECTION;
 }
 
 void sev_hardware_unsetup(void)
