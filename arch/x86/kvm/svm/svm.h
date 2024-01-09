@@ -816,6 +816,9 @@ static inline int sev_private_max_mapping_level(struct kvm *kvm, kvm_pfn_t pfn)
 }
 
 #endif
+bool sev_snp_is_rinj_active(struct kvm_vcpu *vcpu);
+bool sev_snp_nmi_blocked(struct kvm_vcpu *vcpu);
+bool sev_snp_interrupt_blocked(struct kvm_vcpu *vcpu);
 
 /* vmenter.S */
 
