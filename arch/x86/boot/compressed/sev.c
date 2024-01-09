@@ -13,6 +13,7 @@
 #include "misc.h"
 
 #include <asm/bootparam.h>
+#include <linux/mm.h>
 #include <asm/pgtable_types.h>
 #include <asm/sev.h>
 #include <asm/trapnr.h>
@@ -28,6 +29,15 @@
 
 static struct ghcb boot_ghcb_page __aligned(PAGE_SIZE);
 struct ghcb *boot_ghcb;
+
+/*
+ * SVSM related information:
+ *   When running under an SVSM, the VMPL that Linux is executing at must be
+ *   non-zero. The VMPL is therefore used to indicate the presence of an SVSM.
+ */
+static u8 vmpl __section(".data");
+static u64 boot_svsm_caa_pa __section(".data");
+static struct svsm_ca *boot_svsm_caa __section(".data");
 
 /*
  * Copy a version of this function here - insn-eval.c can't be used in
@@ -461,6 +471,13 @@ static bool early_snp_init(struct boot_params *bp)
 	 * more details.
 	 */
 	setup_cpuid_table(cc_info);
+
+	/*
+	 * Record the SVSM Calling Area address (CAA) if the guest is not
+	 * running at VMPL0. The CA will be used to communicate with the
+	 * SVSM to perform the SVSM services.
+	 */
+	setup_svsm_ca(cc_info);
 
 	/*
 	 * Pass run-time kernel a pointer to CC info via boot_params so EFI
