@@ -2421,7 +2421,7 @@ static int snp_launch_update_vmsa(struct kvm *kvm, struct kvm_sev_cmd *argp)
 		 * If SVSM support is requested, only perform the LAUNCH_UPDATE
 		 * on the first vCPU, otherwise, perform it on all vCPUs.
 		 */
-		if (!(sev->vmsa_features & SVM_SEV_FEAT_SVSM) || !i) {
+		if (!has_snp_feature(sev, SVM_SEV_FEAT_SVSM) || !i) {
 			ret = __snp_launch_update_vmsa(kvm, svm, sev, argp);
 			if (ret)
 				return ret;
