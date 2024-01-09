@@ -3304,13 +3304,18 @@ static int sev_es_validate_vmgexit(struct vcpu_svm *svm)
 		if (!kvm_ghcb_sw_scratch_is_valid(svm))
 			goto vmgexit_err;
 		break;
-	case SVM_VMGEXIT_AP_CREATION:
+	case SVM_VMGEXIT_AP_CREATION: {
+		unsigned int request;
+
 		if (!sev_snp_guest(vcpu->kvm))
 			goto vmgexit_err;
-		if (lower_32_bits(control->exit_info_1) != SVM_VMGEXIT_AP_DESTROY)
+		request = lower_32_bits(control->exit_info_1);
+		request &= ~SVM_VMGEXIT_AP_VMPL_MASK;
+		if (request != SVM_VMGEXIT_AP_DESTROY)
 			if (!kvm_ghcb_rax_is_valid(svm))
 				goto vmgexit_err;
 		break;
+	}
 	case SVM_VMGEXIT_NMI_COMPLETE:
 	case SVM_VMGEXIT_AP_HLT_LOOP:
 	case SVM_VMGEXIT_AP_JUMP_TABLE:
@@ -3760,8 +3765,8 @@ static int __sev_snp_update_protected_guest_state(struct kvm_vcpu *vcpu)
 	/* Clear use of the VMSA */
 	svm->vmcb->control.vmsa_pa = INVALID_PAGE;
 
-	if (VALID_PAGE(svm->sev_es.snp_vmsa_gpa)) {
-		gfn_t gfn = gpa_to_gfn(svm->sev_es.snp_vmsa_gpa);
+	if (VALID_PAGE(svm->sev_es.snp_vmsa[svm->sev_es.snp_target_vmpl].gpa)) {
+		gfn_t gfn = gpa_to_gfn(svm->sev_es.snp_vmsa[svm->sev_es.snp_target_vmpl].gpa);
 		struct kvm_memory_slot *slot;
 		kvm_pfn_t pfn;
 
@@ -3786,16 +3791,17 @@ static int __sev_snp_update_protected_guest_state(struct kvm_vcpu *vcpu)
 		 * Deferring that also allows the existing logic for SEV-ES
 		 * VMSAs to be re-used with minimal SNP-specific changes.
 		 */
-		svm->sev_es.snp_has_guest_vmsa = true;
+		svm->sev_es.snp_has_guest_vmsa[svm->sev_es.snp_target_vmpl] = true;
 
 		/* Use the new VMSA */
-		svm->vmcb->control.vmsa_pa = pfn_to_hpa(pfn);
+		svm->sev_es.vmsa_pa[svm->sev_es.snp_target_vmpl] = pfn_to_hpa(pfn);
+		svm->vmcb->control.vmsa_pa = svm->sev_es.vmsa_pa[svm->sev_es.snp_target_vmpl];
 
 		/* Mark the vCPU as runnable */
 		vcpu->arch.pv.pv_unhalted = false;
 		vcpu->arch.mp_state = KVM_MP_STATE_RUNNABLE;
 
-		svm->sev_es.snp_vmsa_gpa = INVALID_PAGE;
+		svm->sev_es.snp_vmsa[svm->sev_es.snp_target_vmpl].gpa = INVALID_PAGE;
 
 		/*
 		 * gmem pages aren't currently migratable, but if this ever
@@ -3803,6 +3809,19 @@ static int __sev_snp_update_protected_guest_state(struct kvm_vcpu *vcpu)
 		 * svm->sev_es.vmsa is pinned through some other means.
 		 */
 		kvm_release_pfn_clean(pfn);
+	}
+
+	if (svm->sev_es.snp_current_vmpl != svm->sev_es.snp_target_vmpl) {
+		/* Unmap the current GHCB */
+		sev_es_unmap_ghcb(svm);
+
+		/* Save the GHCB GPA of the current VMPL */
+		svm->sev_es.ghcb_gpa[svm->sev_es.snp_current_vmpl] = svm->vmcb->control.ghcb_gpa;
+
+		/* Set the GHCB_GPA for the target VMPL and make it the current VMPL */
+		svm->vmcb->control.ghcb_gpa = svm->sev_es.ghcb_gpa[svm->sev_es.snp_target_vmpl];
+
+		svm->sev_es.snp_current_vmpl = svm->sev_es.snp_target_vmpl;
 	}
 
 	/*
@@ -3827,10 +3846,10 @@ void sev_snp_init_protected_guest_state(struct kvm_vcpu *vcpu)
 
 	mutex_lock(&svm->sev_es.snp_vmsa_mutex);
 
-	if (!svm->sev_es.snp_ap_waiting_for_reset)
+	if (!svm->sev_es.snp_vmsa[svm->sev_es.snp_target_vmpl].ap_create)
 		goto unlock;
 
-	svm->sev_es.snp_ap_waiting_for_reset = false;
+	svm->sev_es.snp_vmsa[svm->sev_es.snp_target_vmpl].ap_create = false;
 
 	ret = __sev_snp_update_protected_guest_state(vcpu);
 	if (ret)
@@ -3848,11 +3867,23 @@ static int sev_snp_ap_creation(struct vcpu_svm *svm)
 	struct vcpu_svm *target_svm;
 	unsigned int request;
 	unsigned int apic_id;
+	unsigned int vmpl;
 	bool kick;
 	int ret;
 
 	request = lower_32_bits(svm->vmcb->control.exit_info_1);
 	apic_id = upper_32_bits(svm->vmcb->control.exit_info_1);
+
+	vmpl = (request & SVM_VMGEXIT_AP_VMPL_MASK) >> SVM_VMGEXIT_AP_VMPL_SHIFT;
+	request &= ~SVM_VMGEXIT_AP_VMPL_MASK;
+
+	/* Validate the requested VMPL level */
+	if (vmpl >= SVM_SEV_VMPL_MAX) {
+		vcpu_unimpl(vcpu, "vmgexit: invalid VMPL level [%u] from guest\n",
+			    vmpl);
+		return -EINVAL;
+	}
+	vmpl = array_index_nospec(vmpl, SVM_SEV_VMPL_MAX);
 
 	/* Validate the APIC ID */
 	target_vcpu = kvm_get_vcpu_by_id(vcpu->kvm, apic_id);
@@ -3875,13 +3906,22 @@ static int sev_snp_ap_creation(struct vcpu_svm *svm)
 
 	mutex_lock(&target_svm->sev_es.snp_vmsa_mutex);
 
-	target_svm->sev_es.snp_vmsa_gpa = INVALID_PAGE;
-	target_svm->sev_es.snp_ap_waiting_for_reset = true;
+	target_svm->sev_es.snp_vmsa[vmpl].gpa = INVALID_PAGE;
+	target_svm->sev_es.snp_vmsa[vmpl].ap_create = true;
 
-	/* Interrupt injection mode shouldn't change for AP creation */
+	/* VMPL0 can only be replaced by another vCPU running VMPL0 */
+	if (vmpl == SVM_SEV_VMPL0 &&
+	    (vcpu == target_vcpu ||
+	     svm->sev_es.vmsa_pa[SVM_SEV_VMPL0] != svm->vmcb->control.vmsa_pa)) {
+		ret = -EINVAL;
+		goto out;
+	}
+
+	/* Perform common AP creation validation */
 	if (request < SVM_VMGEXIT_AP_DESTROY) {
 		u64 sev_features;
 
+		/* Interrupt injection mode shouldn't change for AP creation */
 		sev_features = vcpu->arch.regs[VCPU_REGS_RAX];
 		sev_features ^= sev->vmsa_features;
 
@@ -3895,6 +3935,7 @@ static int sev_snp_ap_creation(struct vcpu_svm *svm)
 
 	switch (request) {
 	case SVM_VMGEXIT_AP_CREATE_ON_INIT:
+		/* Delay switching to the new VMSA */
 		kick = false;
 		fallthrough;
 	case SVM_VMGEXIT_AP_CREATE:
@@ -3919,8 +3960,9 @@ static int sev_snp_ap_creation(struct vcpu_svm *svm)
 			ret = -EINVAL;
 			goto out;
 		}
-
-		target_svm->sev_es.snp_vmsa_gpa = svm->vmcb->control.exit_info_2;
+		/* Switch to new VMSA on the next VMRUN */
+		target_svm->sev_es.snp_target_vmpl = vmpl;
+		target_svm->sev_es.snp_vmsa[vmpl].gpa = svm->vmcb->control.exit_info_2;
 		break;
 	case SVM_VMGEXIT_AP_DESTROY:
 		break;
@@ -3934,6 +3976,16 @@ static int sev_snp_ap_creation(struct vcpu_svm *svm)
 out:
 	if (kick) {
 		kvm_make_request(KVM_REQ_UPDATE_PROTECTED_GUEST_STATE, target_vcpu);
+
+		/*
+		 * SNP APs can be initially started using the APIC INIT/SIPI sequence or
+		 * via a GHCB call. In the case of the GHCB call the sequence is not moved
+		 * from KVM_MP_STATE_UNINITIALIZED to KVM_MP_STATE_RUNNABLE, so we need
+    	 * to unblock the VCPU.
+		 */
+		if (target_vcpu->arch.mp_state == KVM_MP_STATE_UNINITIALIZED)
+			target_vcpu->arch.mp_state = KVM_MP_STATE_RUNNABLE;
+
 		kvm_vcpu_kick(target_vcpu);
 	}
 
@@ -4187,7 +4239,7 @@ static int sev_handle_vmgexit_msr_protocol(struct vcpu_svm *svm)
 		gfn = get_ghcb_msr_bits(svm, GHCB_MSR_GPA_VALUE_MASK,
 					GHCB_MSR_GPA_VALUE_POS);
 
-		svm->sev_es.ghcb_registered_gpa = gfn_to_gpa(gfn);
+		svm->sev_es.ghcb_registered_gpa[svm->sev_es.snp_current_vmpl] = gfn_to_gpa(gfn);
 
 		set_ghcb_msr_bits(svm, gfn, GHCB_MSR_GPA_VALUE_MASK,
 				  GHCB_MSR_GPA_VALUE_POS);
@@ -4464,8 +4516,10 @@ static void sev_es_init_vmcb(struct vcpu_svm *svm)
 	 * the VMSA will be NULL if this vCPU is the destination for intrahost
 	 * migration, and will be copied later.
 	 */
-	if (svm->sev_es.vmsa && !svm->sev_es.snp_has_guest_vmsa)
-		svm->vmcb->control.vmsa_pa = __pa(svm->sev_es.vmsa);
+	if (svm->sev_es.vmsa_pa[svm->sev_es.snp_current_vmpl] && 
+	    !svm->sev_es.snp_has_guest_vmsa[svm->sev_es.snp_current_vmpl]) {
+		svm->vmcb->control.vmsa_pa = svm->sev_es.vmsa_pa[svm->sev_es.snp_current_vmpl];
+	}
 
 	/* Can't intercept CR register access, HV can't modify CR registers */
 	svm_clr_intercept(svm, INTERCEPT_CR0_READ);
@@ -4528,16 +4582,32 @@ void sev_es_vcpu_reset(struct vcpu_svm *svm)
 {
 	struct kvm_vcpu *vcpu = &svm->vcpu;
 	struct kvm_sev_info *sev = &to_kvm_svm(vcpu->kvm)->sev_info;
+	unsigned int i;
+	u64 sev_info;
 
 	/*
 	 * Set the GHCB MSR value as per the GHCB specification when emulating
 	 * vCPU RESET for an SEV-ES guest.
 	 */
-	set_ghcb_msr(svm, GHCB_MSR_SEV_INFO((__u64)sev->ghcb_version,
-					    GHCB_VERSION_MIN,
-					    sev_enc_bit));
+	sev_info = GHCB_MSR_SEV_INFO((__u64)sev->ghcb_version, GHCB_VERSION_MIN,
+				     sev_enc_bit);
+	set_ghcb_msr(svm, sev_info);
+	svm->sev_es.ghcb_gpa[SVM_SEV_VMPL0] = sev_info;
 
 	mutex_init(&svm->sev_es.snp_vmsa_mutex);
+
+	/*
+	 * When not running under SNP, the "current VMPL" tracking for a guest
+	 * is always 0 and the base tracking of GPAs and SPAs will be as before
+	 * multiple VMPL support. However, under SNP, multiple VMPL levels can
+	 * be run, so initialize these values appropriately.
+	 */
+	for (i = 1; i < SVM_SEV_VMPL_MAX; i++) {
+		svm->sev_es.vmsa_pa[i] = INVALID_PAGE;
+		svm->sev_es.ghcb_gpa[i] = sev_info;
+		svm->sev_es.snp_has_guest_vmsa[i] = false;
+		svm->sev_es.snp_vmsa[i].ap_create = false;
+	}
 }
 
 void sev_es_prepare_switch_to_guest(struct vcpu_svm *svm, struct sev_es_save_area *hostsa)
