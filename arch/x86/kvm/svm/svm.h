@@ -400,6 +400,15 @@ static __always_inline bool sev_snp_guest(struct kvm *kvm)
 #endif
 }
 
+static inline bool has_snp_feature(struct kvm_sev_info *sev, u64 flag)
+{
+#ifdef CONFIG_KVM_AMD_SEV
+	return sev->vmsa_features & flag;
+#else
+	return false;
+#endif
+}
+
 static inline bool ghcb_gpa_is_registered(struct vcpu_svm *svm, u64 val)
 {
 	return svm->sev_es.ghcb_registered_gpa[svm->sev_es.snp_current_vmpl] == val;
