@@ -3406,7 +3406,7 @@ static int nested_vmx_check_permission(struct kvm_vcpu *vcpu)
 static u8 vmx_has_apicv_interrupt(struct kvm_vcpu *vcpu)
 {
 	u8 rvi = vmx_get_rvi();
-	u8 vppr = kvm_lapic_get_reg(vcpu->arch.apic, APIC_PROCPRI);
+	u8 vppr = kvm_lapic_get_reg(kvm_apic_get(vcpu), APIC_PROCPRI);
 
 	return ((rvi & 0xf0) > (vppr & 0xf0));
 }
@@ -4097,7 +4097,7 @@ static bool vmx_has_nested_events(struct kvm_vcpu *vcpu)
  */
 static int vmx_check_nested_events(struct kvm_vcpu *vcpu)
 {
-	struct kvm_lapic *apic = vcpu->arch.apic;
+	struct kvm_lapic *apic = kvm_apic_get(vcpu);
 	struct vcpu_vmx *vmx = to_vmx(vcpu);
 	/*
 	 * Only a pending nested run blocks a pending exception.  If there is a

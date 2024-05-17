@@ -4831,3 +4831,35 @@ bool sev_snp_interrupt_blocked(struct kvm_vcpu *vcpu)
 	/* Interrupts are blocked when restricted injection is active */
 	return true;
 }
+
+static struct kvm_lapic *snp_get_apic(struct kvm_vcpu *vcpu) {
+	struct vcpu_svm *svm;
+	BUILD_BUG_ON(offsetof(struct vcpu_svm, vcpu) != 0);
+
+	svm = to_svm(vcpu);
+
+	if (svm->sev_es.snp_current_vmpl == 2) {
+		return svm->apic[2];
+	}
+
+	return svm->apic[0];
+}
+
+int kvm_create_lapic(struct kvm_vcpu *vcpu, int timer_advance_ns);
+
+void snp_create_apic(struct kvm_vcpu *vcpu) {
+	struct vcpu_svm *svm;
+	BUILD_BUG_ON(offsetof(struct vcpu_svm, vcpu) != 0);
+	svm = to_svm(vcpu);
+
+	/* Move the created apic to VMPL0 */
+	svm->apic[0] = vcpu->arch.apic;
+	vcpu->arch.apic = NULL;
+
+	/* Create another APIC and move it to VMPL2 */
+	kvm_create_lapic(vcpu, -1);
+	svm->apic[2] = vcpu->arch.apic;
+	vcpu->arch.apic = NULL;
+
+	vcpu->arch.get_apic = snp_get_apic;
+}

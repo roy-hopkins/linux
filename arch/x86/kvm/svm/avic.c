@@ -98,7 +98,7 @@ static void avic_activate_vmcb(struct vcpu_svm *svm)
 	 * (deletes the memslot) if any vCPU has x2APIC enabled, thus enabling
 	 * AVIC in hybrid mode activates only the doorbell mechanism.
 	 */
-	if (x2avic_enabled && apic_x2apic_mode(svm->vcpu.arch.apic)) {
+	if (x2avic_enabled && apic_x2apic_mode(kvm_apic_get(&svm->vcpu))) {
 		vmcb->control.int_ctl |= X2APIC_MODE_MASK;
 		vmcb->control.avic_physical_id |= X2AVIC_MAX_PHYSICAL_ID;
 		/* Disabling MSR intercept for x2APIC registers */
@@ -284,7 +284,7 @@ static int avic_init_backing_page(struct kvm_vcpu *vcpu)
 	    (id > X2AVIC_MAX_PHYSICAL_ID))
 		return -EINVAL;
 
-	if (!vcpu->arch.apic->regs)
+	if (!kvm_apic_get(vcpu)->regs)
 		return -EINVAL;
 
 	if (kvm_apicv_activated(vcpu->kvm)) {
@@ -301,7 +301,7 @@ static int avic_init_backing_page(struct kvm_vcpu *vcpu)
 			return ret;
 	}
 
-	svm->avic_backing_page = virt_to_page(vcpu->arch.apic->regs);
+	svm->avic_backing_page = virt_to_page(kvm_apic_get(vcpu)->regs);
 
 	/* Setting AVIC backing page address in the phy APIC ID table */
 	entry = avic_get_physical_id_entry(vcpu, id);
@@ -339,7 +339,7 @@ void avic_ring_doorbell(struct kvm_vcpu *vcpu)
 
 static void avic_kick_vcpu(struct kvm_vcpu *vcpu, u32 icrl)
 {
-	vcpu->arch.apic->irr_pending = true;
+	kvm_apic_get(vcpu)->irr_pending = true;
 	svm_complete_interrupt_delivery(vcpu,
 					icrl & APIC_MODE_MASK,
 					icrl & APIC_INT_LEVELTRIG,
@@ -494,7 +494,7 @@ int avic_incomplete_ipi_interception(struct kvm_vcpu *vcpu)
 	u32 icrl = svm->vmcb->control.exit_info_1;
 	u32 id = svm->vmcb->control.exit_info_2 >> 32;
 	u32 index = svm->vmcb->control.exit_info_2 & 0x1FF;
-	struct kvm_lapic *apic = vcpu->arch.apic;
+	struct kvm_lapic *apic = kvm_apic_get(vcpu);
 
 	trace_kvm_avic_incomplete_ipi(vcpu->vcpu_id, icrh, icrl, id, index);
 
@@ -580,7 +580,7 @@ static void avic_ldr_write(struct kvm_vcpu *vcpu, u8 g_physical_id, u32 ldr)
 	bool flat;
 	u32 *entry, new_entry;
 
-	flat = kvm_lapic_get_reg(vcpu->arch.apic, APIC_DFR) == APIC_DFR_FLAT;
+	flat = kvm_lapic_get_reg(kvm_apic_get(vcpu), APIC_DFR) == APIC_DFR_FLAT;
 	entry = avic_get_logical_id_entry(vcpu, ldr, flat);
 	if (!entry)
 		return;
@@ -599,7 +599,7 @@ static void avic_invalidate_logical_id_entry(struct kvm_vcpu *vcpu)
 	u32 *entry;
 
 	/* Note: x2AVIC does not use logical APIC ID table */
-	if (apic_x2apic_mode(vcpu->arch.apic))
+	if (apic_x2apic_mode(kvm_apic_get(vcpu)))
 		return;
 
 	entry = avic_get_logical_id_entry(vcpu, svm->ldr_reg, flat);
@@ -610,11 +610,11 @@ static void avic_invalidate_logical_id_entry(struct kvm_vcpu *vcpu)
 static void avic_handle_ldr_update(struct kvm_vcpu *vcpu)
 {
 	struct vcpu_svm *svm = to_svm(vcpu);
-	u32 ldr = kvm_lapic_get_reg(vcpu->arch.apic, APIC_LDR);
-	u32 id = kvm_xapic_id(vcpu->arch.apic);
+	u32 ldr = kvm_lapic_get_reg(kvm_apic_get(vcpu), APIC_LDR);
+	u32 id = kvm_xapic_id(kvm_apic_get(vcpu));
 
 	/* AVIC does not support LDR update for x2APIC */
-	if (apic_x2apic_mode(vcpu->arch.apic))
+	if (apic_x2apic_mode(kvm_apic_get(vcpu)))
 		return;
 
 	if (ldr == svm->ldr_reg)
@@ -629,7 +629,7 @@ static void avic_handle_ldr_update(struct kvm_vcpu *vcpu)
 static void avic_handle_dfr_update(struct kvm_vcpu *vcpu)
 {
 	struct vcpu_svm *svm = to_svm(vcpu);
-	u32 dfr = kvm_lapic_get_reg(vcpu->arch.apic, APIC_DFR);
+	u32 dfr = kvm_lapic_get_reg(kvm_apic_get(vcpu), APIC_DFR);
 
 	if (svm->dfr_reg == dfr)
 		return;

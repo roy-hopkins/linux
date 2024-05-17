@@ -1420,7 +1420,7 @@ static inline bool nested_exit_on_init(struct vcpu_svm *svm)
 
 static int svm_check_nested_events(struct kvm_vcpu *vcpu)
 {
-	struct kvm_lapic *apic = vcpu->arch.apic;
+	struct kvm_lapic *apic = kvm_apic_get(vcpu);
 	struct vcpu_svm *svm = to_svm(vcpu);
 	/*
 	 * Only a pending nested run blocks a pending exception.  If there is a

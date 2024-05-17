@@ -1,0 +1,2105 @@
+In file included from arch/x86/kvm/irq.h:19,
+                 from arch/x86/kvm/x86.c:21:
+arch/x86/kvm/lapic.h: In function ‘lapic_in_kernel’:
+arch/x86/kvm/lapic.h:189:24: error: implicit declaration of function ‘kvm_apic_get’; did you mean ‘kvm_fpu_get’? [-Werror=implicit-function-declaration]
+  189 |                 return kvm_apic_get(vcpu);
+      |                        ^~~~~~~~~~~~
+      |                        kvm_fpu_get
+arch/x86/kvm/lapic.h: In function ‘kvm_apic_present’:
+arch/x86/kvm/lapic.h:213:61: warning: passing argument 1 of ‘kvm_apic_hw_enabled’ makes pointer from integer without a cast [-Wint-conversion]
+  213 |         return lapic_in_kernel(vcpu) && kvm_apic_hw_enabled(kvm_apic_get(vcpu));
+      |                                                             ^~~~~~~~~~~~~~~~~~
+      |                                                             |
+      |                                                             int
+arch/x86/kvm/lapic.h:195:58: note: expected ‘struct kvm_lapic *’ but argument is of type ‘int’
+  195 | static inline bool kvm_apic_hw_enabled(struct kvm_lapic *apic)
+      |                                        ~~~~~~~~~~~~~~~~~~^~~~
+arch/x86/kvm/lapic.h: In function ‘kvm_lapic_enabled’:
+arch/x86/kvm/lapic.h:218:62: warning: passing argument 1 of ‘kvm_apic_sw_enabled’ makes pointer from integer without a cast [-Wint-conversion]
+  218 |         return kvm_apic_present(vcpu) && kvm_apic_sw_enabled(kvm_apic_get(vcpu));
+      |                                                              ^~~~~~~~~~~~~~~~~~
+      |                                                              |
+      |                                                              int
+arch/x86/kvm/lapic.h:204:58: note: expected ‘struct kvm_lapic *’ but argument is of type ‘int’
+  204 | static inline bool kvm_apic_sw_enabled(struct kvm_lapic *apic)
+      |                                        ~~~~~~~~~~~~~~~~~~^~~~
+arch/x86/kvm/lapic.h: In function ‘kvm_vcpu_apicv_active’:
+arch/x86/kvm/lapic.h:228:59: error: invalid type argument of ‘->’ (have ‘int’)
+  228 |         return lapic_in_kernel(vcpu) && kvm_apic_get(vcpu)->apicv_active;
+      |                                                           ^~
+arch/x86/kvm/lapic.h: In function ‘kvm_apic_has_pending_init_or_sipi’:
+arch/x86/kvm/lapic.h:233:59: error: invalid type argument of ‘->’ (have ‘int’)
+  233 |         return lapic_in_kernel(vcpu) && kvm_apic_get(vcpu)->pending_events;
+      |                                                           ^~
+In file included from ./include/linux/kernel.h:23,
+                 from ./include/linux/cpumask.h:10,
+                 from ./include/linux/smp.h:13,
+                 from ./include/linux/percpu.h:7,
+                 from ./include/linux/context_tracking_state.h:5,
+                 from ./include/linux/hardirq.h:5,
+                 from ./include/linux/kvm_host.h:7,
+                 from arch/x86/kvm/x86.c:20:
+arch/x86/kvm/lapic.h: In function ‘kvm_lapic_latched_init’:
+arch/x86/kvm/lapic.h:250:85: error: invalid type argument of ‘->’ (have ‘int’)
+  250 |         return lapic_in_kernel(vcpu) && test_bit(KVM_APIC_INIT, &(kvm_apic_get(vcpu)->pending_events));
+      |                                                                                     ^~
+./include/linux/bitops.h:50:44: note: in definition of macro ‘bitop’
+   50 |           __builtin_constant_p((uintptr_t)(addr) != (uintptr_t)NULL) && \
+      |                                            ^~~~
+arch/x86/kvm/lapic.h:250:41: note: in expansion of macro ‘test_bit’
+  250 |         return lapic_in_kernel(vcpu) && test_bit(KVM_APIC_INIT, &(kvm_apic_get(vcpu)->pending_events));
+      |                                         ^~~~~~~~
+arch/x86/kvm/lapic.h:250:85: error: invalid type argument of ‘->’ (have ‘int’)
+  250 |         return lapic_in_kernel(vcpu) && test_bit(KVM_APIC_INIT, &(kvm_apic_get(vcpu)->pending_events));
+      |                                                                                     ^~
+./include/linux/bitops.h:51:23: note: in definition of macro ‘bitop’
+   51 |           (uintptr_t)(addr) != (uintptr_t)NULL &&                       \
+      |                       ^~~~
+arch/x86/kvm/lapic.h:250:41: note: in expansion of macro ‘test_bit’
+  250 |         return lapic_in_kernel(vcpu) && test_bit(KVM_APIC_INIT, &(kvm_apic_get(vcpu)->pending_events));
+      |                                         ^~~~~~~~
+arch/x86/kvm/lapic.h:250:85: error: invalid type argument of ‘->’ (have ‘int’)
+  250 |         return lapic_in_kernel(vcpu) && test_bit(KVM_APIC_INIT, &(kvm_apic_get(vcpu)->pending_events));
+      |                                                                                     ^~
+./include/linux/bitops.h:52:57: note: in definition of macro ‘bitop’
+   52 |           __builtin_constant_p(*(const unsigned long *)(addr))) ?       \
+      |                                                         ^~~~
+arch/x86/kvm/lapic.h:250:41: note: in expansion of macro ‘test_bit’
+  250 |         return lapic_in_kernel(vcpu) && test_bit(KVM_APIC_INIT, &(kvm_apic_get(vcpu)->pending_events));
+      |                                         ^~~~~~~~
+arch/x86/kvm/lapic.h:250:85: error: invalid type argument of ‘->’ (have ‘int’)
+  250 |         return lapic_in_kernel(vcpu) && test_bit(KVM_APIC_INIT, &(kvm_apic_get(vcpu)->pending_events));
+      |                                                                                     ^~
+./include/linux/bitops.h:53:24: note: in definition of macro ‘bitop’
+   53 |          const##op(nr, addr) : op(nr, addr))
+      |                        ^~~~
+arch/x86/kvm/lapic.h:250:41: note: in expansion of macro ‘test_bit’
+  250 |         return lapic_in_kernel(vcpu) && test_bit(KVM_APIC_INIT, &(kvm_apic_get(vcpu)->pending_events));
+      |                                         ^~~~~~~~
+arch/x86/kvm/lapic.h:250:85: error: invalid type argument of ‘->’ (have ‘int’)
+  250 |         return lapic_in_kernel(vcpu) && test_bit(KVM_APIC_INIT, &(kvm_apic_get(vcpu)->pending_events));
+      |                                                                                     ^~
+./include/linux/bitops.h:53:39: note: in definition of macro ‘bitop’
+   53 |          const##op(nr, addr) : op(nr, addr))
+      |                                       ^~~~
+arch/x86/kvm/lapic.h:250:41: note: in expansion of macro ‘test_bit’
+  250 |         return lapic_in_kernel(vcpu) && test_bit(KVM_APIC_INIT, &(kvm_apic_get(vcpu)->pending_events));
+      |                                         ^~~~~~~~
+In file included from arch/x86/kvm/irq.h:19,
+                 from arch/x86/kvm/i8259.c:34:
+arch/x86/kvm/lapic.h: In function ‘lapic_in_kernel’:
+arch/x86/kvm/lapic.h:189:24: error: implicit declaration of function ‘kvm_apic_get’; did you mean ‘kvm_fpu_get’? [-Werror=implicit-function-declaration]
+  189 |                 return kvm_apic_get(vcpu);
+      |                        ^~~~~~~~~~~~
+      |                        kvm_fpu_get
+arch/x86/kvm/lapic.h: In function ‘kvm_apic_present’:
+arch/x86/kvm/lapic.h:213:61: warning: passing argument 1 of ‘kvm_apic_hw_enabled’ makes pointer from integer without a cast [-Wint-conversion]
+  213 |         return lapic_in_kernel(vcpu) && kvm_apic_hw_enabled(kvm_apic_get(vcpu));
+      |                                                             ^~~~~~~~~~~~~~~~~~
+      |                                                             |
+      |                                                             int
+arch/x86/kvm/lapic.h:195:58: note: expected ‘struct kvm_lapic *’ but argument is of type ‘int’
+  195 | static inline bool kvm_apic_hw_enabled(struct kvm_lapic *apic)
+      |                                        ~~~~~~~~~~~~~~~~~~^~~~
+arch/x86/kvm/lapic.h: In function ‘kvm_lapic_enabled’:
+arch/x86/kvm/lapic.h:218:62: warning: passing argument 1 of ‘kvm_apic_sw_enabled’ makes pointer from integer without a cast [-Wint-conversion]
+  218 |         return kvm_apic_present(vcpu) && kvm_apic_sw_enabled(kvm_apic_get(vcpu));
+      |                                                              ^~~~~~~~~~~~~~~~~~
+      |                                                              |
+      |                                                              int
+arch/x86/kvm/lapic.h:204:58: note: expected ‘struct kvm_lapic *’ but argument is of type ‘int’
+  204 | static inline bool kvm_apic_sw_enabled(struct kvm_lapic *apic)
+      |                                        ~~~~~~~~~~~~~~~~~~^~~~
+arch/x86/kvm/lapic.h: In function ‘kvm_vcpu_apicv_active’:
+arch/x86/kvm/lapic.h:228:59: error: invalid type argument of ‘->’ (have ‘int’)
+  228 |         return lapic_in_kernel(vcpu) && kvm_apic_get(vcpu)->apicv_active;
+      |                                                           ^~
+arch/x86/kvm/lapic.h: In function ‘kvm_apic_has_pending_init_or_sipi’:
+arch/x86/kvm/lapic.h:233:59: error: invalid type argument of ‘->’ (have ‘int’)
+  233 |         return lapic_in_kernel(vcpu) && kvm_apic_get(vcpu)->pending_events;
+      |                                                           ^~
+In file included from ./include/linux/kernel.h:23,
+                 from ./include/linux/cpumask.h:10,
+                 from ./arch/x86/include/asm/paravirt.h:21,
+                 from ./arch/x86/include/asm/irqflags.h:60,
+                 from ./include/linux/irqflags.h:18,
+                 from ./include/linux/spinlock.h:59,
+                 from ./include/linux/mmzone.h:8,
+                 from ./include/linux/gfp.h:7,
+                 from ./include/linux/mm.h:7,
+                 from arch/x86/kvm/i8259.c:31:
+arch/x86/kvm/lapic.h: In function ‘kvm_lapic_latched_init’:
+arch/x86/kvm/lapic.h:250:85: error: invalid type argument of ‘->’ (have ‘int’)
+  250 |         return lapic_in_kernel(vcpu) && test_bit(KVM_APIC_INIT, &(kvm_apic_get(vcpu)->pending_events));
+      |                                                                                     ^~
+./include/linux/bitops.h:50:44: note: in definition of macro ‘bitop’
+   50 |           __builtin_constant_p((uintptr_t)(addr) != (uintptr_t)NULL) && \
+      |                                            ^~~~
+arch/x86/kvm/lapic.h:250:41: note: in expansion of macro ‘test_bit’
+  250 |         return lapic_in_kernel(vcpu) && test_bit(KVM_APIC_INIT, &(kvm_apic_get(vcpu)->pending_events));
+      |                                         ^~~~~~~~
+arch/x86/kvm/lapic.h:250:85: error: invalid type argument of ‘->’ (have ‘int’)
+  250 |         return lapic_in_kernel(vcpu) && test_bit(KVM_APIC_INIT, &(kvm_apic_get(vcpu)->pending_events));
+      |                                                                                     ^~
+./include/linux/bitops.h:51:23: note: in definition of macro ‘bitop’
+   51 |           (uintptr_t)(addr) != (uintptr_t)NULL &&                       \
+      |                       ^~~~
+arch/x86/kvm/lapic.h:250:41: note: in expansion of macro ‘test_bit’
+  250 |         return lapic_in_kernel(vcpu) && test_bit(KVM_APIC_INIT, &(kvm_apic_get(vcpu)->pending_events));
+      |                                         ^~~~~~~~
+arch/x86/kvm/lapic.h:250:85: error: invalid type argument of ‘->’ (have ‘int’)
+  250 |         return lapic_in_kernel(vcpu) && test_bit(KVM_APIC_INIT, &(kvm_apic_get(vcpu)->pending_events));
+      |                                                                                     ^~
+./include/linux/bitops.h:52:57: note: in definition of macro ‘bitop’
+   52 |           __builtin_constant_p(*(const unsigned long *)(addr))) ?       \
+      |                                                         ^~~~
+arch/x86/kvm/lapic.h:250:41: note: in expansion of macro ‘test_bit’
+  250 |         return lapic_in_kernel(vcpu) && test_bit(KVM_APIC_INIT, &(kvm_apic_get(vcpu)->pending_events));
+      |                                         ^~~~~~~~
+arch/x86/kvm/lapic.h:250:85: error: invalid type argument of ‘->’ (have ‘int’)
+  250 |         return lapic_in_kernel(vcpu) && test_bit(KVM_APIC_INIT, &(kvm_apic_get(vcpu)->pending_events));
+      |                                                                                     ^~
+./include/linux/bitops.h:53:24: note: in definition of macro ‘bitop’
+   53 |          const##op(nr, addr) : op(nr, addr))
+      |                        ^~~~
+arch/x86/kvm/lapic.h:250:41: note: in expansion of macro ‘test_bit’
+  250 |         return lapic_in_kernel(vcpu) && test_bit(KVM_APIC_INIT, &(kvm_apic_get(vcpu)->pending_events));
+      |                                         ^~~~~~~~
+arch/x86/kvm/lapic.h:250:85: error: invalid type argument of ‘->’ (have ‘int’)
+  250 |         return lapic_in_kernel(vcpu) && test_bit(KVM_APIC_INIT, &(kvm_apic_get(vcpu)->pending_events));
+      |                                                                                     ^~
+./include/linux/bitops.h:53:39: note: in definition of macro ‘bitop’
+   53 |          const##op(nr, addr) : op(nr, addr))
+      |                                       ^~~~
+arch/x86/kvm/lapic.h:250:41: note: in expansion of macro ‘test_bit’
+  250 |         return lapic_in_kernel(vcpu) && test_bit(KVM_APIC_INIT, &(kvm_apic_get(vcpu)->pending_events));
+      |                                         ^~~~~~~~
+In file included from arch/x86/kvm/irq.h:19,
+                 from arch/x86/kvm/irq.c:15:
+arch/x86/kvm/lapic.h: In function ‘lapic_in_kernel’:
+arch/x86/kvm/lapic.h:189:24: error: implicit declaration of function ‘kvm_apic_get’; did you mean ‘kvm_fpu_get’? [-Werror=implicit-function-declaration]
+  189 |                 return kvm_apic_get(vcpu);
+      |                        ^~~~~~~~~~~~
+      |                        kvm_fpu_get
+arch/x86/kvm/lapic.h: In function ‘kvm_apic_present’:
+arch/x86/kvm/lapic.h:213:61: warning: passing argument 1 of ‘kvm_apic_hw_enabled’ makes pointer from integer without a cast [-Wint-conversion]
+  213 |         return lapic_in_kernel(vcpu) && kvm_apic_hw_enabled(kvm_apic_get(vcpu));
+      |                                                             ^~~~~~~~~~~~~~~~~~
+      |                                                             |
+      |                                                             int
+arch/x86/kvm/lapic.h:195:58: note: expected ‘struct kvm_lapic *’ but argument is of type ‘int’
+  195 | static inline bool kvm_apic_hw_enabled(struct kvm_lapic *apic)
+      |                                        ~~~~~~~~~~~~~~~~~~^~~~
+arch/x86/kvm/lapic.h: In function ‘kvm_lapic_enabled’:
+arch/x86/kvm/lapic.h:218:62: warning: passing argument 1 of ‘kvm_apic_sw_enabled’ makes pointer from integer without a cast [-Wint-conversion]
+  218 |         return kvm_apic_present(vcpu) && kvm_apic_sw_enabled(kvm_apic_get(vcpu));
+      |                                                              ^~~~~~~~~~~~~~~~~~
+      |                                                              |
+      |                                                              int
+arch/x86/kvm/lapic.h:204:58: note: expected ‘struct kvm_lapic *’ but argument is of type ‘int’
+  204 | static inline bool kvm_apic_sw_enabled(struct kvm_lapic *apic)
+      |                                        ~~~~~~~~~~~~~~~~~~^~~~
+arch/x86/kvm/lapic.h: In function ‘kvm_vcpu_apicv_active’:
+arch/x86/kvm/lapic.h:228:59: error: invalid type argument of ‘->’ (have ‘int’)
+  228 |         return lapic_in_kernel(vcpu) && kvm_apic_get(vcpu)->apicv_active;
+      |                                                           ^~
+arch/x86/kvm/lapic.h: In function ‘kvm_apic_has_pending_init_or_sipi’:
+arch/x86/kvm/lapic.h:233:59: error: invalid type argument of ‘->’ (have ‘int’)
+  233 |         return lapic_in_kernel(vcpu) && kvm_apic_get(vcpu)->pending_events;
+      |                                                           ^~
+In file included from ./include/linux/kernel.h:23,
+                 from ./include/linux/cpumask.h:10,
+                 from ./include/linux/smp.h:13,
+                 from ./include/linux/percpu.h:7,
+                 from ./include/linux/context_tracking_state.h:5,
+                 from ./include/linux/hardirq.h:5,
+                 from ./include/linux/kvm_host.h:7,
+                 from arch/x86/kvm/irq.c:13:
+arch/x86/kvm/lapic.h: In function ‘kvm_lapic_latched_init’:
+arch/x86/kvm/lapic.h:250:85: error: invalid type argument of ‘->’ (have ‘int’)
+  250 |         return lapic_in_kernel(vcpu) && test_bit(KVM_APIC_INIT, &(kvm_apic_get(vcpu)->pending_events));
+      |                                                                                     ^~
+./include/linux/bitops.h:50:44: note: in definition of macro ‘bitop’
+   50 |           __builtin_constant_p((uintptr_t)(addr) != (uintptr_t)NULL) && \
+      |                                            ^~~~
+arch/x86/kvm/lapic.h:250:41: note: in expansion of macro ‘test_bit’
+  250 |         return lapic_in_kernel(vcpu) && test_bit(KVM_APIC_INIT, &(kvm_apic_get(vcpu)->pending_events));
+      |                                         ^~~~~~~~
+arch/x86/kvm/lapic.h:250:85: error: invalid type argument of ‘->’ (have ‘int’)
+  250 |         return lapic_in_kernel(vcpu) && test_bit(KVM_APIC_INIT, &(kvm_apic_get(vcpu)->pending_events));
+      |                                                                                     ^~
+./include/linux/bitops.h:51:23: note: in definition of macro ‘bitop’
+   51 |           (uintptr_t)(addr) != (uintptr_t)NULL &&                       \
+      |                       ^~~~
+arch/x86/kvm/lapic.h:250:41: note: in expansion of macro ‘test_bit’
+  250 |         return lapic_in_kernel(vcpu) && test_bit(KVM_APIC_INIT, &(kvm_apic_get(vcpu)->pending_events));
+      |                                         ^~~~~~~~
+arch/x86/kvm/lapic.h:250:85: error: invalid type argument of ‘->’ (have ‘int’)
+  250 |         return lapic_in_kernel(vcpu) && test_bit(KVM_APIC_INIT, &(kvm_apic_get(vcpu)->pending_events));
+      |                                                                                     ^~
+./include/linux/bitops.h:52:57: note: in definition of macro ‘bitop’
+   52 |           __builtin_constant_p(*(const unsigned long *)(addr))) ?       \
+      |                                                         ^~~~
+arch/x86/kvm/lapic.h:250:41: note: in expansion of macro ‘test_bit’
+  250 |         return lapic_in_kernel(vcpu) && test_bit(KVM_APIC_INIT, &(kvm_apic_get(vcpu)->pending_events));
+      |                                         ^~~~~~~~
+arch/x86/kvm/lapic.h:250:85: error: invalid type argument of ‘->’ (have ‘int’)
+  250 |         return lapic_in_kernel(vcpu) && test_bit(KVM_APIC_INIT, &(kvm_apic_get(vcpu)->pending_events));
+      |                                                                                     ^~
+./include/linux/bitops.h:53:24: note: in definition of macro ‘bitop’
+   53 |          const##op(nr, addr) : op(nr, addr))
+      |                        ^~~~
+arch/x86/kvm/lapic.h:250:41: note: in expansion of macro ‘test_bit’
+  250 |         return lapic_in_kernel(vcpu) && test_bit(KVM_APIC_INIT, &(kvm_apic_get(vcpu)->pending_events));
+      |                                         ^~~~~~~~
+arch/x86/kvm/lapic.h:250:85: error: invalid type argument of ‘->’ (have ‘int’)
+  250 |         return lapic_in_kernel(vcpu) && test_bit(KVM_APIC_INIT, &(kvm_apic_get(vcpu)->pending_events));
+      |                                                                                     ^~
+./include/linux/bitops.h:53:39: note: in definition of macro ‘bitop’
+   53 |          const##op(nr, addr) : op(nr, addr))
+      |                                       ^~~~
+arch/x86/kvm/lapic.h:250:41: note: in expansion of macro ‘test_bit’
+  250 |         return lapic_in_kernel(vcpu) && test_bit(KVM_APIC_INIT, &(kvm_apic_get(vcpu)->pending_events));
+      |                                         ^~~~~~~~
+arch/x86/kvm/lapic.h: In function ‘kvm_vcpu_apicv_active’:
+arch/x86/kvm/lapic.h:229:1: error: control reaches end of non-void function [-Werror=return-type]
+  229 | }
+      | ^
+cc1: some warnings being treated as errors
+In file included from arch/x86/kvm/irq.h:19,
+                 from arch/x86/kvm/lapic.c:40:
+arch/x86/kvm/lapic.h: In function ‘lapic_in_kernel’:
+arch/x86/kvm/lapic.h:189:24: error: implicit declaration of function ‘kvm_apic_get’; did you mean ‘kvm_fpu_get’? [-Werror=implicit-function-declaration]
+  189 |                 return kvm_apic_get(vcpu);
+      |                        ^~~~~~~~~~~~
+      |                        kvm_fpu_get
+arch/x86/kvm/lapic.h: In function ‘kvm_apic_present’:
+arch/x86/kvm/lapic.h:213:61: warning: passing argument 1 of ‘kvm_apic_hw_enabled’ makes pointer from integer without a cast [-Wint-conversion]
+  213 |         return lapic_in_kernel(vcpu) && kvm_apic_hw_enabled(kvm_apic_get(vcpu));
+      |                                                             ^~~~~~~~~~~~~~~~~~
+      |                                                             |
+      |                                                             int
+arch/x86/kvm/lapic.h:195:58: note: expected ‘struct kvm_lapic *’ but argument is of type ‘int’
+  195 | static inline bool kvm_apic_hw_enabled(struct kvm_lapic *apic)
+      |                                        ~~~~~~~~~~~~~~~~~~^~~~
+arch/x86/kvm/lapic.h: In function ‘kvm_lapic_enabled’:
+arch/x86/kvm/lapic.h:218:62: warning: passing argument 1 of ‘kvm_apic_sw_enabled’ makes pointer from integer without a cast [-Wint-conversion]
+  218 |         return kvm_apic_present(vcpu) && kvm_apic_sw_enabled(kvm_apic_get(vcpu));
+      |                                                              ^~~~~~~~~~~~~~~~~~
+      |                                                              |
+      |                                                              int
+arch/x86/kvm/lapic.h:204:58: note: expected ‘struct kvm_lapic *’ but argument is of type ‘int’
+  204 | static inline bool kvm_apic_sw_enabled(struct kvm_lapic *apic)
+      |                                        ~~~~~~~~~~~~~~~~~~^~~~
+arch/x86/kvm/lapic.h: In function ‘kvm_vcpu_apicv_active’:
+arch/x86/kvm/lapic.h:228:59: error: invalid type argument of ‘->’ (have ‘int’)
+  228 |         return lapic_in_kernel(vcpu) && kvm_apic_get(vcpu)->apicv_active;
+      |                                                           ^~
+arch/x86/kvm/lapic.h: In function ‘kvm_apic_has_pending_init_or_sipi’:
+arch/x86/kvm/lapic.h:233:59: error: invalid type argument of ‘->’ (have ‘int’)
+  233 |         return lapic_in_kernel(vcpu) && kvm_apic_get(vcpu)->pending_events;
+      |                                                           ^~
+In file included from ./include/linux/kernel.h:23,
+                 from ./include/linux/cpumask.h:10,
+                 from ./include/linux/smp.h:13,
+                 from ./include/linux/percpu.h:7,
+                 from ./include/linux/context_tracking_state.h:5,
+                 from ./include/linux/hardirq.h:5,
+                 from ./include/linux/kvm_host.h:7,
+                 from arch/x86/kvm/lapic.c:20:
+arch/x86/kvm/lapic.h: In function ‘kvm_lapic_latched_init’:
+arch/x86/kvm/lapic.h:250:85: error: invalid type argument of ‘->’ (have ‘int’)
+  250 |         return lapic_in_kernel(vcpu) && test_bit(KVM_APIC_INIT, &(kvm_apic_get(vcpu)->pending_events));
+      |                                                                                     ^~
+./include/linux/bitops.h:50:44: note: in definition of macro ‘bitop’
+   50 |           __builtin_constant_p((uintptr_t)(addr) != (uintptr_t)NULL) && \
+      |                                            ^~~~
+arch/x86/kvm/lapic.h:250:41: note: in expansion of macro ‘test_bit’
+  250 |         return lapic_in_kernel(vcpu) && test_bit(KVM_APIC_INIT, &(kvm_apic_get(vcpu)->pending_events));
+      |                                         ^~~~~~~~
+arch/x86/kvm/lapic.h:250:85: error: invalid type argument of ‘->’ (have ‘int’)
+  250 |         return lapic_in_kernel(vcpu) && test_bit(KVM_APIC_INIT, &(kvm_apic_get(vcpu)->pending_events));
+      |                                                                                     ^~
+./include/linux/bitops.h:51:23: note: in definition of macro ‘bitop’
+   51 |           (uintptr_t)(addr) != (uintptr_t)NULL &&                       \
+      |                       ^~~~
+arch/x86/kvm/lapic.h:250:41: note: in expansion of macro ‘test_bit’
+  250 |         return lapic_in_kernel(vcpu) && test_bit(KVM_APIC_INIT, &(kvm_apic_get(vcpu)->pending_events));
+      |                                         ^~~~~~~~
+arch/x86/kvm/lapic.h:250:85: error: invalid type argument of ‘->’ (have ‘int’)
+  250 |         return lapic_in_kernel(vcpu) && test_bit(KVM_APIC_INIT, &(kvm_apic_get(vcpu)->pending_events));
+      |                                                                                     ^~
+./include/linux/bitops.h:52:57: note: in definition of macro ‘bitop’
+   52 |           __builtin_constant_p(*(const unsigned long *)(addr))) ?       \
+      |                                                         ^~~~
+arch/x86/kvm/lapic.h:250:41: note: in expansion of macro ‘test_bit’
+  250 |         return lapic_in_kernel(vcpu) && test_bit(KVM_APIC_INIT, &(kvm_apic_get(vcpu)->pending_events));
+      |                                         ^~~~~~~~
+arch/x86/kvm/lapic.h:250:85: error: invalid type argument of ‘->’ (have ‘int’)
+  250 |         return lapic_in_kernel(vcpu) && test_bit(KVM_APIC_INIT, &(kvm_apic_get(vcpu)->pending_events));
+      |                                                                                     ^~
+./include/linux/bitops.h:53:24: note: in definition of macro ‘bitop’
+   53 |          const##op(nr, addr) : op(nr, addr))
+      |                        ^~~~
+arch/x86/kvm/lapic.h:250:41: note: in expansion of macro ‘test_bit’
+  250 |         return lapic_in_kernel(vcpu) && test_bit(KVM_APIC_INIT, &(kvm_apic_get(vcpu)->pending_events));
+      |                                         ^~~~~~~~
+arch/x86/kvm/lapic.h:250:85: error: invalid type argument of ‘->’ (have ‘int’)
+  250 |         return lapic_in_kernel(vcpu) && test_bit(KVM_APIC_INIT, &(kvm_apic_get(vcpu)->pending_events));
+      |                                                                                     ^~
+./include/linux/bitops.h:53:39: note: in definition of macro ‘bitop’
+   53 |          const##op(nr, addr) : op(nr, addr))
+      |                                       ^~~~
+arch/x86/kvm/lapic.h:250:41: note: in expansion of macro ‘test_bit’
+  250 |         return lapic_in_kernel(vcpu) && test_bit(KVM_APIC_INIT, &(kvm_apic_get(vcpu)->pending_events));
+      |                                         ^~~~~~~~
+make[4]: *** [scripts/Makefile.build:243: arch/x86/kvm/irq.o] Error 1
+make[4]: *** Waiting for unfinished jobs....
+cc1: some warnings being treated as errors
+make[4]: *** [scripts/Makefile.build:243: arch/x86/kvm/i8259.o] Error 1
+In file included from arch/x86/kvm/irq.h:19,
+                 from arch/x86/kvm/ioapic.h:7,
+                 from arch/x86/kvm/i8254.c:38:
+arch/x86/kvm/lapic.h: In function ‘lapic_in_kernel’:
+arch/x86/kvm/lapic.h:189:24: error: implicit declaration of function ‘kvm_apic_get’; did you mean ‘kvm_fpu_get’? [-Werror=implicit-function-declaration]
+  189 |                 return kvm_apic_get(vcpu);
+      |                        ^~~~~~~~~~~~
+      |                        kvm_fpu_get
+arch/x86/kvm/lapic.h: In function ‘kvm_apic_present’:
+arch/x86/kvm/lapic.h:213:61: warning: passing argument 1 of ‘kvm_apic_hw_enabled’ makes pointer from integer without a cast [-Wint-conversion]
+  213 |         return lapic_in_kernel(vcpu) && kvm_apic_hw_enabled(kvm_apic_get(vcpu));
+      |                                                             ^~~~~~~~~~~~~~~~~~
+      |                                                             |
+      |                                                             int
+arch/x86/kvm/lapic.h:195:58: note: expected ‘struct kvm_lapic *’ but argument is of type ‘int’
+  195 | static inline bool kvm_apic_hw_enabled(struct kvm_lapic *apic)
+      |                                        ~~~~~~~~~~~~~~~~~~^~~~
+arch/x86/kvm/lapic.h: In function ‘kvm_lapic_enabled’:
+arch/x86/kvm/lapic.h:218:62: warning: passing argument 1 of ‘kvm_apic_sw_enabled’ makes pointer from integer without a cast [-Wint-conversion]
+  218 |         return kvm_apic_present(vcpu) && kvm_apic_sw_enabled(kvm_apic_get(vcpu));
+      |                                                              ^~~~~~~~~~~~~~~~~~
+      |                                                              |
+      |                                                              int
+arch/x86/kvm/lapic.h:204:58: note: expected ‘struct kvm_lapic *’ but argument is of type ‘int’
+  204 | static inline bool kvm_apic_sw_enabled(struct kvm_lapic *apic)
+      |                                        ~~~~~~~~~~~~~~~~~~^~~~
+arch/x86/kvm/lapic.h: In function ‘kvm_vcpu_apicv_active’:
+arch/x86/kvm/lapic.h:228:59: error: invalid type argument of ‘->’ (have ‘int’)
+  228 |         return lapic_in_kernel(vcpu) && kvm_apic_get(vcpu)->apicv_active;
+      |                                                           ^~
+arch/x86/kvm/lapic.h: In function ‘kvm_apic_has_pending_init_or_sipi’:
+arch/x86/kvm/lapic.h:233:59: error: invalid type argument of ‘->’ (have ‘int’)
+  233 |         return lapic_in_kernel(vcpu) && kvm_apic_get(vcpu)->pending_events;
+      |                                                           ^~
+In file included from ./include/linux/kernel.h:23,
+                 from ./include/linux/cpumask.h:10,
+                 from ./include/linux/smp.h:13,
+                 from ./include/linux/percpu.h:7,
+                 from ./include/linux/context_tracking_state.h:5,
+                 from ./include/linux/hardirq.h:5,
+                 from ./include/linux/kvm_host.h:7,
+                 from arch/x86/kvm/i8254.c:35:
+arch/x86/kvm/lapic.h: In function ‘kvm_lapic_latched_init’:
+arch/x86/kvm/lapic.h:250:85: error: invalid type argument of ‘->’ (have ‘int’)
+  250 |         return lapic_in_kernel(vcpu) && test_bit(KVM_APIC_INIT, &(kvm_apic_get(vcpu)->pending_events));
+      |                                                                                     ^~
+./include/linux/bitops.h:50:44: note: in definition of macro ‘bitop’
+   50 |           __builtin_constant_p((uintptr_t)(addr) != (uintptr_t)NULL) && \
+      |                                            ^~~~
+arch/x86/kvm/lapic.h:250:41: note: in expansion of macro ‘test_bit’
+  250 |         return lapic_in_kernel(vcpu) && test_bit(KVM_APIC_INIT, &(kvm_apic_get(vcpu)->pending_events));
+      |                                         ^~~~~~~~
+arch/x86/kvm/lapic.h:250:85: error: invalid type argument of ‘->’ (have ‘int’)
+  250 |         return lapic_in_kernel(vcpu) && test_bit(KVM_APIC_INIT, &(kvm_apic_get(vcpu)->pending_events));
+      |                                                                                     ^~
+./include/linux/bitops.h:51:23: note: in definition of macro ‘bitop’
+   51 |           (uintptr_t)(addr) != (uintptr_t)NULL &&                       \
+      |                       ^~~~
+arch/x86/kvm/lapic.h:250:41: note: in expansion of macro ‘test_bit’
+  250 |         return lapic_in_kernel(vcpu) && test_bit(KVM_APIC_INIT, &(kvm_apic_get(vcpu)->pending_events));
+      |                                         ^~~~~~~~
+arch/x86/kvm/lapic.h:250:85: error: invalid type argument of ‘->’ (have ‘int’)
+  250 |         return lapic_in_kernel(vcpu) && test_bit(KVM_APIC_INIT, &(kvm_apic_get(vcpu)->pending_events));
+      |                                                                                     ^~
+./include/linux/bitops.h:52:57: note: in definition of macro ‘bitop’
+   52 |           __builtin_constant_p(*(const unsigned long *)(addr))) ?       \
+      |                                                         ^~~~
+arch/x86/kvm/lapic.h:250:41: note: in expansion of macro ‘test_bit’
+  250 |         return lapic_in_kernel(vcpu) && test_bit(KVM_APIC_INIT, &(kvm_apic_get(vcpu)->pending_events));
+      |                                         ^~~~~~~~
+arch/x86/kvm/lapic.h:250:85: error: invalid type argument of ‘->’ (have ‘int’)
+  250 |         return lapic_in_kernel(vcpu) && test_bit(KVM_APIC_INIT, &(kvm_apic_get(vcpu)->pending_events));
+      |                                                                                     ^~
+./include/linux/bitops.h:53:24: note: in definition of macro ‘bitop’
+   53 |          const##op(nr, addr) : op(nr, addr))
+      |                        ^~~~
+arch/x86/kvm/lapic.h:250:41: note: in expansion of macro ‘test_bit’
+  250 |         return lapic_in_kernel(vcpu) && test_bit(KVM_APIC_INIT, &(kvm_apic_get(vcpu)->pending_events));
+      |                                         ^~~~~~~~
+arch/x86/kvm/lapic.h:250:85: error: invalid type argument of ‘->’ (have ‘int’)
+  250 |         return lapic_in_kernel(vcpu) && test_bit(KVM_APIC_INIT, &(kvm_apic_get(vcpu)->pending_events));
+      |                                                                                     ^~
+./include/linux/bitops.h:53:39: note: in definition of macro ‘bitop’
+   53 |          const##op(nr, addr) : op(nr, addr))
+      |                                       ^~~~
+arch/x86/kvm/lapic.h:250:41: note: in expansion of macro ‘test_bit’
+  250 |         return lapic_in_kernel(vcpu) && test_bit(KVM_APIC_INIT, &(kvm_apic_get(vcpu)->pending_events));
+      |                                         ^~~~~~~~
+arch/x86/kvm/lapic.c: In function ‘kvm_apic_pending_eoi’:
+arch/x86/kvm/lapic.c:111:34: warning: initialization of ‘struct kvm_lapic *’ from ‘int’ makes pointer from integer without a cast [-Wint-conversion]
+  111 |         struct kvm_lapic *apic = kvm_apic_get(vcpu);
+      |                                  ^~~~~~~~~~~~
+arch/x86/kvm/lapic.c: In function ‘kvm_recalculate_phys_map’:
+arch/x86/kvm/lapic.c:221:34: warning: initialization of ‘struct kvm_lapic *’ from ‘int’ makes pointer from integer without a cast [-Wint-conversion]
+  221 |         struct kvm_lapic *apic = kvm_apic_get(vcpu);
+      |                                  ^~~~~~~~~~~~
+arch/x86/kvm/lapic.c: In function ‘kvm_recalculate_logical_map’:
+arch/x86/kvm/lapic.c:296:34: warning: initialization of ‘struct kvm_lapic *’ from ‘int’ makes pointer from integer without a cast [-Wint-conversion]
+  296 |         struct kvm_lapic *apic = kvm_apic_get(vcpu);
+      |                                  ^~~~~~~~~~~~
+In file included from ./include/asm-generic/bug.h:5,
+                 from ./arch/x86/include/asm/bug.h:87,
+                 from ./include/linux/bug.h:5,
+                 from ./include/linux/mmdebug.h:5,
+                 from ./include/linux/percpu.h:5:
+arch/x86/kvm/lapic.c: In function ‘kvm_recalculate_apic_map’:
+arch/x86/kvm/lapic.c:417:60: warning: passing argument 1 of ‘kvm_x2apic_id’ makes pointer from integer without a cast [-Wint-conversion]
+  417 |                         max_id = max(max_id, kvm_x2apic_id(kvm_apic_get(vcpu)));
+      |                                                            ^~~~~~~~~~~~~~~~~~
+      |                                                            |
+      |                                                            int
+./include/linux/compiler.h:236:55: note: in definition of macro ‘__is_constexpr’
+  236 |         (sizeof(int) == sizeof(*(8 ? ((void *)((long)(x) * 0l)) : (int *)8)))
+      |                                                       ^
+./include/linux/minmax.h:92:25: note: in expansion of macro ‘__careful_cmp’
+   92 | #define max(x, y)       __careful_cmp(max, x, y)
+      |                         ^~~~~~~~~~~~~
+arch/x86/kvm/lapic.c:417:34: note: in expansion of macro ‘max’
+  417 |                         max_id = max(max_id, kvm_x2apic_id(kvm_apic_get(vcpu)));
+      |                                  ^~~
+arch/x86/kvm/lapic.c:142:51: note: expected ‘struct kvm_lapic *’ but argument is of type ‘int’
+  142 | static inline u32 kvm_x2apic_id(struct kvm_lapic *apic)
+      |                                 ~~~~~~~~~~~~~~~~~~^~~~
+In file included from ./include/linux/kernel.h:28:
+arch/x86/kvm/lapic.c:417:60: warning: passing argument 1 of ‘kvm_x2apic_id’ makes pointer from integer without a cast [-Wint-conversion]
+  417 |                         max_id = max(max_id, kvm_x2apic_id(kvm_apic_get(vcpu)));
+      |                                                            ^~~~~~~~~~~~~~~~~~
+      |                                                            |
+      |                                                            int
+./include/linux/minmax.h:46:45: note: in definition of macro ‘__cmp’
+   46 | #define __cmp(op, x, y) ((x) __cmp_op_##op (y) ? (x) : (y))
+      |                                             ^
+./include/linux/minmax.h:92:25: note: in expansion of macro ‘__careful_cmp’
+   92 | #define max(x, y)       __careful_cmp(max, x, y)
+      |                         ^~~~~~~~~~~~~
+arch/x86/kvm/lapic.c:417:34: note: in expansion of macro ‘max’
+  417 |                         max_id = max(max_id, kvm_x2apic_id(kvm_apic_get(vcpu)));
+      |                                  ^~~
+arch/x86/kvm/lapic.c:142:51: note: expected ‘struct kvm_lapic *’ but argument is of type ‘int’
+  142 | static inline u32 kvm_x2apic_id(struct kvm_lapic *apic)
+      |                                 ~~~~~~~~~~~~~~~~~~^~~~
+arch/x86/kvm/lapic.c:417:60: warning: passing argument 1 of ‘kvm_x2apic_id’ makes pointer from integer without a cast [-Wint-conversion]
+  417 |                         max_id = max(max_id, kvm_x2apic_id(kvm_apic_get(vcpu)));
+      |                                                            ^~~~~~~~~~~~~~~~~~
+      |                                                            |
+      |                                                            int
+./include/linux/minmax.h:46:57: note: in definition of macro ‘__cmp’
+   46 | #define __cmp(op, x, y) ((x) __cmp_op_##op (y) ? (x) : (y))
+      |                                                         ^
+./include/linux/minmax.h:92:25: note: in expansion of macro ‘__careful_cmp’
+   92 | #define max(x, y)       __careful_cmp(max, x, y)
+      |                         ^~~~~~~~~~~~~
+arch/x86/kvm/lapic.c:417:34: note: in expansion of macro ‘max’
+  417 |                         max_id = max(max_id, kvm_x2apic_id(kvm_apic_get(vcpu)));
+      |                                  ^~~
+arch/x86/kvm/lapic.c:142:51: note: expected ‘struct kvm_lapic *’ but argument is of type ‘int’
+  142 | static inline u32 kvm_x2apic_id(struct kvm_lapic *apic)
+      |                                 ~~~~~~~~~~~~~~~~~~^~~~
+arch/x86/kvm/lapic.c:417:60: warning: passing argument 1 of ‘kvm_x2apic_id’ makes pointer from integer without a cast [-Wint-conversion]
+  417 |                         max_id = max(max_id, kvm_x2apic_id(kvm_apic_get(vcpu)));
+      |                                                            ^~~~~~~~~~~~~~~~~~
+      |                                                            |
+      |                                                            int
+./include/linux/minmax.h:50:16: note: in definition of macro ‘__cmp_once’
+   50 |         typeof(y) unique_y = (y);                       \
+      |                ^
+./include/linux/minmax.h:92:25: note: in expansion of macro ‘__careful_cmp’
+   92 | #define max(x, y)       __careful_cmp(max, x, y)
+      |                         ^~~~~~~~~~~~~
+arch/x86/kvm/lapic.c:417:34: note: in expansion of macro ‘max’
+  417 |                         max_id = max(max_id, kvm_x2apic_id(kvm_apic_get(vcpu)));
+      |                                  ^~~
+arch/x86/kvm/lapic.c:142:51: note: expected ‘struct kvm_lapic *’ but argument is of type ‘int’
+  142 | static inline u32 kvm_x2apic_id(struct kvm_lapic *apic)
+      |                                 ~~~~~~~~~~~~~~~~~~^~~~
+arch/x86/kvm/lapic.c:417:60: warning: passing argument 1 of ‘kvm_x2apic_id’ makes pointer from integer without a cast [-Wint-conversion]
+  417 |                         max_id = max(max_id, kvm_x2apic_id(kvm_apic_get(vcpu)));
+      |                                                            ^~~~~~~~~~~~~~~~~~
+      |                                                            |
+      |                                                            int
+./include/linux/minmax.h:50:31: note: in definition of macro ‘__cmp_once’
+   50 |         typeof(y) unique_y = (y);                       \
+      |                               ^
+./include/linux/minmax.h:92:25: note: in expansion of macro ‘__careful_cmp’
+   92 | #define max(x, y)       __careful_cmp(max, x, y)
+      |                         ^~~~~~~~~~~~~
+arch/x86/kvm/lapic.c:417:34: note: in expansion of macro ‘max’
+  417 |                         max_id = max(max_id, kvm_x2apic_id(kvm_apic_get(vcpu)));
+      |                                  ^~~
+arch/x86/kvm/lapic.c:142:51: note: expected ‘struct kvm_lapic *’ but argument is of type ‘int’
+  142 | static inline u32 kvm_x2apic_id(struct kvm_lapic *apic)
+      |                                 ~~~~~~~~~~~~~~~~~~^~~~
+In file included from ./include/linux/init.h:5,
+                 from ./include/linux/printk.h:6,
+                 from ./include/asm-generic/bug.h:22:
+arch/x86/kvm/lapic.c:417:60: warning: passing argument 1 of ‘kvm_x2apic_id’ makes pointer from integer without a cast [-Wint-conversion]
+  417 |                         max_id = max(max_id, kvm_x2apic_id(kvm_apic_get(vcpu)));
+      |                                                            ^~~~~~~~~~~~~~~~~~
+      |                                                            |
+      |                                                            int
+./include/linux/build_bug.h:78:56: note: in definition of macro ‘__static_assert’
+   78 | #define __static_assert(expr, msg, ...) _Static_assert(expr, msg)
+      |                                                        ^~~~
+./include/linux/minmax.h:51:9: note: in expansion of macro ‘static_assert’
+   51 |         static_assert(__types_ok(x, y),                 \
+      |         ^~~~~~~~~~~~~
+./include/linux/minmax.h:31:31: note: in expansion of macro ‘__is_constexpr’
+   31 |         __builtin_choose_expr(__is_constexpr(is_signed_type(typeof(x))),        \
+      |                               ^~~~~~~~~~~~~~
+./include/linux/minmax.h:31:46: note: in expansion of macro ‘is_signed_type’
+   31 |         __builtin_choose_expr(__is_constexpr(is_signed_type(typeof(x))),        \
+      |                                              ^~~~~~~~~~~~~~
+./include/linux/minmax.h:39:28: note: in expansion of macro ‘__is_signed’
+   39 |         (__is_signed(x) == __is_signed(y) ||                    \
+      |                            ^~~~~~~~~~~
+./include/linux/minmax.h:51:23: note: in expansion of macro ‘__types_ok’
+   51 |         static_assert(__types_ok(x, y),                 \
+      |                       ^~~~~~~~~~
+./include/linux/minmax.h:58:17: note: in expansion of macro ‘__cmp_once’
+   58 |                 __cmp_once(op, x, y, __UNIQUE_ID(__x), __UNIQUE_ID(__y)))
+      |                 ^~~~~~~~~~
+./include/linux/minmax.h:92:25: note: in expansion of macro ‘__careful_cmp’
+   92 | #define max(x, y)       __careful_cmp(max, x, y)
+      |                         ^~~~~~~~~~~~~
+arch/x86/kvm/lapic.c:417:34: note: in expansion of macro ‘max’
+  417 |                         max_id = max(max_id, kvm_x2apic_id(kvm_apic_get(vcpu)));
+      |                                  ^~~
+arch/x86/kvm/lapic.c:142:51: note: expected ‘struct kvm_lapic *’ but argument is of type ‘int’
+  142 | static inline u32 kvm_x2apic_id(struct kvm_lapic *apic)
+      |                                 ~~~~~~~~~~~~~~~~~~^~~~
+arch/x86/kvm/lapic.c:417:60: warning: passing argument 1 of ‘kvm_x2apic_id’ makes pointer from integer without a cast [-Wint-conversion]
+  417 |                         max_id = max(max_id, kvm_x2apic_id(kvm_apic_get(vcpu)));
+      |                                                            ^~~~~~~~~~~~~~~~~~
+      |                                                            |
+      |                                                            int
+./include/linux/build_bug.h:78:56: note: in definition of macro ‘__static_assert’
+   78 | #define __static_assert(expr, msg, ...) _Static_assert(expr, msg)
+      |                                                        ^~~~
+./include/linux/minmax.h:51:9: note: in expansion of macro ‘static_assert’
+   51 |         static_assert(__types_ok(x, y),                 \
+      |         ^~~~~~~~~~~~~
+./include/linux/minmax.h:31:31: note: in expansion of macro ‘__is_constexpr’
+   31 |         __builtin_choose_expr(__is_constexpr(is_signed_type(typeof(x))),        \
+      |                               ^~~~~~~~~~~~~~
+./include/linux/minmax.h:31:46: note: in expansion of macro ‘is_signed_type’
+   31 |         __builtin_choose_expr(__is_constexpr(is_signed_type(typeof(x))),        \
+      |                                              ^~~~~~~~~~~~~~
+./include/linux/minmax.h:39:28: note: in expansion of macro ‘__is_signed’
+   39 |         (__is_signed(x) == __is_signed(y) ||                    \
+      |                            ^~~~~~~~~~~
+./include/linux/minmax.h:51:23: note: in expansion of macro ‘__types_ok’
+   51 |         static_assert(__types_ok(x, y),                 \
+      |                       ^~~~~~~~~~
+./include/linux/minmax.h:58:17: note: in expansion of macro ‘__cmp_once’
+   58 |                 __cmp_once(op, x, y, __UNIQUE_ID(__x), __UNIQUE_ID(__y)))
+      |                 ^~~~~~~~~~
+./include/linux/minmax.h:92:25: note: in expansion of macro ‘__careful_cmp’
+   92 | #define max(x, y)       __careful_cmp(max, x, y)
+      |                         ^~~~~~~~~~~~~
+arch/x86/kvm/lapic.c:417:34: note: in expansion of macro ‘max’
+  417 |                         max_id = max(max_id, kvm_x2apic_id(kvm_apic_get(vcpu)));
+      |                                  ^~~
+arch/x86/kvm/lapic.c:142:51: note: expected ‘struct kvm_lapic *’ but argument is of type ‘int’
+  142 | static inline u32 kvm_x2apic_id(struct kvm_lapic *apic)
+      |                                 ~~~~~~~~~~~~~~~~~~^~~~
+arch/x86/kvm/lapic.c:417:60: warning: passing argument 1 of ‘kvm_x2apic_id’ makes pointer from integer without a cast [-Wint-conversion]
+  417 |                         max_id = max(max_id, kvm_x2apic_id(kvm_apic_get(vcpu)));
+      |                                                            ^~~~~~~~~~~~~~~~~~
+      |                                                            |
+      |                                                            int
+./include/linux/build_bug.h:78:56: note: in definition of macro ‘__static_assert’
+   78 | #define __static_assert(expr, msg, ...) _Static_assert(expr, msg)
+      |                                                        ^~~~
+./include/linux/minmax.h:51:9: note: in expansion of macro ‘static_assert’
+   51 |         static_assert(__types_ok(x, y),                 \
+      |         ^~~~~~~~~~~~~
+./include/linux/minmax.h:32:17: note: in expansion of macro ‘is_signed_type’
+   32 |                 is_signed_type(typeof(x)), 0)
+      |                 ^~~~~~~~~~~~~~
+./include/linux/minmax.h:39:28: note: in expansion of macro ‘__is_signed’
+   39 |         (__is_signed(x) == __is_signed(y) ||                    \
+      |                            ^~~~~~~~~~~
+./include/linux/minmax.h:51:23: note: in expansion of macro ‘__types_ok’
+   51 |         static_assert(__types_ok(x, y),                 \
+      |                       ^~~~~~~~~~
+./include/linux/minmax.h:58:17: note: in expansion of macro ‘__cmp_once’
+   58 |                 __cmp_once(op, x, y, __UNIQUE_ID(__x), __UNIQUE_ID(__y)))
+      |                 ^~~~~~~~~~
+./include/linux/minmax.h:92:25: note: in expansion of macro ‘__careful_cmp’
+   92 | #define max(x, y)       __careful_cmp(max, x, y)
+      |                         ^~~~~~~~~~~~~
+arch/x86/kvm/lapic.c:417:34: note: in expansion of macro ‘max’
+  417 |                         max_id = max(max_id, kvm_x2apic_id(kvm_apic_get(vcpu)));
+      |                                  ^~~
+arch/x86/kvm/lapic.c:142:51: note: expected ‘struct kvm_lapic *’ but argument is of type ‘int’
+  142 | static inline u32 kvm_x2apic_id(struct kvm_lapic *apic)
+      |                                 ~~~~~~~~~~~~~~~~~~^~~~
+arch/x86/kvm/lapic.c:417:60: warning: passing argument 1 of ‘kvm_x2apic_id’ makes pointer from integer without a cast [-Wint-conversion]
+  417 |                         max_id = max(max_id, kvm_x2apic_id(kvm_apic_get(vcpu)));
+      |                                                            ^~~~~~~~~~~~~~~~~~
+      |                                                            |
+      |                                                            int
+./include/linux/build_bug.h:78:56: note: in definition of macro ‘__static_assert’
+   78 | #define __static_assert(expr, msg, ...) _Static_assert(expr, msg)
+      |                                                        ^~~~
+./include/linux/minmax.h:51:9: note: in expansion of macro ‘static_assert’
+   51 |         static_assert(__types_ok(x, y),                 \
+      |         ^~~~~~~~~~~~~
+./include/linux/minmax.h:32:17: note: in expansion of macro ‘is_signed_type’
+   32 |                 is_signed_type(typeof(x)), 0)
+      |                 ^~~~~~~~~~~~~~
+./include/linux/minmax.h:39:28: note: in expansion of macro ‘__is_signed’
+   39 |         (__is_signed(x) == __is_signed(y) ||                    \
+      |                            ^~~~~~~~~~~
+./include/linux/minmax.h:51:23: note: in expansion of macro ‘__types_ok’
+   51 |         static_assert(__types_ok(x, y),                 \
+      |                       ^~~~~~~~~~
+./include/linux/minmax.h:58:17: note: in expansion of macro ‘__cmp_once’
+   58 |                 __cmp_once(op, x, y, __UNIQUE_ID(__x), __UNIQUE_ID(__y)))
+      |                 ^~~~~~~~~~
+./include/linux/minmax.h:92:25: note: in expansion of macro ‘__careful_cmp’
+   92 | #define max(x, y)       __careful_cmp(max, x, y)
+      |                         ^~~~~~~~~~~~~
+arch/x86/kvm/lapic.c:417:34: note: in expansion of macro ‘max’
+  417 |                         max_id = max(max_id, kvm_x2apic_id(kvm_apic_get(vcpu)));
+      |                                  ^~~
+arch/x86/kvm/lapic.c:142:51: note: expected ‘struct kvm_lapic *’ but argument is of type ‘int’
+  142 | static inline u32 kvm_x2apic_id(struct kvm_lapic *apic)
+      |                                 ~~~~~~~~~~~~~~~~~~^~~~
+arch/x86/kvm/lapic.c:417:60: warning: passing argument 1 of ‘kvm_x2apic_id’ makes pointer from integer without a cast [-Wint-conversion]
+  417 |                         max_id = max(max_id, kvm_x2apic_id(kvm_apic_get(vcpu)));
+      |                                                            ^~~~~~~~~~~~~~~~~~
+      |                                                            |
+      |                                                            int
+./include/linux/build_bug.h:78:56: note: in definition of macro ‘__static_assert’
+   78 | #define __static_assert(expr, msg, ...) _Static_assert(expr, msg)
+      |                                                        ^~~~
+./include/linux/minmax.h:51:9: note: in expansion of macro ‘static_assert’
+   51 |         static_assert(__types_ok(x, y),                 \
+      |         ^~~~~~~~~~~~~
+./include/linux/minmax.h:31:31: note: in expansion of macro ‘__is_constexpr’
+   31 |         __builtin_choose_expr(__is_constexpr(is_signed_type(typeof(x))),        \
+      |                               ^~~~~~~~~~~~~~
+./include/linux/minmax.h:31:46: note: in expansion of macro ‘is_signed_type’
+   31 |         __builtin_choose_expr(__is_constexpr(is_signed_type(typeof(x))),        \
+      |                                              ^~~~~~~~~~~~~~
+./include/linux/minmax.h:40:41: note: in expansion of macro ‘__is_signed’
+   40 |                 __is_signed((x) + 0) == __is_signed((y) + 0) || \
+      |                                         ^~~~~~~~~~~
+./include/linux/minmax.h:51:23: note: in expansion of macro ‘__types_ok’
+   51 |         static_assert(__types_ok(x, y),                 \
+      |                       ^~~~~~~~~~
+./include/linux/minmax.h:58:17: note: in expansion of macro ‘__cmp_once’
+   58 |                 __cmp_once(op, x, y, __UNIQUE_ID(__x), __UNIQUE_ID(__y)))
+      |                 ^~~~~~~~~~
+./include/linux/minmax.h:92:25: note: in expansion of macro ‘__careful_cmp’
+   92 | #define max(x, y)       __careful_cmp(max, x, y)
+      |                         ^~~~~~~~~~~~~
+arch/x86/kvm/lapic.c:417:34: note: in expansion of macro ‘max’
+  417 |                         max_id = max(max_id, kvm_x2apic_id(kvm_apic_get(vcpu)));
+      |                                  ^~~
+arch/x86/kvm/lapic.c:142:51: note: expected ‘struct kvm_lapic *’ but argument is of type ‘int’
+  142 | static inline u32 kvm_x2apic_id(struct kvm_lapic *apic)
+      |                                 ~~~~~~~~~~~~~~~~~~^~~~
+arch/x86/kvm/lapic.c:417:60: warning: passing argument 1 of ‘kvm_x2apic_id’ makes pointer from integer without a cast [-Wint-conversion]
+  417 |                         max_id = max(max_id, kvm_x2apic_id(kvm_apic_get(vcpu)));
+      |                                                            ^~~~~~~~~~~~~~~~~~
+      |                                                            |
+      |                                                            int
+./include/linux/build_bug.h:78:56: note: in definition of macro ‘__static_assert’
+   78 | #define __static_assert(expr, msg, ...) _Static_assert(expr, msg)
+      |                                                        ^~~~
+./include/linux/minmax.h:51:9: note: in expansion of macro ‘static_assert’
+   51 |         static_assert(__types_ok(x, y),                 \
+      |         ^~~~~~~~~~~~~
+./include/linux/minmax.h:31:31: note: in expansion of macro ‘__is_constexpr’
+   31 |         __builtin_choose_expr(__is_constexpr(is_signed_type(typeof(x))),        \
+      |                               ^~~~~~~~~~~~~~
+./include/linux/minmax.h:31:46: note: in expansion of macro ‘is_signed_type’
+   31 |         __builtin_choose_expr(__is_constexpr(is_signed_type(typeof(x))),        \
+      |                                              ^~~~~~~~~~~~~~
+./include/linux/minmax.h:40:41: note: in expansion of macro ‘__is_signed’
+   40 |                 __is_signed((x) + 0) == __is_signed((y) + 0) || \
+      |                                         ^~~~~~~~~~~
+./include/linux/minmax.h:51:23: note: in expansion of macro ‘__types_ok’
+   51 |         static_assert(__types_ok(x, y),                 \
+      |                       ^~~~~~~~~~
+./include/linux/minmax.h:58:17: note: in expansion of macro ‘__cmp_once’
+   58 |                 __cmp_once(op, x, y, __UNIQUE_ID(__x), __UNIQUE_ID(__y)))
+      |                 ^~~~~~~~~~
+./include/linux/minmax.h:92:25: note: in expansion of macro ‘__careful_cmp’
+   92 | #define max(x, y)       __careful_cmp(max, x, y)
+      |                         ^~~~~~~~~~~~~
+arch/x86/kvm/lapic.c:417:34: note: in expansion of macro ‘max’
+  417 |                         max_id = max(max_id, kvm_x2apic_id(kvm_apic_get(vcpu)));
+      |                                  ^~~
+arch/x86/kvm/lapic.c:142:51: note: expected ‘struct kvm_lapic *’ but argument is of type ‘int’
+  142 | static inline u32 kvm_x2apic_id(struct kvm_lapic *apic)
+      |                                 ~~~~~~~~~~~~~~~~~~^~~~
+arch/x86/kvm/lapic.c:417:60: warning: passing argument 1 of ‘kvm_x2apic_id’ makes pointer from integer without a cast [-Wint-conversion]
+  417 |                         max_id = max(max_id, kvm_x2apic_id(kvm_apic_get(vcpu)));
+      |                                                            ^~~~~~~~~~~~~~~~~~
+      |                                                            |
+      |                                                            int
+./include/linux/build_bug.h:78:56: note: in definition of macro ‘__static_assert’
+   78 | #define __static_assert(expr, msg, ...) _Static_assert(expr, msg)
+      |                                                        ^~~~
+./include/linux/minmax.h:51:9: note: in expansion of macro ‘static_assert’
+   51 |         static_assert(__types_ok(x, y),                 \
+      |         ^~~~~~~~~~~~~
+./include/linux/minmax.h:32:17: note: in expansion of macro ‘is_signed_type’
+   32 |                 is_signed_type(typeof(x)), 0)
+      |                 ^~~~~~~~~~~~~~
+./include/linux/minmax.h:40:41: note: in expansion of macro ‘__is_signed’
+   40 |                 __is_signed((x) + 0) == __is_signed((y) + 0) || \
+      |                                         ^~~~~~~~~~~
+./include/linux/minmax.h:51:23: note: in expansion of macro ‘__types_ok’
+   51 |         static_assert(__types_ok(x, y),                 \
+      |                       ^~~~~~~~~~
+./include/linux/minmax.h:58:17: note: in expansion of macro ‘__cmp_once’
+   58 |                 __cmp_once(op, x, y, __UNIQUE_ID(__x), __UNIQUE_ID(__y)))
+      |                 ^~~~~~~~~~
+./include/linux/minmax.h:92:25: note: in expansion of macro ‘__careful_cmp’
+   92 | #define max(x, y)       __careful_cmp(max, x, y)
+      |                         ^~~~~~~~~~~~~
+arch/x86/kvm/lapic.c:417:34: note: in expansion of macro ‘max’
+  417 |                         max_id = max(max_id, kvm_x2apic_id(kvm_apic_get(vcpu)));
+      |                                  ^~~
+arch/x86/kvm/lapic.c:142:51: note: expected ‘struct kvm_lapic *’ but argument is of type ‘int’
+  142 | static inline u32 kvm_x2apic_id(struct kvm_lapic *apic)
+      |                                 ~~~~~~~~~~~~~~~~~~^~~~
+arch/x86/kvm/lapic.c:417:60: warning: passing argument 1 of ‘kvm_x2apic_id’ makes pointer from integer without a cast [-Wint-conversion]
+  417 |                         max_id = max(max_id, kvm_x2apic_id(kvm_apic_get(vcpu)));
+      |                                                            ^~~~~~~~~~~~~~~~~~
+      |                                                            |
+      |                                                            int
+./include/linux/build_bug.h:78:56: note: in definition of macro ‘__static_assert’
+   78 | #define __static_assert(expr, msg, ...) _Static_assert(expr, msg)
+      |                                                        ^~~~
+./include/linux/minmax.h:51:9: note: in expansion of macro ‘static_assert’
+   51 |         static_assert(__types_ok(x, y),                 \
+      |         ^~~~~~~~~~~~~
+./include/linux/minmax.h:32:17: note: in expansion of macro ‘is_signed_type’
+   32 |                 is_signed_type(typeof(x)), 0)
+      |                 ^~~~~~~~~~~~~~
+./include/linux/minmax.h:40:41: note: in expansion of macro ‘__is_signed’
+   40 |                 __is_signed((x) + 0) == __is_signed((y) + 0) || \
+      |                                         ^~~~~~~~~~~
+./include/linux/minmax.h:51:23: note: in expansion of macro ‘__types_ok’
+   51 |         static_assert(__types_ok(x, y),                 \
+      |                       ^~~~~~~~~~
+./include/linux/minmax.h:58:17: note: in expansion of macro ‘__cmp_once’
+   58 |                 __cmp_once(op, x, y, __UNIQUE_ID(__x), __UNIQUE_ID(__y)))
+      |                 ^~~~~~~~~~
+./include/linux/minmax.h:92:25: note: in expansion of macro ‘__careful_cmp’
+   92 | #define max(x, y)       __careful_cmp(max, x, y)
+      |                         ^~~~~~~~~~~~~
+arch/x86/kvm/lapic.c:417:34: note: in expansion of macro ‘max’
+  417 |                         max_id = max(max_id, kvm_x2apic_id(kvm_apic_get(vcpu)));
+      |                                  ^~~
+arch/x86/kvm/lapic.c:142:51: note: expected ‘struct kvm_lapic *’ but argument is of type ‘int’
+  142 | static inline u32 kvm_x2apic_id(struct kvm_lapic *apic)
+      |                                 ~~~~~~~~~~~~~~~~~~^~~~
+arch/x86/kvm/lapic.c:417:60: warning: passing argument 1 of ‘kvm_x2apic_id’ makes pointer from integer without a cast [-Wint-conversion]
+  417 |                         max_id = max(max_id, kvm_x2apic_id(kvm_apic_get(vcpu)));
+      |                                                            ^~~~~~~~~~~~~~~~~~
+      |                                                            |
+      |                                                            int
+./include/linux/build_bug.h:78:56: note: in definition of macro ‘__static_assert’
+   78 | #define __static_assert(expr, msg, ...) _Static_assert(expr, msg)
+      |                                                        ^~~~
+./include/linux/minmax.h:51:9: note: in expansion of macro ‘static_assert’
+   51 |         static_assert(__types_ok(x, y),                 \
+      |         ^~~~~~~~~~~~~
+./include/linux/minmax.h:36:32: note: in expansion of macro ‘__is_constexpr’
+   36 |         (__builtin_choose_expr(__is_constexpr(x) && __is_signed(x), x, -1) >= 0)
+      |                                ^~~~~~~~~~~~~~
+./include/linux/minmax.h:41:38: note: in expansion of macro ‘__is_noneg_int’
+   41 |                 __is_noneg_int(x) || __is_noneg_int(y))
+      |                                      ^~~~~~~~~~~~~~
+./include/linux/minmax.h:51:23: note: in expansion of macro ‘__types_ok’
+   51 |         static_assert(__types_ok(x, y),                 \
+      |                       ^~~~~~~~~~
+./include/linux/minmax.h:58:17: note: in expansion of macro ‘__cmp_once’
+   58 |                 __cmp_once(op, x, y, __UNIQUE_ID(__x), __UNIQUE_ID(__y)))
+      |                 ^~~~~~~~~~
+./include/linux/minmax.h:92:25: note: in expansion of macro ‘__careful_cmp’
+   92 | #define max(x, y)       __careful_cmp(max, x, y)
+      |                         ^~~~~~~~~~~~~
+arch/x86/kvm/lapic.c:417:34: note: in expansion of macro ‘max’
+  417 |                         max_id = max(max_id, kvm_x2apic_id(kvm_apic_get(vcpu)));
+      |                                  ^~~
+arch/x86/kvm/lapic.c:142:51: note: expected ‘struct kvm_lapic *’ but argument is of type ‘int’
+  142 | static inline u32 kvm_x2apic_id(struct kvm_lapic *apic)
+      |                                 ~~~~~~~~~~~~~~~~~~^~~~
+arch/x86/kvm/lapic.c:417:60: warning: passing argument 1 of ‘kvm_x2apic_id’ makes pointer from integer without a cast [-Wint-conversion]
+  417 |                         max_id = max(max_id, kvm_x2apic_id(kvm_apic_get(vcpu)));
+      |                                                            ^~~~~~~~~~~~~~~~~~
+      |                                                            |
+      |                                                            int
+./include/linux/build_bug.h:78:56: note: in definition of macro ‘__static_assert’
+   78 | #define __static_assert(expr, msg, ...) _Static_assert(expr, msg)
+      |                                                        ^~~~
+./include/linux/minmax.h:51:9: note: in expansion of macro ‘static_assert’
+   51 |         static_assert(__types_ok(x, y),                 \
+      |         ^~~~~~~~~~~~~
+./include/linux/minmax.h:31:31: note: in expansion of macro ‘__is_constexpr’
+   31 |         __builtin_choose_expr(__is_constexpr(is_signed_type(typeof(x))),        \
+      |                               ^~~~~~~~~~~~~~
+./include/linux/minmax.h:31:46: note: in expansion of macro ‘is_signed_type’
+   31 |         __builtin_choose_expr(__is_constexpr(is_signed_type(typeof(x))),        \
+      |                                              ^~~~~~~~~~~~~~
+./include/linux/minmax.h:36:53: note: in expansion of macro ‘__is_signed’
+   36 |         (__builtin_choose_expr(__is_constexpr(x) && __is_signed(x), x, -1) >= 0)
+      |                                                     ^~~~~~~~~~~
+./include/linux/minmax.h:41:38: note: in expansion of macro ‘__is_noneg_int’
+   41 |                 __is_noneg_int(x) || __is_noneg_int(y))
+      |                                      ^~~~~~~~~~~~~~
+./include/linux/minmax.h:51:23: note: in expansion of macro ‘__types_ok’
+   51 |         static_assert(__types_ok(x, y),                 \
+      |                       ^~~~~~~~~~
+./include/linux/minmax.h:58:17: note: in expansion of macro ‘__cmp_once’
+   58 |                 __cmp_once(op, x, y, __UNIQUE_ID(__x), __UNIQUE_ID(__y)))
+      |                 ^~~~~~~~~~
+./include/linux/minmax.h:92:25: note: in expansion of macro ‘__careful_cmp’
+   92 | #define max(x, y)       __careful_cmp(max, x, y)
+      |                         ^~~~~~~~~~~~~
+arch/x86/kvm/lapic.c:417:34: note: in expansion of macro ‘max’
+  417 |                         max_id = max(max_id, kvm_x2apic_id(kvm_apic_get(vcpu)));
+      |                                  ^~~
+arch/x86/kvm/lapic.c:142:51: note: expected ‘struct kvm_lapic *’ but argument is of type ‘int’
+  142 | static inline u32 kvm_x2apic_id(struct kvm_lapic *apic)
+      |                                 ~~~~~~~~~~~~~~~~~~^~~~
+arch/x86/kvm/lapic.c:417:60: warning: passing argument 1 of ‘kvm_x2apic_id’ makes pointer from integer without a cast [-Wint-conversion]
+  417 |                         max_id = max(max_id, kvm_x2apic_id(kvm_apic_get(vcpu)));
+      |                                                            ^~~~~~~~~~~~~~~~~~
+      |                                                            |
+      |                                                            int
+./include/linux/build_bug.h:78:56: note: in definition of macro ‘__static_assert’
+   78 | #define __static_assert(expr, msg, ...) _Static_assert(expr, msg)
+      |                                                        ^~~~
+./include/linux/minmax.h:51:9: note: in expansion of macro ‘static_assert’
+   51 |         static_assert(__types_ok(x, y),                 \
+      |         ^~~~~~~~~~~~~
+./include/linux/minmax.h:31:31: note: in expansion of macro ‘__is_constexpr’
+   31 |         __builtin_choose_expr(__is_constexpr(is_signed_type(typeof(x))),        \
+      |                               ^~~~~~~~~~~~~~
+./include/linux/minmax.h:31:46: note: in expansion of macro ‘is_signed_type’
+   31 |         __builtin_choose_expr(__is_constexpr(is_signed_type(typeof(x))),        \
+      |                                              ^~~~~~~~~~~~~~
+./include/linux/minmax.h:36:53: note: in expansion of macro ‘__is_signed’
+   36 |         (__builtin_choose_expr(__is_constexpr(x) && __is_signed(x), x, -1) >= 0)
+      |                                                     ^~~~~~~~~~~
+./include/linux/minmax.h:41:38: note: in expansion of macro ‘__is_noneg_int’
+   41 |                 __is_noneg_int(x) || __is_noneg_int(y))
+      |                                      ^~~~~~~~~~~~~~
+./include/linux/minmax.h:51:23: note: in expansion of macro ‘__types_ok’
+   51 |         static_assert(__types_ok(x, y),                 \
+      |                       ^~~~~~~~~~
+./include/linux/minmax.h:58:17: note: in expansion of macro ‘__cmp_once’
+   58 |                 __cmp_once(op, x, y, __UNIQUE_ID(__x), __UNIQUE_ID(__y)))
+      |                 ^~~~~~~~~~
+./include/linux/minmax.h:92:25: note: in expansion of macro ‘__careful_cmp’
+   92 | #define max(x, y)       __careful_cmp(max, x, y)
+      |                         ^~~~~~~~~~~~~
+arch/x86/kvm/lapic.c:417:34: note: in expansion of macro ‘max’
+  417 |                         max_id = max(max_id, kvm_x2apic_id(kvm_apic_get(vcpu)));
+      |                                  ^~~
+arch/x86/kvm/lapic.c:142:51: note: expected ‘struct kvm_lapic *’ but argument is of type ‘int’
+  142 | static inline u32 kvm_x2apic_id(struct kvm_lapic *apic)
+      |                                 ~~~~~~~~~~~~~~~~~~^~~~
+arch/x86/kvm/lapic.c:417:60: warning: passing argument 1 of ‘kvm_x2apic_id’ makes pointer from integer without a cast [-Wint-conversion]
+  417 |                         max_id = max(max_id, kvm_x2apic_id(kvm_apic_get(vcpu)));
+      |                                                            ^~~~~~~~~~~~~~~~~~
+      |                                                            |
+      |                                                            int
+./include/linux/build_bug.h:78:56: note: in definition of macro ‘__static_assert’
+   78 | #define __static_assert(expr, msg, ...) _Static_assert(expr, msg)
+      |                                                        ^~~~
+./include/linux/minmax.h:51:9: note: in expansion of macro ‘static_assert’
+   51 |         static_assert(__types_ok(x, y),                 \
+      |         ^~~~~~~~~~~~~
+./include/linux/minmax.h:32:17: note: in expansion of macro ‘is_signed_type’
+   32 |                 is_signed_type(typeof(x)), 0)
+      |                 ^~~~~~~~~~~~~~
+./include/linux/minmax.h:36:53: note: in expansion of macro ‘__is_signed’
+   36 |         (__builtin_choose_expr(__is_constexpr(x) && __is_signed(x), x, -1) >= 0)
+      |                                                     ^~~~~~~~~~~
+./include/linux/minmax.h:41:38: note: in expansion of macro ‘__is_noneg_int’
+   41 |                 __is_noneg_int(x) || __is_noneg_int(y))
+      |                                      ^~~~~~~~~~~~~~
+./include/linux/minmax.h:51:23: note: in expansion of macro ‘__types_ok’
+   51 |         static_assert(__types_ok(x, y),                 \
+      |                       ^~~~~~~~~~
+./include/linux/minmax.h:58:17: note: in expansion of macro ‘__cmp_once’
+   58 |                 __cmp_once(op, x, y, __UNIQUE_ID(__x), __UNIQUE_ID(__y)))
+      |                 ^~~~~~~~~~
+./include/linux/minmax.h:92:25: note: in expansion of macro ‘__careful_cmp’
+   92 | #define max(x, y)       __careful_cmp(max, x, y)
+      |                         ^~~~~~~~~~~~~
+arch/x86/kvm/lapic.c:417:34: note: in expansion of macro ‘max’
+  417 |                         max_id = max(max_id, kvm_x2apic_id(kvm_apic_get(vcpu)));
+      |                                  ^~~
+arch/x86/kvm/lapic.c:142:51: note: expected ‘struct kvm_lapic *’ but argument is of type ‘int’
+  142 | static inline u32 kvm_x2apic_id(struct kvm_lapic *apic)
+      |                                 ~~~~~~~~~~~~~~~~~~^~~~
+arch/x86/kvm/lapic.c:417:60: warning: passing argument 1 of ‘kvm_x2apic_id’ makes pointer from integer without a cast [-Wint-conversion]
+  417 |                         max_id = max(max_id, kvm_x2apic_id(kvm_apic_get(vcpu)));
+      |                                                            ^~~~~~~~~~~~~~~~~~
+      |                                                            |
+      |                                                            int
+./include/linux/build_bug.h:78:56: note: in definition of macro ‘__static_assert’
+   78 | #define __static_assert(expr, msg, ...) _Static_assert(expr, msg)
+      |                                                        ^~~~
+./include/linux/minmax.h:51:9: note: in expansion of macro ‘static_assert’
+   51 |         static_assert(__types_ok(x, y),                 \
+      |         ^~~~~~~~~~~~~
+./include/linux/minmax.h:32:17: note: in expansion of macro ‘is_signed_type’
+   32 |                 is_signed_type(typeof(x)), 0)
+      |                 ^~~~~~~~~~~~~~
+./include/linux/minmax.h:36:53: note: in expansion of macro ‘__is_signed’
+   36 |         (__builtin_choose_expr(__is_constexpr(x) && __is_signed(x), x, -1) >= 0)
+      |                                                     ^~~~~~~~~~~
+./include/linux/minmax.h:41:38: note: in expansion of macro ‘__is_noneg_int’
+   41 |                 __is_noneg_int(x) || __is_noneg_int(y))
+      |                                      ^~~~~~~~~~~~~~
+./include/linux/minmax.h:51:23: note: in expansion of macro ‘__types_ok’
+   51 |         static_assert(__types_ok(x, y),                 \
+      |                       ^~~~~~~~~~
+./include/linux/minmax.h:58:17: note: in expansion of macro ‘__cmp_once’
+   58 |                 __cmp_once(op, x, y, __UNIQUE_ID(__x), __UNIQUE_ID(__y)))
+      |                 ^~~~~~~~~~
+./include/linux/minmax.h:92:25: note: in expansion of macro ‘__careful_cmp’
+   92 | #define max(x, y)       __careful_cmp(max, x, y)
+      |                         ^~~~~~~~~~~~~
+arch/x86/kvm/lapic.c:417:34: note: in expansion of macro ‘max’
+  417 |                         max_id = max(max_id, kvm_x2apic_id(kvm_apic_get(vcpu)));
+      |                                  ^~~
+arch/x86/kvm/lapic.c:142:51: note: expected ‘struct kvm_lapic *’ but argument is of type ‘int’
+  142 | static inline u32 kvm_x2apic_id(struct kvm_lapic *apic)
+      |                                 ~~~~~~~~~~~~~~~~~~^~~~
+arch/x86/kvm/lapic.c:417:60: warning: passing argument 1 of ‘kvm_x2apic_id’ makes pointer from integer without a cast [-Wint-conversion]
+  417 |                         max_id = max(max_id, kvm_x2apic_id(kvm_apic_get(vcpu)));
+      |                                                            ^~~~~~~~~~~~~~~~~~
+      |                                                            |
+      |                                                            int
+./include/linux/build_bug.h:78:56: note: in definition of macro ‘__static_assert’
+   78 | #define __static_assert(expr, msg, ...) _Static_assert(expr, msg)
+      |                                                        ^~~~
+./include/linux/minmax.h:51:9: note: in expansion of macro ‘static_assert’
+   51 |         static_assert(__types_ok(x, y),                 \
+      |         ^~~~~~~~~~~~~
+./include/linux/minmax.h:41:38: note: in expansion of macro ‘__is_noneg_int’
+   41 |                 __is_noneg_int(x) || __is_noneg_int(y))
+      |                                      ^~~~~~~~~~~~~~
+./include/linux/minmax.h:51:23: note: in expansion of macro ‘__types_ok’
+   51 |         static_assert(__types_ok(x, y),                 \
+      |                       ^~~~~~~~~~
+./include/linux/minmax.h:58:17: note: in expansion of macro ‘__cmp_once’
+   58 |                 __cmp_once(op, x, y, __UNIQUE_ID(__x), __UNIQUE_ID(__y)))
+      |                 ^~~~~~~~~~
+./include/linux/minmax.h:92:25: note: in expansion of macro ‘__careful_cmp’
+   92 | #define max(x, y)       __careful_cmp(max, x, y)
+      |                         ^~~~~~~~~~~~~
+arch/x86/kvm/lapic.c:417:34: note: in expansion of macro ‘max’
+  417 |                         max_id = max(max_id, kvm_x2apic_id(kvm_apic_get(vcpu)));
+      |                                  ^~~
+arch/x86/kvm/lapic.c:142:51: note: expected ‘struct kvm_lapic *’ but argument is of type ‘int’
+  142 | static inline u32 kvm_x2apic_id(struct kvm_lapic *apic)
+      |                                 ~~~~~~~~~~~~~~~~~~^~~~
+arch/x86/kvm/lapic.c: In function ‘kvm_apic_set_version’:
+arch/x86/kvm/lapic.c:572:34: warning: initialization of ‘struct kvm_lapic *’ from ‘int’ makes pointer from integer without a cast [-Wint-conversion]
+  572 |         struct kvm_lapic *apic = kvm_apic_get(vcpu);
+      |                                  ^~~~~~~~~~~~
+arch/x86/kvm/lapic.c: In function ‘kvm_apic_after_set_mcg_cap’:
+arch/x86/kvm/lapic.c:596:34: warning: initialization of ‘struct kvm_lapic *’ from ‘int’ makes pointer from integer without a cast [-Wint-conversion]
+  596 |         struct kvm_lapic *apic = kvm_apic_get(vcpu);
+      |                                  ^~~~~~~~~~~~
+arch/x86/kvm/lapic.c: In function ‘kvm_apic_update_irr’:
+arch/x86/kvm/lapic.c:689:34: warning: initialization of ‘struct kvm_lapic *’ from ‘int’ makes pointer from integer without a cast [-Wint-conversion]
+  689 |         struct kvm_lapic *apic = kvm_apic_get(vcpu);
+      |                                  ^~~~~~~~~~~~
+arch/x86/kvm/lapic.c: In function ‘kvm_apic_clear_irr’:
+arch/x86/kvm/lapic.c:737:29: warning: passing argument 2 of ‘apic_clear_irr’ makes pointer from integer without a cast [-Wint-conversion]
+  737 |         apic_clear_irr(vec, kvm_apic_get(vcpu));
+      |                             ^~~~~~~~~~~~~~~~~~
+      |                             |
+      |                             int
+arch/x86/kvm/lapic.c:720:62: note: expected ‘struct kvm_lapic *’ but argument is of type ‘int’
+  720 | static inline void apic_clear_irr(int vec, struct kvm_lapic *apic)
+      |                                            ~~~~~~~~~~~~~~~~~~^~~~
+arch/x86/kvm/lapic.c: In function ‘kvm_lapic_find_highest_irr’:
+arch/x86/kvm/lapic.c:812:38: warning: passing argument 1 of ‘apic_find_highest_irr’ makes pointer from integer without a cast [-Wint-conversion]
+  812 |         return apic_find_highest_irr(kvm_apic_get(vcpu));
+      |                                      ^~~~~~~~~~~~~~~~~~
+      |                                      |
+      |                                      int
+arch/x86/kvm/lapic.c:703:59: note: expected ‘struct kvm_lapic *’ but argument is of type ‘int’
+  703 | static inline int apic_find_highest_irr(struct kvm_lapic *apic)
+      |                                         ~~~~~~~~~~~~~~~~~~^~~~
+arch/x86/kvm/lapic.c: In function ‘kvm_apic_set_irq’:
+arch/x86/kvm/lapic.c:823:34: warning: initialization of ‘struct kvm_lapic *’ from ‘int’ makes pointer from integer without a cast [-Wint-conversion]
+  823 |         struct kvm_lapic *apic = kvm_apic_get(vcpu);
+      |                                  ^~~~~~~~~~~~
+cc1: some warnings being treated as errors
+arch/x86/kvm/lapic.c: In function ‘kvm_apic_update_ppr’:
+arch/x86/kvm/lapic.c:974:25: warning: passing argument 1 of ‘apic_update_ppr’ makes pointer from integer without a cast [-Wint-conversion]
+  974 |         apic_update_ppr(kvm_apic_get(vcpu));
+      |                         ^~~~~~~~~~~~~~~~~~
+      |                         |
+      |                         int
+arch/x86/kvm/lapic.c:963:47: note: expected ‘struct kvm_lapic *’ but argument is of type ‘int’
+  963 | static void apic_update_ppr(struct kvm_lapic *apic)
+      |                             ~~~~~~~~~~~~~~~~~~^~~~
+arch/x86/kvm/lapic.c: In function ‘kvm_apic_match_dest’:
+arch/x86/kvm/lapic.c:1067:36: warning: initialization of ‘struct kvm_lapic *’ from ‘int’ makes pointer from integer without a cast [-Wint-conversion]
+ 1067 |         struct kvm_lapic *target = kvm_apic_get(vcpu);
+      |                                    ^~~~~~~~~~~~
+make[4]: *** [scripts/Makefile.build:243: arch/x86/kvm/i8254.o] Error 1
+arch/x86/kvm/lapic.c: In function ‘kvm_apic_set_eoi_accelerated’:
+arch/x86/kvm/lapic.c:1492:34: warning: initialization of ‘struct kvm_lapic *’ from ‘int’ makes pointer from integer without a cast [-Wint-conversion]
+ 1492 |         struct kvm_lapic *apic = kvm_apic_get(vcpu);
+      |                                  ^~~~~~~~~~~~
+arch/x86/kvm/lapic.c: In function ‘lapic_timer_int_injected’:
+arch/x86/kvm/lapic.c:1776:34: warning: initialization of ‘struct kvm_lapic *’ from ‘int’ makes pointer from integer without a cast [-Wint-conversion]
+ 1776 |         struct kvm_lapic *apic = kvm_apic_get(vcpu);
+      |                                  ^~~~~~~~~~~~
+arch/x86/kvm/lapic.c: In function ‘__wait_lapic_expire’:
+arch/x86/kvm/lapic.c:1794:50: error: invalid type argument of ‘->’ (have ‘int’)
+ 1794 |         u64 timer_advance_ns = kvm_apic_get(vcpu)->lapic_timer.timer_advance_ns;
+      |                                                  ^~
+arch/x86/kvm/lapic.c: In function ‘adjust_lapic_timer_advance’:
+arch/x86/kvm/lapic.c:1815:34: warning: initialization of ‘struct kvm_lapic *’ from ‘int’ makes pointer from integer without a cast [-Wint-conversion]
+ 1815 |         struct kvm_lapic *apic = kvm_apic_get(vcpu);
+      |                                  ^~~~~~~~~~~~
+arch/x86/kvm/lapic.c: In function ‘__kvm_wait_lapic_expire’:
+arch/x86/kvm/lapic.c:1843:34: warning: initialization of ‘struct kvm_lapic *’ from ‘int’ makes pointer from integer without a cast [-Wint-conversion]
+ 1843 |         struct kvm_lapic *apic = kvm_apic_get(vcpu);
+      |                                  ^~~~~~~~~~~~
+arch/x86/kvm/lapic.c: In function ‘kvm_wait_lapic_expire’:
+arch/x86/kvm/lapic.c:1869:31: error: invalid type argument of ‘->’ (have ‘int’)
+ 1869 |             kvm_apic_get(vcpu)->lapic_timer.expired_tscdeadline &&
+      |                               ^~
+arch/x86/kvm/lapic.c:1870:31: error: invalid type argument of ‘->’ (have ‘int’)
+ 1870 |             kvm_apic_get(vcpu)->lapic_timer.timer_advance_ns &&
+      |                               ^~
+arch/x86/kvm/lapic.c: In function ‘apic_timer_expired’:
+arch/x86/kvm/lapic.c:1914:39: error: invalid type argument of ‘->’ (have ‘int’)
+ 1914 |                 if (kvm_apic_get(vcpu)->lapic_timer.expired_tscdeadline &&
+      |                                       ^~
+arch/x86/kvm/lapic.c:1915:39: error: invalid type argument of ‘->’ (have ‘int’)
+ 1915 |                     kvm_apic_get(vcpu)->lapic_timer.timer_advance_ns)
+      |                                       ^~
+arch/x86/kvm/lapic.c: In function ‘kvm_lapic_hv_timer_in_use’:
+arch/x86/kvm/lapic.c:2085:34: error: invalid type argument of ‘->’ (have ‘int’)
+ 2085 |         return kvm_apic_get(vcpu)->lapic_timer.hv_timer_in_use;
+      |                                  ^~
+arch/x86/kvm/lapic.c: In function ‘kvm_lapic_expired_hv_timer’:
+arch/x86/kvm/lapic.c:2170:34: warning: initialization of ‘struct kvm_lapic *’ from ‘int’ makes pointer from integer without a cast [-Wint-conversion]
+ 2170 |         struct kvm_lapic *apic = kvm_apic_get(vcpu);
+      |                                  ^~~~~~~~~~~~
+arch/x86/kvm/lapic.c: In function ‘kvm_lapic_switch_to_hv_timer’:
+arch/x86/kvm/lapic.c:2191:28: warning: passing argument 1 of ‘restart_apic_timer’ makes pointer from integer without a cast [-Wint-conversion]
+ 2191 |         restart_apic_timer(kvm_apic_get(vcpu));
+      |                            ^~~~~~~~~~~~~~~~~~
+      |                            |
+      |                            int
+arch/x86/kvm/lapic.c:2155:50: note: expected ‘struct kvm_lapic *’ but argument is of type ‘int’
+ 2155 | static void restart_apic_timer(struct kvm_lapic *apic)
+      |                                ~~~~~~~~~~~~~~~~~~^~~~
+arch/x86/kvm/lapic.c: In function ‘kvm_lapic_switch_to_sw_timer’:
+arch/x86/kvm/lapic.c:2196:34: warning: initialization of ‘struct kvm_lapic *’ from ‘int’ makes pointer from integer without a cast [-Wint-conversion]
+ 2196 |         struct kvm_lapic *apic = kvm_apic_get(vcpu);
+      |                                  ^~~~~~~~~~~~
+arch/x86/kvm/lapic.c: In function ‘kvm_lapic_restart_hv_timer’:
+arch/x86/kvm/lapic.c:2207:34: warning: initialization of ‘struct kvm_lapic *’ from ‘int’ makes pointer from integer without a cast [-Wint-conversion]
+ 2207 |         struct kvm_lapic *apic = kvm_apic_get(vcpu);
+      |                                  ^~~~~~~~~~~~
+arch/x86/kvm/lapic.c: In function ‘kvm_lapic_set_eoi’:
+arch/x86/kvm/lapic.c:2438:29: warning: passing argument 1 of ‘kvm_lapic_reg_write’ makes pointer from integer without a cast [-Wint-conversion]
+ 2438 |         kvm_lapic_reg_write(kvm_apic_get(vcpu), APIC_EOI, 0);
+      |                             ^~~~~~~~~~~~~~~~~~
+      |                             |
+      |                             int
+arch/x86/kvm/lapic.c:2252:50: note: expected ‘struct kvm_lapic *’ but argument is of type ‘int’
+ 2252 | static int kvm_lapic_reg_write(struct kvm_lapic *apic, u32 reg, u32 val)
+      |                                ~~~~~~~~~~~~~~~~~~^~~~
+arch/x86/kvm/lapic.c: In function ‘kvm_apic_write_nodecode’:
+arch/x86/kvm/lapic.c:2445:34: warning: initialization of ‘struct kvm_lapic *’ from ‘int’ makes pointer from integer without a cast [-Wint-conversion]
+ 2445 |         struct kvm_lapic *apic = kvm_apic_get(vcpu);
+      |                                  ^~~~~~~~~~~~
+arch/x86/kvm/lapic.c: In function ‘kvm_free_lapic’:
+arch/x86/kvm/lapic.c:2467:34: warning: initialization of ‘struct kvm_lapic *’ from ‘int’ makes pointer from integer without a cast [-Wint-conversion]
+ 2467 |         struct kvm_lapic *apic = kvm_apic_get(vcpu);
+      |                                  ^~~~~~~~~~~~
+arch/x86/kvm/lapic.c: In function ‘kvm_get_lapic_tscdeadline_msr’:
+arch/x86/kvm/lapic.c:2493:34: warning: initialization of ‘struct kvm_lapic *’ from ‘int’ makes pointer from integer without a cast [-Wint-conversion]
+ 2493 |         struct kvm_lapic *apic = kvm_apic_get(vcpu);
+      |                                  ^~~~~~~~~~~~
+arch/x86/kvm/lapic.c: In function ‘kvm_set_lapic_tscdeadline_msr’:
+arch/x86/kvm/lapic.c:2503:34: warning: initialization of ‘struct kvm_lapic *’ from ‘int’ makes pointer from integer without a cast [-Wint-conversion]
+ 2503 |         struct kvm_lapic *apic = kvm_apic_get(vcpu);
+      |                                  ^~~~~~~~~~~~
+arch/x86/kvm/lapic.c: In function ‘kvm_lapic_set_tpr’:
+arch/x86/kvm/lapic.c:2515:22: warning: passing argument 1 of ‘apic_set_tpr’ makes pointer from integer without a cast [-Wint-conversion]
+ 2515 |         apic_set_tpr(kvm_apic_get(vcpu), (cr8 & 0x0f) << 4);
+      |                      ^~~~~~~~~~~~~~~~~~
+      |                      |
+      |                      int
+arch/x86/kvm/lapic.c:978:44: note: expected ‘struct kvm_lapic *’ but argument is of type ‘int’
+  978 | static void apic_set_tpr(struct kvm_lapic *apic, u32 tpr)
+      |                          ~~~~~~~~~~~~~~~~~~^~~~
+arch/x86/kvm/lapic.c: In function ‘kvm_lapic_get_cr8’:
+arch/x86/kvm/lapic.c:2522:39: warning: passing argument 1 of ‘kvm_lapic_get_reg’ makes pointer from integer without a cast [-Wint-conversion]
+ 2522 |         tpr = (u64) kvm_lapic_get_reg(kvm_apic_get(vcpu), APIC_TASKPRI);
+      |                                       ^~~~~~~~~~~~~~~~~~
+      |                                       |
+      |                                       int
+arch/x86/kvm/lapic.h:179:55: note: expected ‘struct kvm_lapic *’ but argument is of type ‘int’
+  179 | static inline u32 kvm_lapic_get_reg(struct kvm_lapic *apic, int reg_off)
+      |                                     ~~~~~~~~~~~~~~~~~~^~~~
+arch/x86/kvm/lapic.c: In function ‘kvm_lapic_set_base’:
+arch/x86/kvm/lapic.c:2530:34: warning: initialization of ‘struct kvm_lapic *’ from ‘int’ makes pointer from integer without a cast [-Wint-conversion]
+ 2530 |         struct kvm_lapic *apic = kvm_apic_get(vcpu);
+      |                                  ^~~~~~~~~~~~
+arch/x86/kvm/lapic.c: In function ‘kvm_apic_update_apicv’:
+arch/x86/kvm/lapic.c:2577:34: warning: initialization of ‘struct kvm_lapic *’ from ‘int’ makes pointer from integer without a cast [-Wint-conversion]
+ 2577 |         struct kvm_lapic *apic = kvm_apic_get(vcpu);
+      |                                  ^~~~~~~~~~~~
+arch/x86/kvm/lapic.c: In function ‘kvm_lapic_reset’:
+arch/x86/kvm/lapic.c:2668:34: warning: initialization of ‘struct kvm_lapic *’ from ‘int’ makes pointer from integer without a cast [-Wint-conversion]
+ 2668 |         struct kvm_lapic *apic = kvm_apic_get(vcpu);
+      |                                  ^~~~~~~~~~~~
+arch/x86/kvm/lapic.c: In function ‘apic_has_pending_timer’:
+arch/x86/kvm/lapic.c:2751:34: warning: initialization of ‘struct kvm_lapic *’ from ‘int’ makes pointer from integer without a cast [-Wint-conversion]
+ 2751 |         struct kvm_lapic *apic = kvm_apic_get(vcpu);
+      |                                  ^~~~~~~~~~~~
+arch/x86/kvm/lapic.c: In function ‘kvm_apic_nmi_wd_deliver’:
+arch/x86/kvm/lapic.c:2780:34: warning: initialization of ‘struct kvm_lapic *’ from ‘int’ makes pointer from integer without a cast [-Wint-conversion]
+ 2780 |         struct kvm_lapic *apic = kvm_apic_get(vcpu);
+      |                                  ^~~~~~~~~~~~
+arch/x86/kvm/lapic.c: In function ‘kvm_create_lapic’:
+arch/x86/kvm/lapic.c:2816:9: error: implicit declaration of function ‘arch_apic_set’; did you mean ‘arch_atomic_set’? [-Werror=implicit-function-declaration]
+ 2816 |         arch_apic_set(vcpu, &vcpu->arch, apic);
+      |         ^~~~~~~~~~~~~
+      |         arch_atomic_set
+arch/x86/kvm/lapic.c: In function ‘kvm_apic_has_interrupt’:
+arch/x86/kvm/lapic.c:2860:34: warning: initialization of ‘struct kvm_lapic *’ from ‘int’ makes pointer from integer without a cast [-Wint-conversion]
+ 2860 |         struct kvm_lapic *apic = kvm_apic_get(vcpu);
+      |                                  ^~~~~~~~~~~~
+arch/x86/kvm/lapic.c: In function ‘kvm_apic_accept_pic_intr’:
+arch/x86/kvm/lapic.c:2873:38: warning: passing argument 1 of ‘kvm_lapic_get_reg’ makes pointer from integer without a cast [-Wint-conversion]
+ 2873 |         u32 lvt0 = kvm_lapic_get_reg(kvm_apic_get(vcpu), APIC_LVT0);
+      |                                      ^~~~~~~~~~~~~~~~~~
+      |                                      |
+      |                                      int
+arch/x86/kvm/lapic.h:179:55: note: expected ‘struct kvm_lapic *’ but argument is of type ‘int’
+  179 | static inline u32 kvm_lapic_get_reg(struct kvm_lapic *apic, int reg_off)
+      |                                     ~~~~~~~~~~~~~~~~~~^~~~
+arch/x86/kvm/lapic.c:2875:34: warning: passing argument 1 of ‘kvm_apic_hw_enabled’ makes pointer from integer without a cast [-Wint-conversion]
+ 2875 |         if (!kvm_apic_hw_enabled(kvm_apic_get(vcpu)))
+      |                                  ^~~~~~~~~~~~~~~~~~
+      |                                  |
+      |                                  int
+arch/x86/kvm/lapic.h:195:58: note: expected ‘struct kvm_lapic *’ but argument is of type ‘int’
+  195 | static inline bool kvm_apic_hw_enabled(struct kvm_lapic *apic)
+      |                                        ~~~~~~~~~~~~~~~~~~^~~~
+arch/x86/kvm/lapic.c: In function ‘kvm_inject_apic_timer_irqs’:
+arch/x86/kvm/lapic.c:2885:34: warning: initialization of ‘struct kvm_lapic *’ from ‘int’ makes pointer from integer without a cast [-Wint-conversion]
+ 2885 |         struct kvm_lapic *apic = kvm_apic_get(vcpu);
+      |                                  ^~~~~~~~~~~~
+arch/x86/kvm/lapic.c: In function ‘kvm_get_apic_interrupt’:
+arch/x86/kvm/lapic.c:2896:34: warning: initialization of ‘struct kvm_lapic *’ from ‘int’ makes pointer from integer without a cast [-Wint-conversion]
+ 2896 |         struct kvm_lapic *apic = kvm_apic_get(vcpu);
+      |                                  ^~~~~~~~~~~~
+arch/x86/kvm/lapic.c: In function ‘kvm_apic_state_fixup’:
+arch/x86/kvm/lapic.c:2934:30: warning: passing argument 1 of ‘apic_x2apic_mode’ makes pointer from integer without a cast [-Wint-conversion]
+ 2934 |         if (apic_x2apic_mode(kvm_apic_get(vcpu))) {
+      |                              ^~~~~~~~~~~~~~~~~~
+      |                              |
+      |                              int
+arch/x86/kvm/lapic.h:221:54: note: expected ‘struct kvm_lapic *’ but argument is of type ‘int’
+  221 | static inline int apic_x2apic_mode(struct kvm_lapic *apic)
+      |                                    ~~~~~~~~~~~~~~~~~~^~~~
+In file included from ./include/linux/string.h:292,
+                 from ./include/linux/bitmap.h:12,
+                 from ./include/linux/cpumask.h:12:
+arch/x86/kvm/lapic.c: In function ‘kvm_apic_get_state’:
+arch/x86/kvm/lapic.c:2971:43: error: invalid type argument of ‘->’ (have ‘int’)
+ 2971 |         memcpy(s->regs, kvm_apic_get(vcpu)->regs, sizeof(*s));
+      |                                           ^~
+./include/linux/fortify-string.h:583:34: note: in definition of macro ‘__fortify_memcpy_chk’
+  583 |         const size_t __q_size = (q_size);                               \
+      |                                  ^~~~~~
+./include/linux/fortify-string.h:639:35: note: in expansion of macro ‘__struct_size’
+  639 |                 __struct_size(p), __struct_size(q),                     \
+      |                                   ^~~~~~~~~~~~~
+arch/x86/kvm/lapic.c:2971:9: note: in expansion of macro ‘memcpy’
+ 2971 |         memcpy(s->regs, kvm_apic_get(vcpu)->regs, sizeof(*s));
+      |         ^~~~~~
+arch/x86/kvm/lapic.c:2971:43: error: invalid type argument of ‘->’ (have ‘int’)
+ 2971 |         memcpy(s->regs, kvm_apic_get(vcpu)->regs, sizeof(*s));
+      |                                           ^~
+./include/linux/fortify-string.h:585:40: note: in definition of macro ‘__fortify_memcpy_chk’
+  585 |         const size_t __q_size_field = (q_size_field);                   \
+      |                                        ^~~~~~~~~~~~
+./include/linux/fortify-string.h:640:35: note: in expansion of macro ‘__member_size’
+  640 |                 __member_size(p), __member_size(q),                     \
+      |                                   ^~~~~~~~~~~~~
+arch/x86/kvm/lapic.c:2971:9: note: in expansion of macro ‘memcpy’
+ 2971 |         memcpy(s->regs, kvm_apic_get(vcpu)->regs, sizeof(*s));
+      |         ^~~~~~
+arch/x86/kvm/lapic.c:2971:43: error: invalid type argument of ‘->’ (have ‘int’)
+ 2971 |         memcpy(s->regs, kvm_apic_get(vcpu)->regs, sizeof(*s));
+      |                                           ^~
+./include/linux/fortify-string.h:593:30: note: in definition of macro ‘__fortify_memcpy_chk’
+  593 |         __underlying_##op(p, q, __fortify_size);                        \
+      |                              ^
+arch/x86/kvm/lapic.c:2971:9: note: in expansion of macro ‘memcpy’
+ 2971 |         memcpy(s->regs, kvm_apic_get(vcpu)->regs, sizeof(*s));
+      |         ^~~~~~
+In file included from arch/x86/kvm/cpuid.c:26:
+arch/x86/kvm/lapic.h: In function ‘lapic_in_kernel’:
+arch/x86/kvm/lapic.h:189:24: error: implicit declaration of function ‘kvm_apic_get’; did you mean ‘kvm_fpu_get’? [-Werror=implicit-function-declaration]
+  189 |                 return kvm_apic_get(vcpu);
+      |                        ^~~~~~~~~~~~
+      |                        kvm_fpu_get
+arch/x86/kvm/lapic.h: In function ‘kvm_apic_present’:
+arch/x86/kvm/lapic.h:213:61: warning: passing argument 1 of ‘kvm_apic_hw_enabled’ makes pointer from integer without a cast [-Wint-conversion]
+  213 |         return lapic_in_kernel(vcpu) && kvm_apic_hw_enabled(kvm_apic_get(vcpu));
+      |                                                             ^~~~~~~~~~~~~~~~~~
+      |                                                             |
+      |                                                             int
+arch/x86/kvm/lapic.h:195:58: note: expected ‘struct kvm_lapic *’ but argument is of type ‘int’
+  195 | static inline bool kvm_apic_hw_enabled(struct kvm_lapic *apic)
+      |                                        ~~~~~~~~~~~~~~~~~~^~~~
+arch/x86/kvm/lapic.h: In function ‘kvm_lapic_enabled’:
+arch/x86/kvm/lapic.c:2978:41: warning: passing argument 1 of ‘__apic_read’ makes pointer from integer without a cast [-Wint-conversion]
+ 2978 |                             __apic_read(kvm_apic_get(vcpu), APIC_TMCCT));
+      |                                         ^~~~~~~~~~~~~~~~~~
+      |                                         |
+      |                                         int
+arch/x86/kvm/lapic.h:218:62: warning: passing argument 1 of ‘kvm_apic_sw_enabled’ makes pointer from integer without a cast [-Wint-conversion]
+  218 |         return kvm_apic_present(vcpu) && kvm_apic_sw_enabled(kvm_apic_get(vcpu));
+      |                                                              ^~~~~~~~~~~~~~~~~~
+      |                                                              |
+      |                                                              int
+arch/x86/kvm/lapic.h:204:58: note: expected ‘struct kvm_lapic *’ but argument is of type ‘int’
+  204 | static inline bool kvm_apic_sw_enabled(struct kvm_lapic *apic)
+      |                                        ~~~~~~~~~~~~~~~~~~^~~~
+arch/x86/kvm/lapic.h: In function ‘kvm_vcpu_apicv_active’:
+arch/x86/kvm/lapic.h:228:59: error: invalid type argument of ‘->’ (have ‘int’)
+  228 |         return lapic_in_kernel(vcpu) && kvm_apic_get(vcpu)->apicv_active;
+      |                                                           ^~
+arch/x86/kvm/lapic.h: In function ‘kvm_apic_has_pending_init_or_sipi’:
+arch/x86/kvm/lapic.h:233:59: error: invalid type argument of ‘->’ (have ‘int’)
+  233 |         return lapic_in_kernel(vcpu) && kvm_apic_get(vcpu)->pending_events;
+      |                                                           ^~
+arch/x86/kvm/lapic.c:1563:42: note: expected ‘struct kvm_lapic *’ but argument is of type ‘int’
+ 1563 | static u32 __apic_read(struct kvm_lapic *apic, unsigned int offset)
+      |                        ~~~~~~~~~~~~~~~~~~^~~~
+In file included from ./include/linux/kernel.h:23,
+                 from ./include/linux/cpumask.h:10,
+                 from ./include/linux/smp.h:13,
+                 from ./include/linux/percpu.h:7,
+                 from ./include/linux/context_tracking_state.h:5,
+                 from ./include/linux/hardirq.h:5,
+                 from ./include/linux/kvm_host.h:7,
+                 from arch/x86/kvm/cpuid.c:13:
+arch/x86/kvm/lapic.h: In function ‘kvm_lapic_latched_init’:
+arch/x86/kvm/lapic.c: In function ‘kvm_apic_set_state’:
+arch/x86/kvm/lapic.h:250:85: error: invalid type argument of ‘->’ (have ‘int’)
+  250 |         return lapic_in_kernel(vcpu) && test_bit(KVM_APIC_INIT, &(kvm_apic_get(vcpu)->pending_events));
+      |                                                                                     ^~
+./include/linux/bitops.h:50:44: note: in definition of macro ‘bitop’
+   50 |           __builtin_constant_p((uintptr_t)(addr) != (uintptr_t)NULL) && \
+      |                                            ^~~~
+arch/x86/kvm/lapic.h:250:41: note: in expansion of macro ‘test_bit’
+  250 |         return lapic_in_kernel(vcpu) && test_bit(KVM_APIC_INIT, &(kvm_apic_get(vcpu)->pending_events));
+      |                                         ^~~~~~~~
+arch/x86/kvm/lapic.h:250:85: error: invalid type argument of ‘->’ (have ‘int’)
+  250 |         return lapic_in_kernel(vcpu) && test_bit(KVM_APIC_INIT, &(kvm_apic_get(vcpu)->pending_events));
+      |                                                                                     ^~
+./include/linux/bitops.h:51:23: note: in definition of macro ‘bitop’
+   51 |           (uintptr_t)(addr) != (uintptr_t)NULL &&                       \
+      |                       ^~~~
+arch/x86/kvm/lapic.h:250:41: note: in expansion of macro ‘test_bit’
+  250 |         return lapic_in_kernel(vcpu) && test_bit(KVM_APIC_INIT, &(kvm_apic_get(vcpu)->pending_events));
+      |                                         ^~~~~~~~
+arch/x86/kvm/lapic.h:250:85: error: invalid type argument of ‘->’ (have ‘int’)
+  250 |         return lapic_in_kernel(vcpu) && test_bit(KVM_APIC_INIT, &(kvm_apic_get(vcpu)->pending_events));
+      |                                                                                     ^~
+./include/linux/bitops.h:52:57: note: in definition of macro ‘bitop’
+   52 |           __builtin_constant_p(*(const unsigned long *)(addr))) ?       \
+      |                                                         ^~~~
+arch/x86/kvm/lapic.h:250:41: note: in expansion of macro ‘test_bit’
+  250 |         return lapic_in_kernel(vcpu) && test_bit(KVM_APIC_INIT, &(kvm_apic_get(vcpu)->pending_events));
+      |                                         ^~~~~~~~
+arch/x86/kvm/lapic.h:250:85: error: invalid type argument of ‘->’ (have ‘int’)
+  250 |         return lapic_in_kernel(vcpu) && test_bit(KVM_APIC_INIT, &(kvm_apic_get(vcpu)->pending_events));
+      |                                                                                     ^~
+./include/linux/bitops.h:53:24: note: in definition of macro ‘bitop’
+   53 |          const##op(nr, addr) : op(nr, addr))
+      |                        ^~~~
+arch/x86/kvm/lapic.h:250:41: note: in expansion of macro ‘test_bit’
+  250 |         return lapic_in_kernel(vcpu) && test_bit(KVM_APIC_INIT, &(kvm_apic_get(vcpu)->pending_events));
+      |                                         ^~~~~~~~
+arch/x86/kvm/lapic.h:250:85: error: invalid type argument of ‘->’ (have ‘int’)
+  250 |         return lapic_in_kernel(vcpu) && test_bit(KVM_APIC_INIT, &(kvm_apic_get(vcpu)->pending_events));
+      |                                                                                     ^~
+./include/linux/bitops.h:53:39: note: in definition of macro ‘bitop’
+   53 |          const##op(nr, addr) : op(nr, addr))
+      |                                       ^~~~
+arch/x86/kvm/lapic.h:250:41: note: in expansion of macro ‘test_bit’
+  250 |         return lapic_in_kernel(vcpu) && test_bit(KVM_APIC_INIT, &(kvm_apic_get(vcpu)->pending_events));
+      |                                         ^~~~~~~~
+arch/x86/kvm/lapic.c:2985:34: warning: initialization of ‘struct kvm_lapic *’ from ‘int’ makes pointer from integer without a cast [-Wint-conversion]
+ 2985 |         struct kvm_lapic *apic = kvm_apic_get(vcpu);
+      |                                  ^~~~~~~~~~~~
+arch/x86/kvm/lapic.c:2999:34: error: invalid type argument of ‘->’ (have ‘int’)
+ 2999 |         memcpy(kvm_apic_get(vcpu)->regs, s->regs, sizeof(*s));
+      |                                  ^~
+./include/linux/fortify-string.h:582:34: note: in definition of macro ‘__fortify_memcpy_chk’
+  582 |         const size_t __p_size = (p_size);                               \
+      |                                  ^~~~~~
+./include/linux/fortify-string.h:639:17: note: in expansion of macro ‘__struct_size’
+  639 |                 __struct_size(p), __struct_size(q),                     \
+      |                 ^~~~~~~~~~~~~
+arch/x86/kvm/lapic.c:2999:9: note: in expansion of macro ‘memcpy’
+ 2999 |         memcpy(kvm_apic_get(vcpu)->regs, s->regs, sizeof(*s));
+      |         ^~~~~~
+arch/x86/kvm/lapic.c:2999:34: error: invalid type argument of ‘->’ (have ‘int’)
+ 2999 |         memcpy(kvm_apic_get(vcpu)->regs, s->regs, sizeof(*s));
+      |                                  ^~
+./include/linux/fortify-string.h:584:40: note: in definition of macro ‘__fortify_memcpy_chk’
+  584 |         const size_t __p_size_field = (p_size_field);                   \
+      |                                        ^~~~~~~~~~~~
+./include/linux/fortify-string.h:640:17: note: in expansion of macro ‘__member_size’
+  640 |                 __member_size(p), __member_size(q),                     \
+      |                 ^~~~~~~~~~~~~
+arch/x86/kvm/lapic.c:2999:9: note: in expansion of macro ‘memcpy’
+ 2999 |         memcpy(kvm_apic_get(vcpu)->regs, s->regs, sizeof(*s));
+      |         ^~~~~~
+arch/x86/kvm/lapic.c:2999:34: error: invalid type argument of ‘->’ (have ‘int’)
+ 2999 |         memcpy(kvm_apic_get(vcpu)->regs, s->regs, sizeof(*s));
+      |                                  ^~
+./include/linux/fortify-string.h:593:27: note: in definition of macro ‘__fortify_memcpy_chk’
+  593 |         __underlying_##op(p, q, __fortify_size);                        \
+      |                           ^
+arch/x86/kvm/lapic.c:2999:9: note: in expansion of macro ‘memcpy’
+ 2999 |         memcpy(kvm_apic_get(vcpu)->regs, s->regs, sizeof(*s));
+      |         ^~~~~~
+arch/x86/kvm/lapic.c: In function ‘__kvm_migrate_apic_timer’:
+arch/x86/kvm/lapic.c:3036:36: error: invalid type argument of ‘->’ (have ‘int’)
+ 3036 |         timer = &kvm_apic_get(vcpu)->lapic_timer.timer;
+      |                                    ^~
+arch/x86/kvm/lapic.c: In function ‘kvm_lapic_sync_from_vapic’:
+arch/x86/kvm/lapic.c:3076:51: warning: passing argument 2 of ‘apic_sync_pv_eoi_from_guest’ makes pointer from integer without a cast [-Wint-conversion]
+ 3076 |                 apic_sync_pv_eoi_from_guest(vcpu, kvm_apic_get(vcpu));
+      |                                                   ^~~~~~~~~~~~~~~~~~
+      |                                                   |
+      |                                                   int
+arch/x86/kvm/lapic.c:3049:59: note: expected ‘struct kvm_lapic *’ but argument is of type ‘int’
+ 3049 |                                         struct kvm_lapic *apic)
+      |                                         ~~~~~~~~~~~~~~~~~~^~~~
+arch/x86/kvm/lapic.c:3081:65: error: invalid type argument of ‘->’ (have ‘int’)
+ 3081 |         if (kvm_read_guest_cached(vcpu->kvm, &kvm_apic_get(vcpu)->vapic_cache, &data,
+      |                                                                 ^~
+arch/x86/kvm/lapic.c:3085:22: warning: passing argument 1 of ‘apic_set_tpr’ makes pointer from integer without a cast [-Wint-conversion]
+ 3085 |         apic_set_tpr(kvm_apic_get(vcpu), data & 0xff);
+      |                      ^~~~~~~~~~~~~~~~~~
+      |                      |
+      |                      int
+arch/x86/kvm/lapic.c:978:44: note: expected ‘struct kvm_lapic *’ but argument is of type ‘int’
+  978 | static void apic_set_tpr(struct kvm_lapic *apic, u32 tpr)
+      |                          ~~~~~~~~~~~~~~~~~~^~~~
+arch/x86/kvm/lapic.c: In function ‘kvm_lapic_sync_to_vapic’:
+arch/x86/kvm/lapic.c:3118:34: warning: initialization of ‘struct kvm_lapic *’ from ‘int’ makes pointer from integer without a cast [-Wint-conversion]
+ 3118 |         struct kvm_lapic *apic = kvm_apic_get(vcpu);
+      |                                  ^~~~~~~~~~~~
+arch/x86/kvm/lapic.c:3134:62: error: invalid type argument of ‘->’ (have ‘int’)
+ 3134 |         kvm_write_guest_cached(vcpu->kvm, &kvm_apic_get(vcpu)->vapic_cache, &data,
+      |                                                              ^~
+arch/x86/kvm/lapic.c: In function ‘kvm_lapic_set_vapic_addr’:
+In file included from arch/x86/kvm/irq.h:19,
+                 from arch/x86/kvm/ioapic.h:7,
+                 from arch/x86/kvm/ioapic.c:46:
+arch/x86/kvm/lapic.h: In function ‘lapic_in_kernel’:
+arch/x86/kvm/lapic.h:189:24: error: implicit declaration of function ‘kvm_apic_get’; did you mean ‘kvm_fpu_get’? [-Werror=implicit-function-declaration]
+  189 |                 return kvm_apic_get(vcpu);
+      |                        ^~~~~~~~~~~~
+      |                        kvm_fpu_get
+arch/x86/kvm/lapic.c:3142:60: error: invalid type argument of ‘->’ (have ‘int’)
+ 3142 |                                         &kvm_apic_get(vcpu)->vapic_cache,
+      |                                                            ^~
+arch/x86/kvm/lapic.h: In function ‘kvm_apic_present’:
+arch/x86/kvm/lapic.h:213:61: warning: passing argument 1 of ‘kvm_apic_hw_enabled’ makes pointer from integer without a cast [-Wint-conversion]
+  213 |         return lapic_in_kernel(vcpu) && kvm_apic_hw_enabled(kvm_apic_get(vcpu));
+      |                                                             ^~~~~~~~~~~~~~~~~~
+      |                                                             |
+      |                                                             int
+arch/x86/kvm/lapic.h:195:58: note: expected ‘struct kvm_lapic *’ but argument is of type ‘int’
+  195 | static inline bool kvm_apic_hw_enabled(struct kvm_lapic *apic)
+      |                                        ~~~~~~~~~~~~~~~~~~^~~~
+arch/x86/kvm/lapic.h: In function ‘kvm_lapic_enabled’:
+arch/x86/kvm/lapic.h:218:62: warning: passing argument 1 of ‘kvm_apic_sw_enabled’ makes pointer from integer without a cast [-Wint-conversion]
+  218 |         return kvm_apic_present(vcpu) && kvm_apic_sw_enabled(kvm_apic_get(vcpu));
+      |                                                              ^~~~~~~~~~~~~~~~~~
+      |                                                              |
+      |                                                              int
+arch/x86/kvm/lapic.h:204:58: note: expected ‘struct kvm_lapic *’ but argument is of type ‘int’
+  204 | static inline bool kvm_apic_sw_enabled(struct kvm_lapic *apic)
+      |                                        ~~~~~~~~~~~~~~~~~~^~~~
+arch/x86/kvm/lapic.h: In function ‘kvm_vcpu_apicv_active’:
+arch/x86/kvm/lapic.h:228:59: error: invalid type argument of ‘->’ (have ‘int’)
+  228 |         return lapic_in_kernel(vcpu) && kvm_apic_get(vcpu)->apicv_active;
+      |                                                           ^~
+arch/x86/kvm/lapic.h: In function ‘kvm_apic_has_pending_init_or_sipi’:
+arch/x86/kvm/lapic.h:233:59: error: invalid type argument of ‘->’ (have ‘int’)
+  233 |         return lapic_in_kernel(vcpu) && kvm_apic_get(vcpu)->pending_events;
+      |                                                           ^~
+In file included from ./include/linux/kernel.h:23,
+                 from ./include/linux/cpumask.h:10,
+                 from ./include/linux/smp.h:13,
+                 from ./include/linux/percpu.h:7,
+                 from ./include/linux/context_tracking_state.h:5,
+                 from ./include/linux/hardirq.h:5,
+                 from ./include/linux/kvm_host.h:7,
+                 from arch/x86/kvm/ioapic.c:31:
+arch/x86/kvm/lapic.h: In function ‘kvm_lapic_latched_init’:
+arch/x86/kvm/lapic.h:250:85: error: invalid type argument of ‘->’ (have ‘int’)
+  250 |         return lapic_in_kernel(vcpu) && test_bit(KVM_APIC_INIT, &(kvm_apic_get(vcpu)->pending_events));
+      |                                                                                     ^~
+./include/linux/bitops.h:50:44: note: in definition of macro ‘bitop’
+   50 |           __builtin_constant_p((uintptr_t)(addr) != (uintptr_t)NULL) && \
+      |                                            ^~~~
+arch/x86/kvm/lapic.h:250:41: note: in expansion of macro ‘test_bit’
+  250 |         return lapic_in_kernel(vcpu) && test_bit(KVM_APIC_INIT, &(kvm_apic_get(vcpu)->pending_events));
+      |                                         ^~~~~~~~
+arch/x86/kvm/lapic.h:250:85: error: invalid type argument of ‘->’ (have ‘int’)
+  250 |         return lapic_in_kernel(vcpu) && test_bit(KVM_APIC_INIT, &(kvm_apic_get(vcpu)->pending_events));
+      |                                                                                     ^~
+./include/linux/bitops.h:51:23: note: in definition of macro ‘bitop’
+   51 |           (uintptr_t)(addr) != (uintptr_t)NULL &&                       \
+      |                       ^~~~
+arch/x86/kvm/lapic.h:250:41: note: in expansion of macro ‘test_bit’
+  250 |         return lapic_in_kernel(vcpu) && test_bit(KVM_APIC_INIT, &(kvm_apic_get(vcpu)->pending_events));
+      |                                         ^~~~~~~~
+arch/x86/kvm/lapic.c:3150:27: error: invalid type argument of ‘->’ (have ‘int’)
+ 3150 |         kvm_apic_get(vcpu)->vapic_addr = vapic_addr;
+      |                           ^~
+arch/x86/kvm/lapic.h:250:85: error: invalid type argument of ‘->’ (have ‘int’)
+  250 |         return lapic_in_kernel(vcpu) && test_bit(KVM_APIC_INIT, &(kvm_apic_get(vcpu)->pending_events));
+      |                                                                                     ^~
+./include/linux/bitops.h:52:57: note: in definition of macro ‘bitop’
+   52 |           __builtin_constant_p(*(const unsigned long *)(addr))) ?       \
+      |                                                         ^~~~
+arch/x86/kvm/lapic.h:250:41: note: in expansion of macro ‘test_bit’
+  250 |         return lapic_in_kernel(vcpu) && test_bit(KVM_APIC_INIT, &(kvm_apic_get(vcpu)->pending_events));
+      |                                         ^~~~~~~~
+arch/x86/kvm/lapic.h:250:85: error: invalid type argument of ‘->’ (have ‘int’)
+  250 |         return lapic_in_kernel(vcpu) && test_bit(KVM_APIC_INIT, &(kvm_apic_get(vcpu)->pending_events));
+      |                                                                                     ^~
+./include/linux/bitops.h:53:24: note: in definition of macro ‘bitop’
+   53 |          const##op(nr, addr) : op(nr, addr))
+      |                        ^~~~
+arch/x86/kvm/lapic.h:250:41: note: in expansion of macro ‘test_bit’
+  250 |         return lapic_in_kernel(vcpu) && test_bit(KVM_APIC_INIT, &(kvm_apic_get(vcpu)->pending_events));
+      |                                         ^~~~~~~~
+arch/x86/kvm/lapic.h:250:85: error: invalid type argument of ‘->’ (have ‘int’)
+  250 |         return lapic_in_kernel(vcpu) && test_bit(KVM_APIC_INIT, &(kvm_apic_get(vcpu)->pending_events));
+      |                                                                                     ^~
+./include/linux/bitops.h:53:39: note: in definition of macro ‘bitop’
+   53 |          const##op(nr, addr) : op(nr, addr))
+      |                                       ^~~~
+arch/x86/kvm/lapic.h:250:41: note: in expansion of macro ‘test_bit’
+  250 |         return lapic_in_kernel(vcpu) && test_bit(KVM_APIC_INIT, &(kvm_apic_get(vcpu)->pending_events));
+      |                                         ^~~~~~~~
+arch/x86/kvm/lapic.c: In function ‘kvm_x2apic_msr_write’:
+arch/x86/kvm/lapic.c:3200:34: warning: initialization of ‘struct kvm_lapic *’ from ‘int’ makes pointer from integer without a cast [-Wint-conversion]
+ 3200 |         struct kvm_lapic *apic = kvm_apic_get(vcpu);
+      |                                  ^~~~~~~~~~~~
+arch/x86/kvm/lapic.c: In function ‘kvm_x2apic_msr_read’:
+arch/x86/kvm/lapic.c:3211:34: warning: initialization of ‘struct kvm_lapic *’ from ‘int’ makes pointer from integer without a cast [-Wint-conversion]
+ 3211 |         struct kvm_lapic *apic = kvm_apic_get(vcpu);
+      |                                  ^~~~~~~~~~~~
+arch/x86/kvm/lapic.c: In function ‘kvm_hv_vapic_msr_write’:
+arch/x86/kvm/lapic.c:3225:36: warning: passing argument 1 of ‘kvm_lapic_msr_write’ makes pointer from integer without a cast [-Wint-conversion]
+ 3225 |         return kvm_lapic_msr_write(kvm_apic_get(vcpu), reg, data);
+      |                                    ^~~~~~~~~~~~~~~~~~
+      |                                    |
+      |                                    int
+arch/x86/kvm/ioapic.c: In function ‘kvm_ioapic_update_eoi_one’:
+arch/x86/kvm/ioapic.c:536:34: warning: initialization of ‘struct kvm_lapic *’ from ‘int’ makes pointer from integer without a cast [-Wint-conversion]
+  536 |         struct kvm_lapic *apic = kvm_apic_get(vcpu);
+      |                                  ^~~~~~~~~~~~
+arch/x86/kvm/lapic.c:3181:50: note: expected ‘struct kvm_lapic *’ but argument is of type ‘int’
+ 3181 | static int kvm_lapic_msr_write(struct kvm_lapic *apic, u32 reg, u64 data)
+      |                                ~~~~~~~~~~~~~~~~~~^~~~
+arch/x86/kvm/lapic.c: In function ‘kvm_hv_vapic_msr_read’:
+arch/x86/kvm/lapic.c:3233:35: warning: passing argument 1 of ‘kvm_lapic_msr_read’ makes pointer from integer without a cast [-Wint-conversion]
+ 3233 |         return kvm_lapic_msr_read(kvm_apic_get(vcpu), reg, data);
+      |                                   ^~~~~~~~~~~~~~~~~~
+      |                                   |
+      |                                   int
+arch/x86/kvm/lapic.c:3164:49: note: expected ‘struct kvm_lapic *’ but argument is of type ‘int’
+ 3164 | static int kvm_lapic_msr_read(struct kvm_lapic *apic, u32 reg, u64 *data)
+      |                               ~~~~~~~~~~~~~~~~~~^~~~
+arch/x86/kvm/lapic.c: In function ‘kvm_apic_accept_events’:
+arch/x86/kvm/lapic.c:3264:34: warning: initialization of ‘struct kvm_lapic *’ from ‘int’ makes pointer from integer without a cast [-Wint-conversion]
+ 3264 |         struct kvm_lapic *apic = kvm_apic_get(vcpu);
+      |                                  ^~~~~~~~~~~~
+arch/x86/kvm/lapic.c: At top level:
+arch/x86/kvm/lapic.c:3320:19: warning: no previous prototype for ‘kvm_apic_get’ [-Wmissing-prototypes]
+ 3320 | struct kvm_lapic *kvm_apic_get(struct kvm_vcpu *cpu) {
+      |                   ^~~~~~~~~~~~
+arch/x86/kvm/lapic.c:3320:19: error: conflicting types for ‘kvm_apic_get’; have ‘struct kvm_lapic *(struct kvm_vcpu *)’
+arch/x86/kvm/lapic.h:189:24: note: previous implicit declaration of ‘kvm_apic_get’ with type ‘int()’
+  189 |                 return kvm_apic_get(vcpu);
+      |                        ^~~~~~~~~~~~
+arch/x86/kvm/lapic.c: In function ‘kvm_apic_get’:
+arch/x86/kvm/lapic.c:3321:22: error: invalid type argument of ‘->’ (have ‘struct kvm_vcpu_arch’)
+ 3321 |         if (cpu->arch->get_apic) {
+      |                      ^~
+arch/x86/kvm/lapic.c:3322:33: error: invalid type argument of ‘->’ (have ‘struct kvm_vcpu_arch’)
+ 3322 |                 return cpu->arch->get_apic(
+      |                                 ^~
+arch/x86/kvm/lapic.c:3323:9: error: expected expression before ‘return’
+ 3323 |         return cpu->arch->apic;
+      |         ^~~~~~
+arch/x86/kvm/lapic.c:3323:32: error: expected ‘;’ before ‘}’ token
+ 3323 |         return cpu->arch->apic;
+      |                                ^
+      |                                ;
+ 3324 | }
+      | ~                               
+arch/x86/kvm/lapic.c: In function ‘kvm_apic_set’:
+arch/x86/kvm/lapic.c:3327:18: error: invalid type argument of ‘->’ (have ‘struct kvm_vcpu_arch’)
+ 3327 |         cpu->arch->apic = apic;
+      |                  ^~
+arch/x86/kvm/lapic.c: In function ‘kvm_apic_get’:
+arch/x86/kvm/lapic.c:3328:1: error: expected declaration or statement at end of input
+ 3328 | }
+      | ^
+In file included from arch/x86/kvm/irq.h:19,
+                 from arch/x86/kvm/irq_comm.c:20:
+arch/x86/kvm/lapic.h: In function ‘lapic_in_kernel’:
+arch/x86/kvm/lapic.h:189:24: error: implicit declaration of function ‘kvm_apic_get’; did you mean ‘kvm_fpu_get’? [-Werror=implicit-function-declaration]
+  189 |                 return kvm_apic_get(vcpu);
+      |                        ^~~~~~~~~~~~
+      |                        kvm_fpu_get
+In file included from arch/x86/kvm/pmu.c:23:
+arch/x86/kvm/lapic.h: In function ‘lapic_in_kernel’:
+arch/x86/kvm/lapic.h:189:24: error: implicit declaration of function ‘kvm_apic_get’; did you mean ‘kvm_fpu_get’? [-Werror=implicit-function-declaration]
+  189 |                 return kvm_apic_get(vcpu);
+      |                        ^~~~~~~~~~~~
+      |                        kvm_fpu_get
+arch/x86/kvm/lapic.h: In function ‘kvm_apic_present’:
+arch/x86/kvm/lapic.h:213:61: warning: passing argument 1 of ‘kvm_apic_hw_enabled’ makes pointer from integer without a cast [-Wint-conversion]
+  213 |         return lapic_in_kernel(vcpu) && kvm_apic_hw_enabled(kvm_apic_get(vcpu));
+      |                                                             ^~~~~~~~~~~~~~~~~~
+      |                                                             |
+      |                                                             int
+arch/x86/kvm/lapic.h:195:58: note: expected ‘struct kvm_lapic *’ but argument is of type ‘int’
+  195 | static inline bool kvm_apic_hw_enabled(struct kvm_lapic *apic)
+      |                                        ~~~~~~~~~~~~~~~~~~^~~~
+arch/x86/kvm/lapic.h: In function ‘kvm_lapic_enabled’:
+arch/x86/kvm/lapic.h:218:62: warning: passing argument 1 of ‘kvm_apic_sw_enabled’ makes pointer from integer without a cast [-Wint-conversion]
+  218 |         return kvm_apic_present(vcpu) && kvm_apic_sw_enabled(kvm_apic_get(vcpu));
+      |                                                              ^~~~~~~~~~~~~~~~~~
+      |                                                              |
+      |                                                              int
+arch/x86/kvm/lapic.h:204:58: note: expected ‘struct kvm_lapic *’ but argument is of type ‘int’
+  204 | static inline bool kvm_apic_sw_enabled(struct kvm_lapic *apic)
+      |                                        ~~~~~~~~~~~~~~~~~~^~~~
+arch/x86/kvm/lapic.h: In function ‘kvm_apic_present’:
+arch/x86/kvm/lapic.h:213:61: warning: passing argument 1 of ‘kvm_apic_hw_enabled’ makes pointer from integer without a cast [-Wint-conversion]
+  213 |         return lapic_in_kernel(vcpu) && kvm_apic_hw_enabled(kvm_apic_get(vcpu));
+      |                                                             ^~~~~~~~~~~~~~~~~~
+      |                                                             |
+      |                                                             int
+arch/x86/kvm/lapic.h:195:58: note: expected ‘struct kvm_lapic *’ but argument is of type ‘int’
+  195 | static inline bool kvm_apic_hw_enabled(struct kvm_lapic *apic)
+      |                                        ~~~~~~~~~~~~~~~~~~^~~~
+arch/x86/kvm/lapic.h: In function ‘kvm_vcpu_apicv_active’:
+arch/x86/kvm/lapic.h:228:59: error: invalid type argument of ‘->’ (have ‘int’)
+  228 |         return lapic_in_kernel(vcpu) && kvm_apic_get(vcpu)->apicv_active;
+      |                                                           ^~
+arch/x86/kvm/lapic.h: In function ‘kvm_lapic_enabled’:
+arch/x86/kvm/lapic.h: In function ‘kvm_apic_has_pending_init_or_sipi’:
+arch/x86/kvm/lapic.h:218:62: warning: passing argument 1 of ‘kvm_apic_sw_enabled’ makes pointer from integer without a cast [-Wint-conversion]
+  218 |         return kvm_apic_present(vcpu) && kvm_apic_sw_enabled(kvm_apic_get(vcpu));
+      |                                                              ^~~~~~~~~~~~~~~~~~
+      |                                                              |
+      |                                                              int
+arch/x86/kvm/lapic.h:233:59: error: invalid type argument of ‘->’ (have ‘int’)
+  233 |         return lapic_in_kernel(vcpu) && kvm_apic_get(vcpu)->pending_events;
+      |                                                           ^~
+arch/x86/kvm/lapic.h:204:58: note: expected ‘struct kvm_lapic *’ but argument is of type ‘int’
+  204 | static inline bool kvm_apic_sw_enabled(struct kvm_lapic *apic)
+      |                                        ~~~~~~~~~~~~~~~~~~^~~~
+arch/x86/kvm/lapic.h: In function ‘kvm_vcpu_apicv_active’:
+arch/x86/kvm/lapic.h:228:59: error: invalid type argument of ‘->’ (have ‘int’)
+  228 |         return lapic_in_kernel(vcpu) && kvm_apic_get(vcpu)->apicv_active;
+      |                                                           ^~
+arch/x86/kvm/lapic.h: In function ‘kvm_apic_has_pending_init_or_sipi’:
+arch/x86/kvm/lapic.h:233:59: error: invalid type argument of ‘->’ (have ‘int’)
+  233 |         return lapic_in_kernel(vcpu) && kvm_apic_get(vcpu)->pending_events;
+      |                                                           ^~
+In file included from ./include/linux/kernel.h:23,
+                 from ./include/linux/cpumask.h:10,
+                 from ./include/linux/smp.h:13,
+                 from ./include/linux/percpu.h:7,
+                 from ./include/linux/context_tracking_state.h:5,
+                 from ./include/linux/hardirq.h:5,
+                 from ./include/linux/kvm_host.h:7,
+                 from arch/x86/kvm/pmu.c:15:
+arch/x86/kvm/lapic.h: In function ‘kvm_lapic_latched_init’:
+In file included from ./include/linux/kernel.h:23,
+                 from ./include/linux/cpumask.h:10,
+                 from ./include/linux/smp.h:13,
+                 from ./include/linux/percpu.h:7,
+                 from ./include/linux/context_tracking_state.h:5,
+                 from ./include/linux/hardirq.h:5,
+                 from ./include/linux/kvm_host.h:7,
+                 from arch/x86/kvm/irq_comm.c:13:
+arch/x86/kvm/lapic.h: In function ‘kvm_lapic_latched_init’:
+arch/x86/kvm/lapic.h:250:85: error: invalid type argument of ‘->’ (have ‘int’)
+  250 |         return lapic_in_kernel(vcpu) && test_bit(KVM_APIC_INIT, &(kvm_apic_get(vcpu)->pending_events));
+      |                                                                                     ^~
+./include/linux/bitops.h:50:44: note: in definition of macro ‘bitop’
+   50 |           __builtin_constant_p((uintptr_t)(addr) != (uintptr_t)NULL) && \
+      |                                            ^~~~
+arch/x86/kvm/lapic.h:250:41: note: in expansion of macro ‘test_bit’
+  250 |         return lapic_in_kernel(vcpu) && test_bit(KVM_APIC_INIT, &(kvm_apic_get(vcpu)->pending_events));
+      |                                         ^~~~~~~~
+arch/x86/kvm/lapic.h:250:85: error: invalid type argument of ‘->’ (have ‘int’)
+  250 |         return lapic_in_kernel(vcpu) && test_bit(KVM_APIC_INIT, &(kvm_apic_get(vcpu)->pending_events));
+      |                                                                                     ^~
+./include/linux/bitops.h:51:23: note: in definition of macro ‘bitop’
+   51 |           (uintptr_t)(addr) != (uintptr_t)NULL &&                       \
+      |                       ^~~~
+arch/x86/kvm/lapic.h:250:41: note: in expansion of macro ‘test_bit’
+  250 |         return lapic_in_kernel(vcpu) && test_bit(KVM_APIC_INIT, &(kvm_apic_get(vcpu)->pending_events));
+      |                                         ^~~~~~~~
+arch/x86/kvm/lapic.h:250:85: error: invalid type argument of ‘->’ (have ‘int’)
+  250 |         return lapic_in_kernel(vcpu) && test_bit(KVM_APIC_INIT, &(kvm_apic_get(vcpu)->pending_events));
+      |                                                                                     ^~
+./include/linux/bitops.h:50:44: note: in definition of macro ‘bitop’
+   50 |           __builtin_constant_p((uintptr_t)(addr) != (uintptr_t)NULL) && \
+      |                                            ^~~~
+arch/x86/kvm/lapic.h:250:41: note: in expansion of macro ‘test_bit’
+  250 |         return lapic_in_kernel(vcpu) && test_bit(KVM_APIC_INIT, &(kvm_apic_get(vcpu)->pending_events));
+      |                                         ^~~~~~~~
+arch/x86/kvm/lapic.h:250:85: error: invalid type argument of ‘->’ (have ‘int’)
+  250 |         return lapic_in_kernel(vcpu) && test_bit(KVM_APIC_INIT, &(kvm_apic_get(vcpu)->pending_events));
+      |                                                                                     ^~
+./include/linux/bitops.h:52:57: note: in definition of macro ‘bitop’
+   52 |           __builtin_constant_p(*(const unsigned long *)(addr))) ?       \
+      |                                                         ^~~~
+arch/x86/kvm/lapic.h:250:41: note: in expansion of macro ‘test_bit’
+  250 |         return lapic_in_kernel(vcpu) && test_bit(KVM_APIC_INIT, &(kvm_apic_get(vcpu)->pending_events));
+      |                                         ^~~~~~~~
+arch/x86/kvm/lapic.h:250:85: error: invalid type argument of ‘->’ (have ‘int’)
+  250 |         return lapic_in_kernel(vcpu) && test_bit(KVM_APIC_INIT, &(kvm_apic_get(vcpu)->pending_events));
+      |                                                                                     ^~
+./include/linux/bitops.h:51:23: note: in definition of macro ‘bitop’
+   51 |           (uintptr_t)(addr) != (uintptr_t)NULL &&                       \
+      |                       ^~~~
+arch/x86/kvm/lapic.h:250:41: note: in expansion of macro ‘test_bit’
+  250 |         return lapic_in_kernel(vcpu) && test_bit(KVM_APIC_INIT, &(kvm_apic_get(vcpu)->pending_events));
+      |                                         ^~~~~~~~
+arch/x86/kvm/lapic.h:250:85: error: invalid type argument of ‘->’ (have ‘int’)
+  250 |         return lapic_in_kernel(vcpu) && test_bit(KVM_APIC_INIT, &(kvm_apic_get(vcpu)->pending_events));
+      |                                                                                     ^~
+./include/linux/bitops.h:53:24: note: in definition of macro ‘bitop’
+   53 |          const##op(nr, addr) : op(nr, addr))
+      |                        ^~~~
+arch/x86/kvm/lapic.h:250:41: note: in expansion of macro ‘test_bit’
+  250 |         return lapic_in_kernel(vcpu) && test_bit(KVM_APIC_INIT, &(kvm_apic_get(vcpu)->pending_events));
+      |                                         ^~~~~~~~
+arch/x86/kvm/lapic.h:250:85: error: invalid type argument of ‘->’ (have ‘int’)
+  250 |         return lapic_in_kernel(vcpu) && test_bit(KVM_APIC_INIT, &(kvm_apic_get(vcpu)->pending_events));
+      |                                                                                     ^~
+./include/linux/bitops.h:52:57: note: in definition of macro ‘bitop’
+   52 |           __builtin_constant_p(*(const unsigned long *)(addr))) ?       \
+      |                                                         ^~~~
+arch/x86/kvm/lapic.h:250:41: note: in expansion of macro ‘test_bit’
+  250 |         return lapic_in_kernel(vcpu) && test_bit(KVM_APIC_INIT, &(kvm_apic_get(vcpu)->pending_events));
+      |                                         ^~~~~~~~
+arch/x86/kvm/lapic.h:250:85: error: invalid type argument of ‘->’ (have ‘int’)
+  250 |         return lapic_in_kernel(vcpu) && test_bit(KVM_APIC_INIT, &(kvm_apic_get(vcpu)->pending_events));
+      |                                                                                     ^~
+./include/linux/bitops.h:53:39: note: in definition of macro ‘bitop’
+   53 |          const##op(nr, addr) : op(nr, addr))
+      |                                       ^~~~
+arch/x86/kvm/lapic.h:250:41: note: in expansion of macro ‘test_bit’
+  250 |         return lapic_in_kernel(vcpu) && test_bit(KVM_APIC_INIT, &(kvm_apic_get(vcpu)->pending_events));
+      |                                         ^~~~~~~~
+arch/x86/kvm/lapic.h:250:85: error: invalid type argument of ‘->’ (have ‘int’)
+  250 |         return lapic_in_kernel(vcpu) && test_bit(KVM_APIC_INIT, &(kvm_apic_get(vcpu)->pending_events));
+      |                                                                                     ^~
+./include/linux/bitops.h:53:24: note: in definition of macro ‘bitop’
+   53 |          const##op(nr, addr) : op(nr, addr))
+      |                        ^~~~
+arch/x86/kvm/lapic.h:250:41: note: in expansion of macro ‘test_bit’
+  250 |         return lapic_in_kernel(vcpu) && test_bit(KVM_APIC_INIT, &(kvm_apic_get(vcpu)->pending_events));
+      |                                         ^~~~~~~~
+arch/x86/kvm/lapic.h:250:85: error: invalid type argument of ‘->’ (have ‘int’)
+  250 |         return lapic_in_kernel(vcpu) && test_bit(KVM_APIC_INIT, &(kvm_apic_get(vcpu)->pending_events));
+      |                                                                                     ^~
+./include/linux/bitops.h:53:39: note: in definition of macro ‘bitop’
+   53 |          const##op(nr, addr) : op(nr, addr))
+      |                                       ^~~~
+arch/x86/kvm/lapic.h:250:41: note: in expansion of macro ‘test_bit’
+  250 |         return lapic_in_kernel(vcpu) && test_bit(KVM_APIC_INIT, &(kvm_apic_get(vcpu)->pending_events));
+      |                                         ^~~~~~~~
+cc1: some warnings being treated as errors
+arch/x86/kvm/lapic.h: In function ‘kvm_vcpu_apicv_active’:
+arch/x86/kvm/lapic.h:229:1: error: control reaches end of non-void function [-Werror=return-type]
+  229 | }
+      | ^
+arch/x86/kvm/irq_comm.c: In function ‘kvm_irq_delivery_to_apic’:
+arch/x86/kvm/irq_comm.c:78:48: warning: passing argument 1 of ‘kvm_apic_sw_enabled’ makes pointer from integer without a cast [-Wint-conversion]
+   78 |                 } else if (kvm_apic_sw_enabled(kvm_apic_get(vcpu))) {
+      |                                                ^~~~~~~~~~~~~~~~~~
+      |                                                |
+      |                                                int
+arch/x86/kvm/lapic.h:204:58: note: expected ‘struct kvm_lapic *’ but argument is of type ‘int’
+  204 | static inline bool kvm_apic_sw_enabled(struct kvm_lapic *apic)
+      |                                        ~~~~~~~~~~~~~~~~~~^~~~
+make[4]: *** [scripts/Makefile.build:243: arch/x86/kvm/ioapic.o] Error 1
+arch/x86/kvm/pmu.c: In function ‘kvm_pmu_deliver_pmi’:
+arch/x86/kvm/pmu.c:598:40: warning: passing argument 1 of ‘kvm_apic_local_deliver’ makes pointer from integer without a cast [-Wint-conversion]
+  598 |                 kvm_apic_local_deliver(kvm_apic_get(vcpu), APIC_LVTPC);
+      |                                        ^~~~~~~~~~~~~~~~~~
+      |                                        |
+      |                                        int
+arch/x86/kvm/lapic.h:113:46: note: expected ‘struct kvm_lapic *’ but argument is of type ‘int’
+  113 | int kvm_apic_local_deliver(struct kvm_lapic *apic, int lvt_type);
+      |                            ~~~~~~~~~~~~~~~~~~^~~~
+arch/x86/kvm/lapic.c: In function ‘kvm_lapic_hv_timer_in_use’:
+arch/x86/kvm/lapic.c:2086:1: error: control reaches end of non-void function [-Werror=return-type]
+ 2086 | }
+      | ^
+cc1: some warnings being treated as errors
+make[4]: *** [scripts/Makefile.build:243: arch/x86/kvm/irq_comm.o] Error 1
+cc1: some warnings being treated as errors
+arch/x86/kvm/lapic.h: In function ‘kvm_apic_has_pending_init_or_sipi’:
+arch/x86/kvm/lapic.h:234:1: error: control reaches end of non-void function [-Werror=return-type]
+  234 | }
+      | ^
+arch/x86/kvm/lapic.c: In function ‘kvm_apic_get’:
+arch/x86/kvm/lapic.c:3329: error: control reaches end of non-void function [-Werror=return-type]
+arch/x86/kvm/lapic.c: At top level:
+arch/x86/kvm/lapic.c:3326:6: warning: ‘kvm_apic_set’ defined but not used [-Wunused-function]
+ 3326 | void kvm_apic_set(struct kvm_vcpu *vcpu, struct kvm_lapic *apic) {
+      |      ^~~~~~~~~~~~
+make[4]: *** [scripts/Makefile.build:243: arch/x86/kvm/pmu.o] Error 1
+cc1: some warnings being treated as errors
+In file included from arch/x86/kvm/debugfs.c:11:
+arch/x86/kvm/lapic.h: In function ‘lapic_in_kernel’:
+arch/x86/kvm/lapic.h:189:24: error: implicit declaration of function ‘kvm_apic_get’; did you mean ‘kvm_fpu_get’? [-Werror=implicit-function-declaration]
+  189 |                 return kvm_apic_get(vcpu);
+      |                        ^~~~~~~~~~~~
+      |                        kvm_fpu_get
+arch/x86/kvm/lapic.h: In function ‘kvm_apic_present’:
+arch/x86/kvm/lapic.h:213:61: warning: passing argument 1 of ‘kvm_apic_hw_enabled’ makes pointer from integer without a cast [-Wint-conversion]
+  213 |         return lapic_in_kernel(vcpu) && kvm_apic_hw_enabled(kvm_apic_get(vcpu));
+      |                                                             ^~~~~~~~~~~~~~~~~~
+      |                                                             |
+      |                                                             int
+arch/x86/kvm/lapic.h:195:58: note: expected ‘struct kvm_lapic *’ but argument is of type ‘int’
+  195 | static inline bool kvm_apic_hw_enabled(struct kvm_lapic *apic)
+      |                                        ~~~~~~~~~~~~~~~~~~^~~~
+arch/x86/kvm/lapic.h: In function ‘kvm_lapic_enabled’:
+arch/x86/kvm/lapic.h:218:62: warning: passing argument 1 of ‘kvm_apic_sw_enabled’ makes pointer from integer without a cast [-Wint-conversion]
+  218 |         return kvm_apic_present(vcpu) && kvm_apic_sw_enabled(kvm_apic_get(vcpu));
+      |                                                              ^~~~~~~~~~~~~~~~~~
+      |                                                              |
+      |                                                              int
+arch/x86/kvm/lapic.h:204:58: note: expected ‘struct kvm_lapic *’ but argument is of type ‘int’
+  204 | static inline bool kvm_apic_sw_enabled(struct kvm_lapic *apic)
+      |                                        ~~~~~~~~~~~~~~~~~~^~~~
+arch/x86/kvm/lapic.h: In function ‘kvm_vcpu_apicv_active’:
+arch/x86/kvm/lapic.h:228:59: error: invalid type argument of ‘->’ (have ‘int’)
+  228 |         return lapic_in_kernel(vcpu) && kvm_apic_get(vcpu)->apicv_active;
+      |                                                           ^~
+arch/x86/kvm/lapic.h: In function ‘kvm_apic_has_pending_init_or_sipi’:
+arch/x86/kvm/lapic.h:233:59: error: invalid type argument of ‘->’ (have ‘int’)
+  233 |         return lapic_in_kernel(vcpu) && kvm_apic_get(vcpu)->pending_events;
+      |                                                           ^~
+In file included from ./include/linux/kernel.h:23,
+                 from ./include/linux/cpumask.h:10,
+                 from ./include/linux/smp.h:13,
+                 from ./include/linux/percpu.h:7,
+                 from ./include/linux/context_tracking_state.h:5,
+                 from ./include/linux/hardirq.h:5,
+                 from ./include/linux/kvm_host.h:7,
+                 from arch/x86/kvm/debugfs.c:9:
+arch/x86/kvm/lapic.h: In function ‘kvm_lapic_latched_init’:
+arch/x86/kvm/lapic.h:250:85: error: invalid type argument of ‘->’ (have ‘int’)
+  250 |         return lapic_in_kernel(vcpu) && test_bit(KVM_APIC_INIT, &(kvm_apic_get(vcpu)->pending_events));
+      |                                                                                     ^~
+./include/linux/bitops.h:50:44: note: in definition of macro ‘bitop’
+   50 |           __builtin_constant_p((uintptr_t)(addr) != (uintptr_t)NULL) && \
+      |                                            ^~~~
+arch/x86/kvm/lapic.h:250:41: note: in expansion of macro ‘test_bit’
+  250 |         return lapic_in_kernel(vcpu) && test_bit(KVM_APIC_INIT, &(kvm_apic_get(vcpu)->pending_events));
+      |                                         ^~~~~~~~
+arch/x86/kvm/lapic.h:250:85: error: invalid type argument of ‘->’ (have ‘int’)
+  250 |         return lapic_in_kernel(vcpu) && test_bit(KVM_APIC_INIT, &(kvm_apic_get(vcpu)->pending_events));
+      |                                                                                     ^~
+./include/linux/bitops.h:51:23: note: in definition of macro ‘bitop’
+   51 |           (uintptr_t)(addr) != (uintptr_t)NULL &&                       \
+      |                       ^~~~
+arch/x86/kvm/lapic.h:250:41: note: in expansion of macro ‘test_bit’
+  250 |         return lapic_in_kernel(vcpu) && test_bit(KVM_APIC_INIT, &(kvm_apic_get(vcpu)->pending_events));
+      |                                         ^~~~~~~~
+arch/x86/kvm/lapic.h:250:85: error: invalid type argument of ‘->’ (have ‘int’)
+  250 |         return lapic_in_kernel(vcpu) && test_bit(KVM_APIC_INIT, &(kvm_apic_get(vcpu)->pending_events));
+      |                                                                                     ^~
+./include/linux/bitops.h:52:57: note: in definition of macro ‘bitop’
+   52 |           __builtin_constant_p(*(const unsigned long *)(addr))) ?       \
+      |                                                         ^~~~
+arch/x86/kvm/lapic.h:250:41: note: in expansion of macro ‘test_bit’
+  250 |         return lapic_in_kernel(vcpu) && test_bit(KVM_APIC_INIT, &(kvm_apic_get(vcpu)->pending_events));
+      |                                         ^~~~~~~~
+arch/x86/kvm/lapic.h:250:85: error: invalid type argument of ‘->’ (have ‘int’)
+  250 |         return lapic_in_kernel(vcpu) && test_bit(KVM_APIC_INIT, &(kvm_apic_get(vcpu)->pending_events));
+      |                                                                                     ^~
+./include/linux/bitops.h:53:24: note: in definition of macro ‘bitop’
+   53 |          const##op(nr, addr) : op(nr, addr))
+      |                        ^~~~
+arch/x86/kvm/lapic.h:250:41: note: in expansion of macro ‘test_bit’
+  250 |         return lapic_in_kernel(vcpu) && test_bit(KVM_APIC_INIT, &(kvm_apic_get(vcpu)->pending_events));
+      |                                         ^~~~~~~~
+arch/x86/kvm/lapic.h:250:85: error: invalid type argument of ‘->’ (have ‘int’)
+  250 |         return lapic_in_kernel(vcpu) && test_bit(KVM_APIC_INIT, &(kvm_apic_get(vcpu)->pending_events));
+      |                                                                                     ^~
+./include/linux/bitops.h:53:39: note: in definition of macro ‘bitop’
+   53 |          const##op(nr, addr) : op(nr, addr))
+      |                                       ^~~~
+arch/x86/kvm/lapic.h:250:41: note: in expansion of macro ‘test_bit’
+  250 |         return lapic_in_kernel(vcpu) && test_bit(KVM_APIC_INIT, &(kvm_apic_get(vcpu)->pending_events));
+      |                                         ^~~~~~~~
+make[4]: *** [scripts/Makefile.build:243: arch/x86/kvm/lapic.o] Error 1
+arch/x86/kvm/debugfs.c: In function ‘vcpu_get_timer_advance_ns’:
+arch/x86/kvm/debugfs.c:18:34: error: invalid type argument of ‘->’ (have ‘int’)
+   18 |         *val = kvm_apic_get(vcpu)->lapic_timer.timer_advance_ns;
+      |                                  ^~
+In file included from ./arch/x86/kvm/irq.h:19,
+                 from arch/x86/kvm/mmu/mmu.c:19:
+./arch/x86/kvm/lapic.h: In function ‘lapic_in_kernel’:
+./arch/x86/kvm/lapic.h:189:24: error: implicit declaration of function ‘kvm_apic_get’; did you mean ‘kvm_fpu_get’? [-Werror=implicit-function-declaration]
+  189 |                 return kvm_apic_get(vcpu);
+      |                        ^~~~~~~~~~~~
+      |                        kvm_fpu_get
+./arch/x86/kvm/lapic.h: In function ‘kvm_apic_present’:
+./arch/x86/kvm/lapic.h:213:61: warning: passing argument 1 of ‘kvm_apic_hw_enabled’ makes pointer from integer without a cast [-Wint-conversion]
+  213 |         return lapic_in_kernel(vcpu) && kvm_apic_hw_enabled(kvm_apic_get(vcpu));
+      |                                                             ^~~~~~~~~~~~~~~~~~
+      |                                                             |
+      |                                                             int
+./arch/x86/kvm/lapic.h:195:58: note: expected ‘struct kvm_lapic *’ but argument is of type ‘int’
+  195 | static inline bool kvm_apic_hw_enabled(struct kvm_lapic *apic)
+      |                                        ~~~~~~~~~~~~~~~~~~^~~~
+./arch/x86/kvm/lapic.h: In function ‘kvm_lapic_enabled’:
+./arch/x86/kvm/lapic.h:218:62: warning: passing argument 1 of ‘kvm_apic_sw_enabled’ makes pointer from integer without a cast [-Wint-conversion]
+  218 |         return kvm_apic_present(vcpu) && kvm_apic_sw_enabled(kvm_apic_get(vcpu));
+      |                                                              ^~~~~~~~~~~~~~~~~~
+      |                                                              |
+      |                                                              int
+./arch/x86/kvm/lapic.h:204:58: note: expected ‘struct kvm_lapic *’ but argument is of type ‘int’
+  204 | static inline bool kvm_apic_sw_enabled(struct kvm_lapic *apic)
+      |                                        ~~~~~~~~~~~~~~~~~~^~~~
+./arch/x86/kvm/lapic.h: In function ‘kvm_vcpu_apicv_active’:
+./arch/x86/kvm/lapic.h:228:59: error: invalid type argument of ‘->’ (have ‘int’)
+  228 |         return lapic_in_kernel(vcpu) && kvm_apic_get(vcpu)->apicv_active;
+      |                                                           ^~
+./arch/x86/kvm/lapic.h: In function ‘kvm_apic_has_pending_init_or_sipi’:
+./arch/x86/kvm/lapic.h:233:59: error: invalid type argument of ‘->’ (have ‘int’)
+  233 |         return lapic_in_kernel(vcpu) && kvm_apic_get(vcpu)->pending_events;
+      |                                                           ^~
+In file included from ./include/linux/log2.h:12,
+                 from ./include/asm-generic/getorder.h:8,
+                 from ./arch/x86/include/asm/page.h:86,
+                 from ./include/linux/mm_types_task.h:13,
+                 from ./include/linux/mm_types.h:5,
+                 from ./arch/x86/kvm/irq.h:13:
+./arch/x86/kvm/lapic.h: In function ‘kvm_lapic_latched_init’:
+./arch/x86/kvm/lapic.h:250:85: error: invalid type argument of ‘->’ (have ‘int’)
+  250 |         return lapic_in_kernel(vcpu) && test_bit(KVM_APIC_INIT, &(kvm_apic_get(vcpu)->pending_events));
+      |                                                                                     ^~
+./include/linux/bitops.h:50:44: note: in definition of macro ‘bitop’
+   50 |           __builtin_constant_p((uintptr_t)(addr) != (uintptr_t)NULL) && \
+      |                                            ^~~~
+./arch/x86/kvm/lapic.h:250:41: note: in expansion of macro ‘test_bit’
+  250 |         return lapic_in_kernel(vcpu) && test_bit(KVM_APIC_INIT, &(kvm_apic_get(vcpu)->pending_events));
+      |                                         ^~~~~~~~
+./arch/x86/kvm/lapic.h:250:85: error: invalid type argument of ‘->’ (have ‘int’)
+  250 |         return lapic_in_kernel(vcpu) && test_bit(KVM_APIC_INIT, &(kvm_apic_get(vcpu)->pending_events));
+      |                                                                                     ^~
+./include/linux/bitops.h:51:23: note: in definition of macro ‘bitop’
+   51 |           (uintptr_t)(addr) != (uintptr_t)NULL &&                       \
+      |                       ^~~~
+./arch/x86/kvm/lapic.h:250:41: note: in expansion of macro ‘test_bit’
+  250 |         return lapic_in_kernel(vcpu) && test_bit(KVM_APIC_INIT, &(kvm_apic_get(vcpu)->pending_events));
+      |                                         ^~~~~~~~
+./arch/x86/kvm/lapic.h:250:85: error: invalid type argument of ‘->’ (have ‘int’)
+  250 |         return lapic_in_kernel(vcpu) && test_bit(KVM_APIC_INIT, &(kvm_apic_get(vcpu)->pending_events));
+      |                                                                                     ^~
+./include/linux/bitops.h:52:57: note: in definition of macro ‘bitop’
+   52 |           __builtin_constant_p(*(const unsigned long *)(addr))) ?       \
+      |                                                         ^~~~
+./arch/x86/kvm/lapic.h:250:41: note: in expansion of macro ‘test_bit’
+  250 |         return lapic_in_kernel(vcpu) && test_bit(KVM_APIC_INIT, &(kvm_apic_get(vcpu)->pending_events));
+      |                                         ^~~~~~~~
+./arch/x86/kvm/lapic.h:250:85: error: invalid type argument of ‘->’ (have ‘int’)
+  250 |         return lapic_in_kernel(vcpu) && test_bit(KVM_APIC_INIT, &(kvm_apic_get(vcpu)->pending_events));
+      |                                                                                     ^~
+./include/linux/bitops.h:53:24: note: in definition of macro ‘bitop’
+   53 |          const##op(nr, addr) : op(nr, addr))
+      |                        ^~~~
+./arch/x86/kvm/lapic.h:250:41: note: in expansion of macro ‘test_bit’
+  250 |         return lapic_in_kernel(vcpu) && test_bit(KVM_APIC_INIT, &(kvm_apic_get(vcpu)->pending_events));
+      |                                         ^~~~~~~~
+./arch/x86/kvm/lapic.h:250:85: error: invalid type argument of ‘->’ (have ‘int’)
+  250 |         return lapic_in_kernel(vcpu) && test_bit(KVM_APIC_INIT, &(kvm_apic_get(vcpu)->pending_events));
+      |                                                                                     ^~
+./include/linux/bitops.h:53:39: note: in definition of macro ‘bitop’
+   53 |          const##op(nr, addr) : op(nr, addr))
+      |                                       ^~~~
+./arch/x86/kvm/lapic.h:250:41: note: in expansion of macro ‘test_bit’
+  250 |         return lapic_in_kernel(vcpu) && test_bit(KVM_APIC_INIT, &(kvm_apic_get(vcpu)->pending_events));
+      |                                         ^~~~~~~~
+cc1: some warnings being treated as errors
+make[4]: *** [scripts/Makefile.build:243: arch/x86/kvm/debugfs.o] Error 1
+arch/x86/kvm/cpuid.c: In function ‘kvm_vcpu_after_set_cpuid’:
+arch/x86/kvm/cpuid.c:330:34: warning: initialization of ‘struct kvm_lapic *’ from ‘int’ makes pointer from integer without a cast [-Wint-conversion]
+  330 |         struct kvm_lapic *apic = kvm_apic_get(vcpu);
+      |                                  ^~~~~~~~~~~~
+cc1: some warnings being treated as errors
+make[4]: *** [scripts/Makefile.build:243: arch/x86/kvm/cpuid.o] Error 1
+arch/x86/kvm/x86.c: In function ‘handle_fastpath_set_x2apic_icr_irqoff’:
+arch/x86/kvm/x86.c:2162:57: warning: passing argument 1 of ‘apic_x2apic_mode’ makes pointer from integer without a cast [-Wint-conversion]
+ 2162 |         if (!lapic_in_kernel(vcpu) || !apic_x2apic_mode(kvm_apic_get(vcpu)))
+      |                                                         ^~~~~~~~~~~~~~~~~~
+      |                                                         |
+      |                                                         int
+arch/x86/kvm/lapic.h:221:54: note: expected ‘struct kvm_lapic *’ but argument is of type ‘int’
+  221 | static inline int apic_x2apic_mode(struct kvm_lapic *apic)
+      |                                    ~~~~~~~~~~~~~~~~~~^~~~
+arch/x86/kvm/x86.c:2169:45: warning: passing argument 1 of ‘kvm_x2apic_icr_write’ makes pointer from integer without a cast [-Wint-conversion]
+ 2169 |                 return kvm_x2apic_icr_write(kvm_apic_get(vcpu), data);
+      |                                             ^~~~~~~~~~~~~~~~~~
+      |                                             |
+      |                                             int
+arch/x86/kvm/lapic.h:139:44: note: expected ‘struct kvm_lapic *’ but argument is of type ‘int’
+  139 | int kvm_x2apic_icr_write(struct kvm_lapic *apic, u64 data);
+      |                          ~~~~~~~~~~~~~~~~~~^~~~
+arch/x86/kvm/x86.c: In function ‘kvm_vcpu_x86_set_ucna’:
+arch/x86/kvm/x86.c:5254:40: warning: passing argument 1 of ‘kvm_apic_local_deliver’ makes pointer from integer without a cast [-Wint-conversion]
+ 5254 |                 kvm_apic_local_deliver(kvm_apic_get(vcpu), APIC_LVTCMCI);
+      |                                        ^~~~~~~~~~~~~~~~~~
+      |                                        |
+      |                                        int
+arch/x86/kvm/lapic.h:113:46: note: expected ‘struct kvm_lapic *’ but argument is of type ‘int’
+  113 | int kvm_apic_local_deliver(struct kvm_lapic *apic, int lvt_type);
+      |                            ~~~~~~~~~~~~~~~~~~^~~~
+arch/x86/kvm/x86.c: In function ‘kvm_vcpu_ioctl_x86_set_vcpu_events’:
+arch/x86/kvm/x86.c:5477:35: error: invalid type argument of ‘->’ (have ‘int’)
+ 5477 |                 kvm_apic_get(vcpu)->sipi_vector = events->sipi_vector;
+      |                                   ^~
+arch/x86/kvm/x86.c:5503:75: error: invalid type argument of ‘->’ (have ‘int’)
+ 5503 |                                 set_bit(KVM_APIC_INIT, &kvm_apic_get(vcpu)->pending_events);
+      |                                                                           ^~
+arch/x86/kvm/x86.c:5505:77: error: invalid type argument of ‘->’ (have ‘int’)
+ 5505 |                                 clear_bit(KVM_APIC_INIT, &kvm_apic_get(vcpu)->pending_events);
+      |                                                                             ^~
+arch/x86/kvm/x86.c: In function ‘vcpu_mmio_write’:
+arch/x86/kvm/x86.c:7430:68: error: invalid type argument of ‘->’ (have ‘int’)
+ 7430 |                       !kvm_iodevice_write(vcpu, &kvm_apic_get(vcpu)->dev, addr, n, v))
+      |                                                                    ^~
+arch/x86/kvm/x86.c: In function ‘vcpu_mmio_read’:
+arch/x86/kvm/x86.c:7450:67: error: invalid type argument of ‘->’ (have ‘int’)
+ 7450 |                       !kvm_iodevice_read(vcpu, &kvm_apic_get(vcpu)->dev,
+      |                                                                   ^~
+arch/x86/kvm/x86.c: In function ‘update_cr8_intercept’:
+arch/x86/kvm/x86.c:10178:31: error: invalid type argument of ‘->’ (have ‘int’)
+10178 |         if (kvm_apic_get(vcpu)->apicv_active)
+      |                               ^~
+arch/x86/kvm/x86.c:10181:32: error: invalid type argument of ‘->’ (have ‘int’)
+10181 |         if (!kvm_apic_get(vcpu)->vapic_addr)
+      |                                ^~
+arch/x86/kvm/x86.c: In function ‘__kvm_vcpu_update_apicv’:
+cc1: some warnings being treated as errors
+arch/x86/kvm/x86.c:10525:34: warning: initialization of ‘struct kvm_lapic *’ from ‘int’ makes pointer from integer without a cast [-Wint-conversion]
+10525 |         struct kvm_lapic *apic = kvm_apic_get(vcpu);
+      |                                  ^~~~~~~~~~~~
+arch/x86/kvm/x86.c: In function ‘kvm_vcpu_update_apicv’:
+make[4]: *** [scripts/Makefile.build:243: arch/x86/kvm/mmu/mmu.o] Error 1
+arch/x86/kvm/x86.c:10576:30: warning: passing argument 1 of ‘apic_x2apic_mode’ makes pointer from integer without a cast [-Wint-conversion]
+10576 |         if (apic_x2apic_mode(kvm_apic_get(vcpu)) &&
+      |                              ^~~~~~~~~~~~~~~~~~
+      |                              |
+      |                              int
+arch/x86/kvm/lapic.h:221:54: note: expected ‘struct kvm_lapic *’ but argument is of type ‘int’
+  221 | static inline int apic_x2apic_mode(struct kvm_lapic *apic)
+      |                                    ~~~~~~~~~~~~~~~~~~^~~~
+arch/x86/kvm/x86.c: In function ‘vcpu_load_eoi_exitmap’:
+arch/x86/kvm/x86.c:10659:34: warning: passing argument 1 of ‘kvm_apic_hw_enabled’ makes pointer from integer without a cast [-Wint-conversion]
+10659 |         if (!kvm_apic_hw_enabled(kvm_apic_get(vcpu)))
+      |                                  ^~~~~~~~~~~~~~~~~~
+      |                                  |
+      |                                  int
+arch/x86/kvm/lapic.h:195:58: note: expected ‘struct kvm_lapic *’ but argument is of type ‘int’
+  195 | static inline bool kvm_apic_hw_enabled(struct kvm_lapic *apic)
+      |                                        ~~~~~~~~~~~~~~~~~~^~~~
+arch/x86/kvm/x86.c: In function ‘kvm_arch_vcpu_ioctl_set_mpstate’:
+arch/x86/kvm/x86.c:11652:60: error: invalid type argument of ‘->’ (have ‘int’)
+11652 |                 set_bit(KVM_APIC_SIPI, &(kvm_apic_get(vcpu)->pending_events));
+      |                                                            ^~
+arch/x86/kvm/x86.c: In function ‘kvm_arch_vcpu_create’:
+arch/x86/kvm/x86.c:12101:43: error: invalid type argument of ‘->’ (have ‘int’)
+12101 |                         kvm_apic_get(vcpu)->apicv_active = true;
+      |                                           ^~
+arch/x86/kvm/lapic.h: In function ‘kvm_lapic_latched_init’:
+arch/x86/kvm/lapic.h:251:1: error: control reaches end of non-void function [-Werror=return-type]
+  251 | }
+      | ^
+arch/x86/kvm/lapic.h: In function ‘kvm_vcpu_apicv_active’:
+arch/x86/kvm/lapic.h:229:1: error: control reaches end of non-void function [-Werror=return-type]
+  229 | }
+      | ^
+arch/x86/kvm/lapic.h: In function ‘kvm_apic_has_pending_init_or_sipi’:
+arch/x86/kvm/lapic.h:234:1: error: control reaches end of non-void function [-Werror=return-type]
+  234 | }
+      | ^
+cc1: some warnings being treated as errors
+make[4]: *** [scripts/Makefile.build:243: arch/x86/kvm/x86.o] Error 1
+make[3]: *** [scripts/Makefile.build:481: arch/x86/kvm] Error 2
+make[2]: *** [scripts/Makefile.build:481: arch/x86] Error 2
+make[2]: *** Waiting for unfinished jobs....
+make[1]: *** [/home/rhopkins/src/kernels/linux-6.8-rc3/linux/Makefile:1921: .] Error 2
+make: *** [Makefile:240: __sub-make] Error 2

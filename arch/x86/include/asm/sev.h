@@ -382,6 +382,7 @@ u64 snp_config_transaction_start(void);
 u64 snp_config_transaction_end(void);
 u64 snp_config_transaction_get_id(void);
 bool snp_config_transaction_is_stale(u64 id);
+struct kvm_vcpu;
 #else
 static inline bool snp_probe_rmptable_info(void) { return false; }
 static inline int snp_lookup_rmpentry(u64 pfn, bool *assigned, int *level) { return -ENODEV; }

@@ -331,6 +331,8 @@ struct vcpu_svm {
 
 	/* Transaction ID associated with SNP config updates */
 	u64 snp_transaction_id;
+
+	struct kvm_lapic *apic[16];
 };
 
 struct svm_cpu_data {
@@ -763,6 +765,7 @@ int sev_gmem_max_level(struct kvm *kvm, kvm_pfn_t pfn, gfn_t gfn, u8 *max_level)
 bool sev_snp_is_rinj_active(struct kvm_vcpu *vcpu);
 bool sev_snp_nmi_blocked(struct kvm_vcpu *vcpu);
 bool sev_snp_interrupt_blocked(struct kvm_vcpu *vcpu);
+void snp_create_apic(struct kvm_vcpu *vcpu);
 
 /* vmenter.S */
 

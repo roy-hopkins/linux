@@ -1446,6 +1446,10 @@ static int svm_vcpu_create(struct kvm_vcpu *vcpu)
 		fpstate_set_confidential(&vcpu->arch.guest_fpu);
 	}
 
+	if (sev_snp_guest(vcpu->kvm)) {
+		snp_create_apic(vcpu);
+	}
+
 	err = avic_init_vcpu(svm);
 	if (err)
 		goto error_free_vmsa_page;
@@ -3463,6 +3467,7 @@ static bool svm_check_exit_valid(u64 exit_code)
 
 static int svm_handle_invalid_exit(struct kvm_vcpu *vcpu, u64 exit_code)
 {
+	pr_info("** svm_handle_invalid_exit\n");
 	vcpu_unimpl(vcpu, "svm: unexpected exit reason 0x%llx\n", exit_code);
 	dump_vmcb(vcpu);
 	vcpu->run->exit_reason = KVM_EXIT_INTERNAL_ERROR;
@@ -3543,6 +3548,7 @@ static int svm_handle_exit(struct kvm_vcpu *vcpu, fastpath_t exit_fastpath)
 		kvm_run->fail_entry.hardware_entry_failure_reason
 			= svm->vmcb->control.exit_code;
 		kvm_run->fail_entry.cpu = vcpu->arch.last_vmentry_cpu;
+		pr_info("** SVM_EXIT_ERR\n");
 		dump_vmcb(vcpu);
 		return 0;
 	}
@@ -3663,7 +3669,7 @@ void svm_complete_interrupt_delivery(struct kvm_vcpu *vcpu, int delivery_mode,
 	bool in_guest_mode = (smp_load_acquire(&vcpu->mode) == IN_GUEST_MODE);
 
 	/* Note, this is called iff the local APIC is in-kernel. */
-	if (!READ_ONCE(vcpu->arch.apic->apicv_active)) {
+	if (!READ_ONCE(kvm_apic_get(vcpu)->apicv_active)) {
 		/* Process the interrupt via kvm_check_and_inject_events(). */
 		kvm_make_request(KVM_REQ_EVENT, vcpu);
 		kvm_vcpu_kick(vcpu);
