@@ -452,24 +452,24 @@ static void nested_save_pending_event_to_vmcb12(struct vcpu_svm *svm,
 	u32 exit_int_info = 0;
 	unsigned int nr;
 
-	if (vcpu->arch.exception.injected) {
-		nr = vcpu->arch.exception.vector;
+	if (vcpu->arch.current_vtl->exception.injected) {
+		nr = vcpu->arch.current_vtl->exception.vector;
 		exit_int_info = nr | SVM_EVTINJ_VALID | SVM_EVTINJ_TYPE_EXEPT;
 
-		if (vcpu->arch.exception.has_error_code) {
+		if (vcpu->arch.current_vtl->exception.has_error_code) {
 			exit_int_info |= SVM_EVTINJ_VALID_ERR;
 			vmcb12->control.exit_int_info_err =
-				vcpu->arch.exception.error_code;
+				vcpu->arch.current_vtl->exception.error_code;
 		}
 
 	} else if (vcpu->arch.nmi_injected) {
 		exit_int_info = SVM_EVTINJ_VALID | SVM_EVTINJ_TYPE_NMI;
 
-	} else if (vcpu->arch.interrupt.injected) {
-		nr = vcpu->arch.interrupt.nr;
+	} else if (vcpu->arch.current_vtl->interrupt.injected) {
+		nr = vcpu->arch.current_vtl->interrupt.nr;
 		exit_int_info = nr | SVM_EVTINJ_VALID;
 
-		if (vcpu->arch.interrupt.soft)
+		if (vcpu->arch.current_vtl->interrupt.soft)
 			exit_int_info |= SVM_EVTINJ_TYPE_SOFT;
 		else
 			exit_int_info |= SVM_EVTINJ_TYPE_INTR;
@@ -1379,7 +1379,7 @@ static bool nested_svm_is_exception_vmexit(struct kvm_vcpu *vcpu, u8 vector,
 
 static void nested_svm_inject_exception_vmexit(struct kvm_vcpu *vcpu)
 {
-	struct kvm_queued_exception *ex = &vcpu->arch.exception_vmexit;
+	struct kvm_queued_exception *ex = &vcpu->arch.current_vtl->exception_vmexit;
 	struct vcpu_svm *svm = to_svm(vcpu);
 	struct vmcb *vmcb = svm->vmcb;
 
@@ -1420,7 +1420,7 @@ static inline bool nested_exit_on_init(struct vcpu_svm *svm)
 
 static int svm_check_nested_events(struct kvm_vcpu *vcpu)
 {
-	struct kvm_lapic *apic = kvm_apic_get(vcpu);
+	struct kvm_lapic *apic = kvm_get_apic(vcpu);
 	struct vcpu_svm *svm = to_svm(vcpu);
 	/*
 	 * Only a pending nested run blocks a pending exception.  If there is a
@@ -1447,14 +1447,14 @@ static int svm_check_nested_events(struct kvm_vcpu *vcpu)
 		return 0;
 	}
 
-	if (vcpu->arch.exception_vmexit.pending) {
+	if (vcpu->arch.current_vtl->exception_vmexit.pending) {
 		if (block_nested_exceptions)
                         return -EBUSY;
 		nested_svm_inject_exception_vmexit(vcpu);
 		return 0;
 	}
 
-	if (vcpu->arch.exception.pending) {
+	if (vcpu->arch.current_vtl->exception.pending) {
 		if (block_nested_exceptions)
 			return -EBUSY;
 		return 0;

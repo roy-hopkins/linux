@@ -33,6 +33,7 @@
 #include "lapic.h"
 #include "xen.h"
 #include "smm.h"
+#include "vtl.h"
 
 #include <linux/clocksource.h>
 #include <linux/interrupt.h>
@@ -626,7 +627,7 @@ static void kvm_queue_exception_vmexit(struct kvm_vcpu *vcpu, unsigned int vecto
 				       bool has_error_code, u32 error_code,
 				       bool has_payload, unsigned long payload)
 {
-	struct kvm_queued_exception *ex = &vcpu->arch.exception_vmexit;
+	struct kvm_queued_exception *ex = &vcpu->arch.current_vtl->exception_vmexit;
 
 	ex->vector = vector;
 	ex->injected = false;
@@ -666,7 +667,7 @@ static void kvm_multiple_exception(struct kvm_vcpu *vcpu,
 		return;
 	}
 
-	if (!vcpu->arch.exception.pending && !vcpu->arch.exception.injected) {
+	if (!vcpu->arch.current_vtl->exception.pending && !vcpu->arch.current_vtl->exception.injected) {
 	queue:
 		if (reinject) {
 			/*
@@ -677,7 +678,7 @@ static void kvm_multiple_exception(struct kvm_vcpu *vcpu,
 			 * enough to need reinjection.
 			 */
 			WARN_ON_ONCE(kvm_is_exception_pending(vcpu));
-			vcpu->arch.exception.injected = true;
+			vcpu->arch.current_vtl->exception.injected = true;
 			if (WARN_ON_ONCE(has_payload)) {
 				/*
 				 * A reinjected event has already
@@ -687,22 +688,22 @@ static void kvm_multiple_exception(struct kvm_vcpu *vcpu,
 				payload = 0;
 			}
 		} else {
-			vcpu->arch.exception.pending = true;
-			vcpu->arch.exception.injected = false;
+			vcpu->arch.current_vtl->exception.pending = true;
+			vcpu->arch.current_vtl->exception.injected = false;
 		}
-		vcpu->arch.exception.has_error_code = has_error;
-		vcpu->arch.exception.vector = nr;
-		vcpu->arch.exception.error_code = error_code;
-		vcpu->arch.exception.has_payload = has_payload;
-		vcpu->arch.exception.payload = payload;
+		vcpu->arch.current_vtl->exception.has_error_code = has_error;
+		vcpu->arch.current_vtl->exception.vector = nr;
+		vcpu->arch.current_vtl->exception.error_code = error_code;
+		vcpu->arch.current_vtl->exception.has_payload = has_payload;
+		vcpu->arch.current_vtl->exception.payload = payload;
 		if (!is_guest_mode(vcpu))
 			kvm_deliver_exception_payload(vcpu,
-						      &vcpu->arch.exception);
+						      &vcpu->arch.current_vtl->exception);
 		return;
 	}
 
 	/* to check exception */
-	prev_nr = vcpu->arch.exception.vector;
+	prev_nr = vcpu->arch.current_vtl->exception.vector;
 	if (prev_nr == DF_VECTOR) {
 		/* triple fault -> shutdown */
 		kvm_make_request(KVM_REQ_TRIPLE_FAULT, vcpu);
@@ -716,8 +717,8 @@ static void kvm_multiple_exception(struct kvm_vcpu *vcpu,
 		 * Synthesize #DF.  Clear the previously injected or pending
 		 * exception so as not to incorrectly trigger shutdown.
 		 */
-		vcpu->arch.exception.injected = false;
-		vcpu->arch.exception.pending = false;
+		vcpu->arch.current_vtl->exception.injected = false;
+		vcpu->arch.current_vtl->exception.pending = false;
 
 		kvm_queue_exception_e(vcpu, DF_VECTOR, 0);
 	} else {
@@ -2159,14 +2160,14 @@ static inline bool kvm_vcpu_exit_request(struct kvm_vcpu *vcpu)
  */
 static int handle_fastpath_set_x2apic_icr_irqoff(struct kvm_vcpu *vcpu, u64 data)
 {
-	if (!lapic_in_kernel(vcpu) || !apic_x2apic_mode(kvm_apic_get(vcpu)))
+	if (!lapic_in_kernel(vcpu) || !apic_x2apic_mode(kvm_get_apic(vcpu)))
 		return 1;
 
 	if (((data & APIC_SHORT_MASK) == APIC_DEST_NOSHORT) &&
 	    ((data & APIC_DEST_MASK) == APIC_DEST_PHYSICAL) &&
 	    ((data & APIC_MODE_MASK) == APIC_DM_FIXED) &&
 	    ((u32)(data >> 32) != X2APIC_BROADCAST))
-		return kvm_x2apic_icr_write(kvm_apic_get(vcpu), data);
+		return kvm_x2apic_icr_write(kvm_get_apic(vcpu), data);
 
 	return 1;
 }
@@ -5166,10 +5167,10 @@ static int kvm_vcpu_ioctl_interrupt(struct kvm_vcpu *vcpu,
 	if (pic_in_kernel(vcpu->kvm))
 		return -ENXIO;
 
-	if (vcpu->arch.pending_external_vector != -1)
+	if (vcpu->arch.current_vtl->pending_external_vector != -1)
 		return -EEXIST;
 
-	vcpu->arch.pending_external_vector = irq->irq;
+	vcpu->arch.current_vtl->pending_external_vector = irq->irq;
 	kvm_make_request(KVM_REQ_EVENT, vcpu);
 	return 0;
 }
@@ -5251,7 +5252,7 @@ static int kvm_vcpu_x86_set_ucna(struct kvm_vcpu *vcpu, struct kvm_x86_mce *mce,
 		return 0;
 
 	if (lapic_in_kernel(vcpu))
-		kvm_apic_local_deliver(kvm_apic_get(vcpu), APIC_LVTCMCI);
+		kvm_apic_local_deliver(kvm_get_apic(vcpu), APIC_LVTCMCI);
 
 	return 0;
 }
@@ -5328,12 +5329,12 @@ static void kvm_vcpu_ioctl_x86_get_vcpu_events(struct kvm_vcpu *vcpu,
 	 * In that case, ignore the VM-Exiting exception as it's an extension
 	 * of the injected exception.
 	 */
-	if (vcpu->arch.exception_vmexit.pending &&
-	    !vcpu->arch.exception.pending &&
-	    !vcpu->arch.exception.injected)
-		ex = &vcpu->arch.exception_vmexit;
+	if (vcpu->arch.current_vtl->exception_vmexit.pending &&
+	    !vcpu->arch.current_vtl->exception.pending &&
+	    !vcpu->arch.current_vtl->exception.injected)
+		ex = &vcpu->arch.current_vtl->exception_vmexit;
 	else
-		ex = &vcpu->arch.exception;
+		ex = &vcpu->arch.current_vtl->exception;
 
 	/*
 	 * In guest mode, payload delivery should be deferred if the exception
@@ -5373,8 +5374,8 @@ static void kvm_vcpu_ioctl_x86_get_vcpu_events(struct kvm_vcpu *vcpu,
 	events->exception_payload = ex->payload;
 
 	events->interrupt.injected =
-		vcpu->arch.interrupt.injected && !vcpu->arch.interrupt.soft;
-	events->interrupt.nr = vcpu->arch.interrupt.nr;
+		vcpu->arch.current_vtl->interrupt.injected && !vcpu->arch.current_vtl->interrupt.soft;
+	events->interrupt.nr = vcpu->arch.current_vtl->interrupt.nr;
 	events->interrupt.shadow = static_call(kvm_x86_get_interrupt_shadow)(vcpu);
 
 	events->nmi.injected = vcpu->arch.nmi_injected;
@@ -5405,6 +5406,9 @@ static void kvm_vcpu_ioctl_x86_get_vcpu_events(struct kvm_vcpu *vcpu,
 static int kvm_vcpu_ioctl_x86_set_vcpu_events(struct kvm_vcpu *vcpu,
 					      struct kvm_vcpu_events *events)
 {
+	// RDH TODO: Set the correct vtl for events
+	unsigned int vtl = 2;
+
 	if (events->flags & ~(KVM_VCPUEVENT_VALID_NMI_PENDING
 			      | KVM_VCPUEVENT_VALID_SIPI_VECTOR
 			      | KVM_VCPUEVENT_VALID_SHADOW
@@ -5445,21 +5449,27 @@ static int kvm_vcpu_ioctl_x86_set_vcpu_events(struct kvm_vcpu *vcpu,
 	 * is hosed, and will incorrectly convert an injected exception into a
 	 * pending exception, which in turn may cause a spurious VM-Exit.
 	 */
-	vcpu->arch.exception_from_userspace = events->exception.pending;
+	vcpu->arch.vtl[vtl].exception_from_userspace = events->exception.pending;
 
-	vcpu->arch.exception_vmexit.pending = false;
+	vcpu->arch.vtl[vtl].exception_vmexit.pending = false;
 
-	vcpu->arch.exception.injected = events->exception.injected;
-	vcpu->arch.exception.pending = events->exception.pending;
-	vcpu->arch.exception.vector = events->exception.nr;
-	vcpu->arch.exception.has_error_code = events->exception.has_error_code;
-	vcpu->arch.exception.error_code = events->exception.error_code;
-	vcpu->arch.exception.has_payload = events->exception_has_payload;
-	vcpu->arch.exception.payload = events->exception_payload;
+	vcpu->arch.vtl[vtl].exception.injected = events->exception.injected;
+	vcpu->arch.vtl[vtl].exception.pending = events->exception.pending;
+	vcpu->arch.vtl[vtl].exception.vector = events->exception.nr;
+	vcpu->arch.vtl[vtl].exception.has_error_code = events->exception.has_error_code;
+	vcpu->arch.vtl[vtl].exception.error_code = events->exception.error_code;
+	vcpu->arch.vtl[vtl].exception.has_payload = events->exception_has_payload;
+	vcpu->arch.vtl[vtl].exception.payload = events->exception_payload;
 
-	vcpu->arch.interrupt.injected = events->interrupt.injected;
-	vcpu->arch.interrupt.nr = events->interrupt.nr;
-	vcpu->arch.interrupt.soft = events->interrupt.soft;
+	vcpu->arch.vtl[vtl].interrupt.injected = events->interrupt.injected;
+	vcpu->arch.vtl[vtl].interrupt.nr = events->interrupt.nr;
+	vcpu->arch.vtl[vtl].interrupt.soft = events->interrupt.soft;
+
+	if (vcpu->arch.vtl[vtl].interrupt.injected || vcpu->arch.vtl[vtl].exception.injected) {
+		// RDH: This is just here to allow a breakpoint to be set
+		pr_debug("Interrupt injected");
+	}
+	
 	if (events->flags & KVM_VCPUEVENT_VALID_SHADOW)
 		static_call(kvm_x86_set_interrupt_shadow)(vcpu,
 						events->interrupt.shadow);
@@ -5474,7 +5484,7 @@ static int kvm_vcpu_ioctl_x86_set_vcpu_events(struct kvm_vcpu *vcpu,
 
 	if (events->flags & KVM_VCPUEVENT_VALID_SIPI_VECTOR &&
 	    lapic_in_kernel(vcpu))
-		kvm_apic_get(vcpu)->sipi_vector = events->sipi_vector;
+		kvm_get_apic(vcpu)->sipi_vector = events->sipi_vector;
 
 	if (events->flags & KVM_VCPUEVENT_VALID_SMM) {
 #ifdef CONFIG_KVM_SMM
@@ -5500,9 +5510,9 @@ static int kvm_vcpu_ioctl_x86_set_vcpu_events(struct kvm_vcpu *vcpu,
 
 		if (lapic_in_kernel(vcpu)) {
 			if (events->smi.latched_init)
-				set_bit(KVM_APIC_INIT, &kvm_apic_get(vcpu)->pending_events);
+				set_bit(KVM_APIC_INIT, &kvm_get_apic(vcpu)->pending_events);
 			else
-				clear_bit(KVM_APIC_INIT, &kvm_apic_get(vcpu)->pending_events);
+				clear_bit(KVM_APIC_INIT, &kvm_get_apic(vcpu)->pending_events);
 		}
 	}
 
@@ -7427,7 +7437,7 @@ static int vcpu_mmio_write(struct kvm_vcpu *vcpu, gpa_t addr, int len,
 	do {
 		n = min(len, 8);
 		if (!(lapic_in_kernel(vcpu) &&
-		      !kvm_iodevice_write(vcpu, &kvm_apic_get(vcpu)->dev, addr, n, v))
+		      !kvm_iodevice_write(vcpu, &kvm_get_apic(vcpu)->dev, addr, n, v))
 		    && kvm_io_bus_write(vcpu, KVM_MMIO_BUS, addr, n, v))
 			break;
 		handled += n;
@@ -7447,7 +7457,7 @@ static int vcpu_mmio_read(struct kvm_vcpu *vcpu, gpa_t addr, int len, void *v)
 	do {
 		n = min(len, 8);
 		if (!(lapic_in_kernel(vcpu) &&
-		      !kvm_iodevice_read(vcpu, &kvm_apic_get(vcpu)->dev,
+		      !kvm_iodevice_read(vcpu, &kvm_get_apic(vcpu)->dev,
 					 addr, n, v))
 		    && kvm_io_bus_read(vcpu, KVM_MMIO_BUS, addr, n, v))
 			break;
@@ -10175,10 +10185,10 @@ static void update_cr8_intercept(struct kvm_vcpu *vcpu)
 	if (!lapic_in_kernel(vcpu))
 		return;
 
-	if (kvm_apic_get(vcpu)->apicv_active)
+	if (kvm_get_apic(vcpu)->apicv_active)
 		return;
 
-	if (!kvm_apic_get(vcpu)->vapic_addr)
+	if (!kvm_get_apic(vcpu)->vapic_addr)
 		max_irr = kvm_lapic_find_highest_irr(vcpu);
 	else
 		max_irr = -1;
@@ -10211,12 +10221,12 @@ static void kvm_inject_exception(struct kvm_vcpu *vcpu)
 	 * is injected as intercepted #PF VM-Exits for AMD's Paged Real Mode do
 	 * report an error code despite the CPU being in Real Mode.
 	 */
-	vcpu->arch.exception.has_error_code &= is_protmode(vcpu);
+	vcpu->arch.current_vtl->exception.has_error_code &= is_protmode(vcpu);
 
-	trace_kvm_inj_exception(vcpu->arch.exception.vector,
-				vcpu->arch.exception.has_error_code,
-				vcpu->arch.exception.error_code,
-				vcpu->arch.exception.injected);
+	trace_kvm_inj_exception(vcpu->arch.current_vtl->exception.vector,
+				vcpu->arch.current_vtl->exception.has_error_code,
+				vcpu->arch.current_vtl->exception.error_code,
+				vcpu->arch.current_vtl->exception.injected);
 
 	static_call(kvm_x86_inject_exception)(vcpu);
 }
@@ -10299,13 +10309,13 @@ static int kvm_check_and_inject_events(struct kvm_vcpu *vcpu,
 	 * *previous* instruction and must be serviced prior to recognizing any
 	 * new events in order to fully complete the previous instruction.
 	 */
-	if (vcpu->arch.exception.injected)
+	if (vcpu->arch.current_vtl->exception.injected)
 		kvm_inject_exception(vcpu);
 	else if (kvm_is_exception_pending(vcpu))
 		; /* see above */
 	else if (vcpu->arch.nmi_injected)
 		static_call(kvm_x86_inject_nmi)(vcpu);
-	else if (vcpu->arch.interrupt.injected)
+	else if (vcpu->arch.current_vtl->interrupt.injected)
 		static_call(kvm_x86_inject_irq)(vcpu, true);
 
 	/*
@@ -10313,8 +10323,8 @@ static int kvm_check_and_inject_events(struct kvm_vcpu *vcpu,
 	 * exceptions on top of injected exceptions that do not VM-Exit should
 	 * either morph to #DF or, sadly, override the injected exception.
 	 */
-	WARN_ON_ONCE(vcpu->arch.exception.injected &&
-		     vcpu->arch.exception.pending);
+	WARN_ON_ONCE(vcpu->arch.current_vtl->exception.injected &&
+		     vcpu->arch.current_vtl->exception.pending);
 
 	/*
 	 * Bail if immediate entry+exit to/from the guest is needed to complete
@@ -10333,8 +10343,8 @@ static int kvm_check_and_inject_events(struct kvm_vcpu *vcpu,
 	 * or force an immediate re-entry and exit to/from L2, and exception
 	 * VM-Exits cannot be injected (flag should _never_ be set).
 	 */
-	WARN_ON_ONCE(vcpu->arch.exception_vmexit.injected ||
-		     vcpu->arch.exception_vmexit.pending);
+	WARN_ON_ONCE(vcpu->arch.current_vtl->exception_vmexit.injected ||
+		     vcpu->arch.current_vtl->exception_vmexit.pending);
 
 	/*
 	 * New events, other than exceptions, cannot be injected if KVM needs
@@ -10343,7 +10353,7 @@ static int kvm_check_and_inject_events(struct kvm_vcpu *vcpu,
 	 */
 	can_inject = !kvm_event_needs_reinjection(vcpu);
 
-	if (vcpu->arch.exception.pending) {
+	if (vcpu->arch.current_vtl->exception.pending) {
 		/*
 		 * Fault-class exceptions, except #DBs, set RF=1 in the RFLAGS
 		 * value pushed on the stack.  Trap-like exception and all #DBs
@@ -10354,12 +10364,12 @@ static int kvm_check_and_inject_events(struct kvm_vcpu *vcpu,
 		 * describe the behavior of General Detect #DBs, which are
 		 * fault-like.  They do _not_ set RF, a la code breakpoints.
 		 */
-		if (exception_type(vcpu->arch.exception.vector) == EXCPT_FAULT)
+		if (exception_type(vcpu->arch.current_vtl->exception.vector) == EXCPT_FAULT)
 			__kvm_set_rflags(vcpu, kvm_get_rflags(vcpu) |
 					     X86_EFLAGS_RF);
 
-		if (vcpu->arch.exception.vector == DB_VECTOR) {
-			kvm_deliver_exception_payload(vcpu, &vcpu->arch.exception);
+		if (vcpu->arch.current_vtl->exception.vector == DB_VECTOR) {
+			kvm_deliver_exception_payload(vcpu, &vcpu->arch.current_vtl->exception);
 			if (vcpu->arch.dr7 & DR7_GD) {
 				vcpu->arch.dr7 &= ~DR7_GD;
 				kvm_update_dr7(vcpu);
@@ -10368,8 +10378,8 @@ static int kvm_check_and_inject_events(struct kvm_vcpu *vcpu,
 
 		kvm_inject_exception(vcpu);
 
-		vcpu->arch.exception.pending = false;
-		vcpu->arch.exception.injected = true;
+		vcpu->arch.current_vtl->exception.pending = false;
+		vcpu->arch.current_vtl->exception.injected = true;
 
 		can_inject = false;
 	}
@@ -10453,8 +10463,8 @@ static int kvm_check_and_inject_events(struct kvm_vcpu *vcpu,
 	 * VMX without unrestricted guest, as that requires KVM to emulate Real
 	 * Mode events (see kvm_inject_realmode_interrupt()).
 	 */
-	WARN_ON_ONCE(vcpu->arch.exception.pending ||
-		     vcpu->arch.exception_vmexit.pending);
+	WARN_ON_ONCE(vcpu->arch.current_vtl->exception.pending ||
+		     vcpu->arch.current_vtl->exception_vmexit.pending);
 	return 0;
 
 out:
@@ -10522,7 +10532,7 @@ void kvm_make_scan_ioapic_request(struct kvm *kvm)
 
 void __kvm_vcpu_update_apicv(struct kvm_vcpu *vcpu)
 {
-	struct kvm_lapic *apic = kvm_apic_get(vcpu);
+	struct kvm_lapic *apic = kvm_get_apic(vcpu);
 	bool activate;
 
 	if (!lapic_in_kernel(vcpu))
@@ -10573,7 +10583,7 @@ static void kvm_vcpu_update_apicv(struct kvm_vcpu *vcpu)
 	 * despite being in x2APIC mode.  For simplicity, inhibiting the APIC
 	 * access page is sticky.
 	 */
-	if (apic_x2apic_mode(kvm_apic_get(vcpu)) &&
+	if (apic_x2apic_mode(kvm_get_apic(vcpu)) &&
 	    kvm_x86_ops.allow_apicv_in_x2apic_without_x2apic_virtualization)
 		kvm_inhibit_apic_access_page(vcpu);
 
@@ -10638,14 +10648,14 @@ static void vcpu_scan_ioapic(struct kvm_vcpu *vcpu)
 	if (!kvm_apic_present(vcpu))
 		return;
 
-	bitmap_zero(vcpu->arch.ioapic_handled_vectors, 256);
+	bitmap_zero(vcpu->arch.current_vtl->ioapic_handled_vectors, 256);
 
 	if (irqchip_split(vcpu->kvm))
-		kvm_scan_ioapic_routes(vcpu, vcpu->arch.ioapic_handled_vectors);
+		kvm_scan_ioapic_routes(vcpu, vcpu->arch.current_vtl->ioapic_handled_vectors);
 	else {
 		static_call_cond(kvm_x86_sync_pir_to_irr)(vcpu);
 		if (ioapic_in_kernel(vcpu->kvm))
-			kvm_ioapic_scan_entry(vcpu, vcpu->arch.ioapic_handled_vectors);
+			kvm_ioapic_scan_entry(vcpu, vcpu->arch.current_vtl->ioapic_handled_vectors);
 	}
 
 	if (is_guest_mode(vcpu))
@@ -10656,7 +10666,8 @@ static void vcpu_scan_ioapic(struct kvm_vcpu *vcpu)
 
 static void vcpu_load_eoi_exitmap(struct kvm_vcpu *vcpu)
 {
-	if (!kvm_apic_hw_enabled(kvm_apic_get(vcpu)))
+	unsigned int vtl = static_call(kvm_x86_vcpu_current_vtl)(vcpu);
+	if (!kvm_apic_hw_enabled(kvm_get_apic(vcpu)))
 		return;
 
 #ifdef CONFIG_KVM_HYPERV
@@ -10664,14 +10675,14 @@ static void vcpu_load_eoi_exitmap(struct kvm_vcpu *vcpu)
 		u64 eoi_exit_bitmap[4];
 
 		bitmap_or((ulong *)eoi_exit_bitmap,
-			  vcpu->arch.ioapic_handled_vectors,
+			  vcpu->arch.vtl[vtl].ioapic_handled_vectors,
 			  to_hv_synic(vcpu)->vec_bitmap, 256);
 		static_call_cond(kvm_x86_load_eoi_exitmap)(vcpu, eoi_exit_bitmap);
 		return;
 	}
 #endif
 	static_call_cond(kvm_x86_load_eoi_exitmap)(
-		vcpu, (u64 *)vcpu->arch.ioapic_handled_vectors);
+		vcpu, (u64 *)vcpu->arch.vtl[vtl].ioapic_handled_vectors);
 }
 
 void kvm_arch_guest_memory_reclaimed(struct kvm *kvm)
@@ -10801,14 +10812,17 @@ static int vcpu_enter_guest(struct kvm_vcpu *vcpu)
 		if (kvm_check_request(KVM_REQ_NMI, vcpu))
 			process_nmi(vcpu);
 		if (kvm_check_request(KVM_REQ_IOAPIC_EOI_EXIT, vcpu)) {
-			BUG_ON(vcpu->arch.pending_ioapic_eoi > 255);
-			if (test_bit(vcpu->arch.pending_ioapic_eoi,
-				     vcpu->arch.ioapic_handled_vectors)) {
-				vcpu->run->exit_reason = KVM_EXIT_IOAPIC_EOI;
-				vcpu->run->eoi.vector =
-						vcpu->arch.pending_ioapic_eoi;
-				r = 0;
-				goto out;
+			unsigned long vtl;
+			for (vtl = 0; vtl < KVM_MAX_VTL; vtl++) {
+				BUG_ON(vcpu->arch.vtl[vtl].pending_ioapic_eoi > 255);
+				if (test_bit(vcpu->arch.vtl[vtl].pending_ioapic_eoi,
+					vcpu->arch.vtl[vtl].ioapic_handled_vectors)) {
+					vcpu->run->exit_reason = KVM_EXIT_IOAPIC_EOI;
+					vcpu->run->eoi.vector =
+							vcpu->arch.vtl[vtl].pending_ioapic_eoi;
+					r = 0;
+					goto out;
+				}
 			}
 		}
 		if (kvm_check_request(KVM_REQ_SCAN_IOAPIC, vcpu))
@@ -11315,7 +11329,7 @@ static void kvm_put_guest_fpu(struct kvm_vcpu *vcpu)
 
 int kvm_arch_vcpu_ioctl_run(struct kvm_vcpu *vcpu)
 {
-	struct kvm_queued_exception *ex = &vcpu->arch.exception;
+	struct kvm_queued_exception *ex = &vcpu->arch.current_vtl->exception;
 	struct kvm_run *kvm_run = vcpu->run;
 	int r;
 
@@ -11382,7 +11396,7 @@ int kvm_arch_vcpu_ioctl_run(struct kvm_vcpu *vcpu)
 	 * If userspace set a pending exception and L2 is active, convert it to
 	 * a pending VM-Exit if L1 wants to intercept the exception.
 	 */
-	if (vcpu->arch.exception_from_userspace && is_guest_mode(vcpu) &&
+	if (vcpu->arch.current_vtl->exception_from_userspace && is_guest_mode(vcpu) &&
 	    kvm_x86_ops.nested_ops->is_exception_vmexit(vcpu, ex->vector,
 							ex->error_code)) {
 		kvm_queue_exception_vmexit(vcpu, ex->vector,
@@ -11391,7 +11405,7 @@ int kvm_arch_vcpu_ioctl_run(struct kvm_vcpu *vcpu)
 		ex->injected = false;
 		ex->pending = false;
 	}
-	vcpu->arch.exception_from_userspace = false;
+	vcpu->arch.current_vtl->exception_from_userspace = false;
 
 	if (unlikely(vcpu->arch.complete_userspace_io)) {
 		int (*cui)(struct kvm_vcpu *) = vcpu->arch.complete_userspace_io;
@@ -11498,8 +11512,8 @@ static void __set_regs(struct kvm_vcpu *vcpu, struct kvm_regs *regs)
 	kvm_rip_write(vcpu, regs->rip);
 	kvm_set_rflags(vcpu, regs->rflags | X86_EFLAGS_FIXED);
 
-	vcpu->arch.exception.pending = false;
-	vcpu->arch.exception_vmexit.pending = false;
+	vcpu->arch.current_vtl->exception.pending = false;
+	vcpu->arch.current_vtl->exception_vmexit.pending = false;
 
 	kvm_make_request(KVM_REQ_EVENT, vcpu);
 }
@@ -11554,8 +11568,8 @@ static void __get_sregs(struct kvm_vcpu *vcpu, struct kvm_sregs *sregs)
 	if (vcpu->arch.guest_state_protected)
 		return;
 
-	if (vcpu->arch.interrupt.injected && !vcpu->arch.interrupt.soft)
-		set_bit(vcpu->arch.interrupt.nr,
+	if (vcpu->arch.current_vtl->interrupt.injected && !vcpu->arch.current_vtl->interrupt.soft)
+		set_bit(vcpu->arch.current_vtl->interrupt.nr,
 			(unsigned long *)sregs->interrupt_bitmap);
 }
 
@@ -11649,7 +11663,7 @@ int kvm_arch_vcpu_ioctl_set_mpstate(struct kvm_vcpu *vcpu,
 
 	if (mp_state->mp_state == KVM_MP_STATE_SIPI_RECEIVED) {
 		vcpu->arch.mp_state = KVM_MP_STATE_INIT_RECEIVED;
-		set_bit(KVM_APIC_SIPI, &kvm_apic_get(vcpu)->pending_events);
+		set_bit(KVM_APIC_SIPI, &kvm_get_apic(vcpu)->pending_events);
 	} else
 		vcpu->arch.mp_state = mp_state->mp_state;
 	kvm_make_request(KVM_REQ_EVENT, vcpu);
@@ -12062,10 +12076,42 @@ int kvm_arch_vcpu_precreate(struct kvm *kvm, unsigned int id)
 	return static_call(kvm_x86_vcpu_precreate)(kvm);
 }
 
+#define FOREACH_VTL(vcpu, fn) \
+{ \
+	unsigned int vtl; \
+	for (vtl = 0; vtl < KVM_MAX_VTL; vtl++) { \
+		if (vcpu->arch.vtl.active) { \
+			fn \
+		} \
+	} \
+}
+
+#define FOREACH_VTL_RET(vcpu, fn) \
+{ \
+	unsigned int vtl; \
+	int ret = 0; \
+	for (vtl = 0; vtl < KVM_MAX_VTL; vtl++) { \
+		if (vcpu->arch.vtl.active) { \
+			ret = fn \
+			if (ret) { \
+				break; \
+			} \
+		} \
+	} \
+}
+
 int kvm_arch_vcpu_create(struct kvm_vcpu *vcpu)
 {
 	struct page *page;
 	int r;
+	unsigned int vtl;
+
+	kvm_vtl_init(vcpu);
+
+	vcpu->arch.vtl[0].active = true;
+	vcpu->arch.vtl[0].apic_per_vtl = true;
+	vcpu->arch.current_vtl = &vcpu->arch.vtl[0];
+	static_call(kvm_x86_vcpu_init_vtl)(vcpu);
 
 	vcpu->arch.last_vmentry_cpu = -1;
 	vcpu->arch.regs_avail = ~0;
@@ -12083,24 +12129,29 @@ int kvm_arch_vcpu_create(struct kvm_vcpu *vcpu)
 		return r;
 
 	if (irqchip_in_kernel(vcpu->kvm)) {
-		r = kvm_create_lapic(vcpu, lapic_timer_advance_ns);
-		if (r < 0)
-			goto fail_mmu_destroy;
+		struct kvm_vtl_context *prev_vtl = vcpu->arch.current_vtl;
+		for (vtl = 0; vtl < KVM_MAX_VTL; vtl++) {
+			vcpu->arch.current_vtl = &vcpu->arch.vtl[vtl];
+			r = kvm_create_lapic(vcpu, lapic_timer_advance_ns);
+			if (r < 0)
+				goto fail_mmu_destroy;
 
-		/*
-		 * Defer evaluating inhibits until the vCPU is first run, as
-		 * this vCPU will not get notified of any changes until this
-		 * vCPU is visible to other vCPUs (marked online and added to
-		 * the set of vCPUs).  Opportunistically mark APICv active as
-		 * VMX in particularly is highly unlikely to have inhibits.
-		 * Ignore the current per-VM APICv state so that vCPU creation
-		 * is guaranteed to run with a deterministic value, the request
-		 * will ensure the vCPU gets the correct state before VM-Entry.
-		 */
-		if (enable_apicv) {
-			kvm_apic_get(vcpu)->apicv_active = true;
-			kvm_make_request(KVM_REQ_APICV_UPDATE, vcpu);
+			/*
+			* Defer evaluating inhibits until the vCPU is first run, as
+			* this vCPU will not get notified of any changes until this
+			* vCPU is visible to other vCPUs (marked online and added to
+			* the set of vCPUs).  Opportunistically mark APICv active as
+			* VMX in particularly is highly unlikely to have inhibits.
+			* Ignore the current per-VM APICv state so that vCPU creation
+			* is guaranteed to run with a deterministic value, the request
+			* will ensure the vCPU gets the correct state before VM-Entry.
+			*/
+			if (enable_apicv) {
+				kvm_get_apic(vcpu)->apicv_active = true;
+				kvm_make_request(KVM_REQ_APICV_UPDATE, vcpu);
+			}
 		}
+		vcpu->arch.current_vtl = prev_vtl;
 	} else
 		static_branch_inc(&kvm_has_noapic_vcpu);
 
@@ -12141,7 +12192,6 @@ int kvm_arch_vcpu_create(struct kvm_vcpu *vcpu)
 	vcpu->arch.perf_capabilities = kvm_caps.supported_perf_cap;
 	kvm_pmu_init(vcpu);
 
-	vcpu->arch.pending_external_vector = -1;
 	vcpu->arch.preempted_in_kernel = false;
 
 #if IS_ENABLED(CONFIG_HYPERV)

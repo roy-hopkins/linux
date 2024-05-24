@@ -456,7 +456,7 @@ static int svm_update_soft_interrupt_rip(struct kvm_vcpu *vcpu)
 
 static void svm_inject_exception(struct kvm_vcpu *vcpu)
 {
-	struct kvm_queued_exception *ex = &vcpu->arch.exception;
+	struct kvm_queued_exception *ex = &vcpu->arch.current_vtl->exception;
 	struct vcpu_svm *svm = to_svm(vcpu);
 
 	kvm_deliver_exception_payload(vcpu, ex);
@@ -1413,6 +1413,26 @@ void svm_switch_vmcb(struct vcpu_svm *svm, struct kvm_vmcb_info *target_vmcb)
 	svm->vmcb = target_vmcb->ptr;
 }
 
+static int svm_vcpu_init_vtl(struct kvm_vcpu *vcpu)
+{
+	if (sev_snp_guest(vcpu->kvm)) {
+		unsigned int vtl;
+		for (vtl = 0; vtl < 4; vtl++) {
+			vcpu->arch.vtl[vtl].active = true;
+			vcpu->arch.vtl[vtl].apic_per_vtl = true;
+		}
+	}
+	return 0;
+}
+
+static unsigned int svm_vcpu_current_vtl(struct kvm_vcpu *vcpu) 
+{
+	if (sev_snp_guest(vcpu->kvm)) {
+		return snp_vcpu_current_vtl(vcpu);
+	}
+	return 0;
+}
+
 static int svm_vcpu_create(struct kvm_vcpu *vcpu)
 {
 	struct vcpu_svm *svm;
@@ -1444,10 +1464,6 @@ static int svm_vcpu_create(struct kvm_vcpu *vcpu)
 		 * do xsave/xrstor on it.
 		 */
 		fpstate_set_confidential(&vcpu->arch.guest_fpu);
-	}
-
-	if (sev_snp_guest(vcpu->kvm)) {
-		snp_create_apic(vcpu);
 	}
 
 	err = avic_init_vcpu(svm);
@@ -3642,7 +3658,7 @@ static void svm_inject_irq(struct kvm_vcpu *vcpu, bool reinjected)
 	struct vcpu_svm *svm = to_svm(vcpu);
 	u32 type;
 
-	if (vcpu->arch.interrupt.soft) {
+	if (vcpu->arch.current_vtl->interrupt.soft) {
 		if (svm_update_soft_interrupt_rip(vcpu))
 			return;
 
@@ -3651,11 +3667,11 @@ static void svm_inject_irq(struct kvm_vcpu *vcpu, bool reinjected)
 		type = SVM_EVTINJ_TYPE_INTR;
 	}
 
-	trace_kvm_inj_virq(vcpu->arch.interrupt.nr,
-			   vcpu->arch.interrupt.soft, reinjected);
+	trace_kvm_inj_virq(vcpu->arch.current_vtl->interrupt.nr,
+			   vcpu->arch.current_vtl->interrupt.soft, reinjected);
 	++vcpu->stat.irq_injections;
 
-	svm->vmcb->control.event_inj = vcpu->arch.interrupt.nr |
+	svm->vmcb->control.event_inj = vcpu->arch.current_vtl->interrupt.nr |
 				       SVM_EVTINJ_VALID | type;
 }
 
@@ -3669,7 +3685,7 @@ void svm_complete_interrupt_delivery(struct kvm_vcpu *vcpu, int delivery_mode,
 	bool in_guest_mode = (smp_load_acquire(&vcpu->mode) == IN_GUEST_MODE);
 
 	/* Note, this is called iff the local APIC is in-kernel. */
-	if (!READ_ONCE(kvm_apic_get(vcpu)->apicv_active)) {
+	if (!READ_ONCE(kvm_get_apic(vcpu)->apicv_active)) {
 		/* Process the interrupt via kvm_check_and_inject_events(). */
 		kvm_make_request(KVM_REQ_EVENT, vcpu);
 		kvm_vcpu_kick(vcpu);
@@ -4968,9 +4984,12 @@ static struct kvm_x86_ops svm_x86_ops __initdata = {
 	.hardware_disable = svm_hardware_disable,
 	.has_emulated_msr = svm_has_emulated_msr,
 
+	.vcpu_init_vtl = svm_vcpu_init_vtl,
 	.vcpu_create = svm_vcpu_create,
 	.vcpu_free = svm_vcpu_free,
 	.vcpu_reset = svm_vcpu_reset,
+
+	.vcpu_current_vtl = svm_vcpu_current_vtl,
 
 	.vm_size = sizeof(struct kvm_svm),
 	.vm_init = svm_vm_init,

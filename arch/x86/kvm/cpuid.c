@@ -327,7 +327,7 @@ static bool kvm_cpuid_has_hyperv(struct kvm_cpuid_entry2 *entries, int nent)
 
 static void kvm_vcpu_after_set_cpuid(struct kvm_vcpu *vcpu)
 {
-	struct kvm_lapic *apic = kvm_apic_get(vcpu);
+	struct kvm_lapic *apic = kvm_get_apic(vcpu);
 	struct kvm_cpuid_entry2 *best;
 	bool allow_gbpages;
 

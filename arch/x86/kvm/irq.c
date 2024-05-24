@@ -38,7 +38,8 @@ int kvm_cpu_has_pending_timer(struct kvm_vcpu *vcpu)
  */
 static int pending_userspace_extint(struct kvm_vcpu *v)
 {
-	return v->arch.pending_external_vector != -1;
+	unsigned long vtl = static_call(kvm_x86_vcpu_current_vtl)(v);
+	return v->arch.vtl[vtl].pending_external_vector != -1;
 }
 
 /*
@@ -59,7 +60,7 @@ int kvm_cpu_has_extint(struct kvm_vcpu *v)
 	 * interrupt.
 	 */
 	if (!lapic_in_kernel(v))
-		return v->arch.interrupt.injected;
+		return v->arch.current_vtl->interrupt.injected;
 
 	if (kvm_xen_has_interrupt(v))
 		return 1;
@@ -116,7 +117,7 @@ static int kvm_cpu_get_extint(struct kvm_vcpu *v)
 	}
 
 	if (!lapic_in_kernel(v))
-		return v->arch.interrupt.nr;
+		return v->arch.current_vtl->interrupt.nr;
 
 #ifdef CONFIG_KVM_XEN
 	if (kvm_xen_has_interrupt(v))
@@ -124,9 +125,10 @@ static int kvm_cpu_get_extint(struct kvm_vcpu *v)
 #endif
 
 	if (irqchip_split(v->kvm)) {
-		int vector = v->arch.pending_external_vector;
+		unsigned long vtl = static_call(kvm_x86_vcpu_current_vtl)(v);
+		int vector = v->arch.vtl[vtl].pending_external_vector;
 
-		v->arch.pending_external_vector = -1;
+		v->arch.vtl[vtl].pending_external_vector = -1;
 		return vector;
 	} else
 		return kvm_pic_read_irq(v->kvm); /* PIC */

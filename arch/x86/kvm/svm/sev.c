@@ -3455,6 +3455,9 @@ static int __sev_snp_update_protected_guest_state(struct kvm_vcpu *vcpu)
 		svm->vmcb->control.ghcb_gpa = svm->sev_es.ghcb_gpa[svm->sev_es.snp_target_vmpl];
 
 		svm->sev_es.snp_current_vmpl = svm->sev_es.snp_target_vmpl;
+		
+		/* Update the VTL context in the CPU */
+		vcpu->arch.current_vtl = &vcpu->arch.vtl[svm->sev_es.snp_current_vmpl];
 	}
 
 	/*
@@ -3906,6 +3909,9 @@ static int __sev_run_vmpl_vmsa(struct vcpu_svm *svm, unsigned int new_vmpl)
 	vcpu->arch.efer				= new_vmpl_sa->efer;
 
 	svm->sev_es.snp_current_vmpl = new_vmpl;
+
+	/* Update the VTL context in the CPU */
+	vcpu->arch.current_vtl = &vcpu->arch.vtl[new_vmpl];
 
 	vmcb_mark_all_dirty(svm->vmcb);
 
@@ -4832,34 +4838,12 @@ bool sev_snp_interrupt_blocked(struct kvm_vcpu *vcpu)
 	return true;
 }
 
-static struct kvm_lapic *snp_get_apic(struct kvm_vcpu *vcpu) {
-	struct vcpu_svm *svm;
-	BUILD_BUG_ON(offsetof(struct vcpu_svm, vcpu) != 0);
-
-	svm = to_svm(vcpu);
-
-	if (svm->sev_es.snp_current_vmpl == 2) {
-		return svm->apic[2];
-	}
-
-	return svm->apic[0];
-}
-
 int kvm_create_lapic(struct kvm_vcpu *vcpu, int timer_advance_ns);
 
-void snp_create_apic(struct kvm_vcpu *vcpu) {
+unsigned int snp_vcpu_current_vtl(struct kvm_vcpu *vcpu) {
 	struct vcpu_svm *svm;
 	BUILD_BUG_ON(offsetof(struct vcpu_svm, vcpu) != 0);
 	svm = to_svm(vcpu);
 
-	/* Move the created apic to VMPL0 */
-	svm->apic[0] = vcpu->arch.apic;
-	vcpu->arch.apic = NULL;
-
-	/* Create another APIC and move it to VMPL2 */
-	kvm_create_lapic(vcpu, -1);
-	svm->apic[2] = vcpu->arch.apic;
-	vcpu->arch.apic = NULL;
-
-	vcpu->arch.get_apic = snp_get_apic;
+	return svm->sev_es.snp_current_vmpl;
 }

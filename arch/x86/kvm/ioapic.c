@@ -533,7 +533,7 @@ static void kvm_ioapic_update_eoi_one(struct kvm_vcpu *vcpu,
 				      int trigger_mode,
 				      int pin)
 {
-	struct kvm_lapic *apic = kvm_apic_get(vcpu);
+	struct kvm_lapic *apic = kvm_get_apic(vcpu);
 	union kvm_ioapic_redirect_entry *ent = &ioapic->redirtbl[pin];
 
 	/*

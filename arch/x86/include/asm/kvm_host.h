@@ -747,6 +747,36 @@ struct kvm_queued_exception {
 	bool has_payload;
 };
 
+#define KVM_MAX_VTL 4
+
+struct kvm_vtl_context {
+	bool active; /* If false then the context for the highest vtl should be used */
+
+	/* 
+	 * If false then the apic is shared with vtl[0]. If true then the apic
+	 * from this context should be used.
+	 */
+	bool apic_per_vtl; 
+	struct kvm_lapic *apic;    /* kernel irqchip context for this vtl */
+
+	int pending_ioapic_eoi;
+	int pending_external_vector;
+	DECLARE_BITMAP(ioapic_handled_vectors, 256);
+
+	bool exception_from_userspace;
+
+	/* Exceptions to be injected to the guest. */
+	struct kvm_queued_exception exception;
+	/* Exception VM-Exits to be synthesized to L1. */
+	struct kvm_queued_exception exception_vmexit;
+
+	struct kvm_queued_interrupt {
+		bool injected;
+		bool soft;
+		u8 nr;
+	} interrupt;
+};
+
 struct kvm_vcpu_arch {
 	/*
 	 * rip and regs accesses must go through
@@ -769,10 +799,8 @@ struct kvm_vcpu_arch {
 	u32 hflags;
 	u64 efer;
 	u64 apic_base;
-	struct kvm_lapic *apic;    /* kernel irqchip context */
 	struct kvm_lapic *(*get_apic)(struct kvm_vcpu *vcpu);
 	bool load_eoi_exitmap_pending;
-	DECLARE_BITMAP(ioapic_handled_vectors, 256);
 	unsigned long apic_attention;
 	int32_t apic_arb_prio;
 	int mp_state;
@@ -845,19 +873,6 @@ struct kvm_vcpu_arch {
 	unsigned sev_pio_count;
 
 	u8 event_exit_inst_len;
-
-	bool exception_from_userspace;
-
-	/* Exceptions to be injected to the guest. */
-	struct kvm_queued_exception exception;
-	/* Exception VM-Exits to be synthesized to L1. */
-	struct kvm_queued_exception exception_vmexit;
-
-	struct kvm_queued_interrupt {
-		bool injected;
-		bool soft;
-		u8 nr;
-	} interrupt;
 
 	int halt_request; /* real mode on Intel only */
 
@@ -1010,9 +1025,6 @@ struct kvm_vcpu_arch {
 		bool pv_unhalted;
 	} pv;
 
-	int pending_ioapic_eoi;
-	int pending_external_vector;
-
 	/* be preempted when it's in kernel-mode(cpl=0) */
 	bool preempted_in_kernel;
 
@@ -1052,6 +1064,14 @@ struct kvm_vcpu_arch {
 #if IS_ENABLED(CONFIG_HYPERV)
 	hpa_t hv_root_tdp;
 #endif
+
+	/*
+	 * Some platforms maintain certain state information for multiple privilege
+	 * levels within the same CPU. These states are accessed through this array.
+	 */
+	struct kvm_vtl_context vtl[KVM_MAX_VTL];
+	struct kvm_vtl_context *current_vtl;
+
 };
 
 struct kvm_lpage_info {
@@ -1615,9 +1635,12 @@ struct kvm_x86_ops {
 
 	/* Create, but do not attach this VCPU */
 	int (*vcpu_precreate)(struct kvm *kvm);
+	int (*vcpu_init_vtl)(struct kvm_vcpu *vcpu);
 	int (*vcpu_create)(struct kvm_vcpu *vcpu);
 	void (*vcpu_free)(struct kvm_vcpu *vcpu);
 	void (*vcpu_reset)(struct kvm_vcpu *vcpu, bool init_event);
+
+	unsigned int (*vcpu_current_vtl)(struct kvm_vcpu *vcpu);
 
 	void (*prepare_switch_to_guest)(struct kvm_vcpu *vcpu);
 	void (*vcpu_load)(struct kvm_vcpu *vcpu, int cpu);

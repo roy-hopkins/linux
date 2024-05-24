@@ -1755,10 +1755,10 @@ static void vmx_update_emulated_instruction(struct kvm_vcpu *vcpu)
 	 * vmx_check_nested_events().
 	 */
 	if (nested_cpu_has_mtf(vmcs12) &&
-	    (!vcpu->arch.exception.pending ||
-	     vcpu->arch.exception.vector == DB_VECTOR) &&
-	    (!vcpu->arch.exception_vmexit.pending ||
-	     vcpu->arch.exception_vmexit.vector == DB_VECTOR)) {
+	    (!vcpu->arch.current_vtl->exception.pending ||
+	     vcpu->arch.current_vtl->exception.vector == DB_VECTOR) &&
+	    (!vcpu->arch.current_vtl->exception_vmexit.pending ||
+	     vcpu->arch.current_vtl->exception_vmexit.vector == DB_VECTOR)) {
 		vmx->nested.mtf_pending = true;
 		kvm_make_request(KVM_REQ_EVENT, vcpu);
 	} else {
@@ -1787,7 +1787,7 @@ static void vmx_clear_hlt(struct kvm_vcpu *vcpu)
 
 static void vmx_inject_exception(struct kvm_vcpu *vcpu)
 {
-	struct kvm_queued_exception *ex = &vcpu->arch.exception;
+	struct kvm_queued_exception *ex = &vcpu->arch.current_vtl->exception;
 	u32 intr_info = ex->vector | INTR_INFO_VALID_MASK;
 	struct vcpu_vmx *vmx = to_vmx(vcpu);
 
@@ -4065,7 +4065,7 @@ static void vmx_update_msr_bitmap_x2apic(struct kvm_vcpu *vcpu)
 	 * mode, only the current timer count needs on-demand emulation by KVM.
 	 */
 	if (mode & MSR_BITMAP_MODE_X2APIC_APICV)
-		msr_bitmap[read_idx] = ~kvm_lapic_readable_reg_mask(kvm_apic_get(vcpu));
+		msr_bitmap[read_idx] = ~kvm_lapic_readable_reg_mask(kvm_get_apic(vcpu));
 	else
 		msr_bitmap[read_idx] = ~0ull;
 	msr_bitmap[write_idx] = ~0ull;
@@ -4243,7 +4243,7 @@ static int vmx_deliver_posted_interrupt(struct kvm_vcpu *vcpu, int vector)
 		return 0;
 
 	/* Note, this is called iff the local APIC is in-kernel. */
-	if (!kvm_apic_get(vcpu)->apicv_active)
+	if (!kvm_get_apic(vcpu)->apicv_active)
 		return -1;
 
 	if (pi_test_and_set_pir(vector, &vmx->pi_desc))
@@ -4808,7 +4808,7 @@ static void init_vmcs(struct vcpu_vmx *vmx)
 		vmcs_write64(VIRTUAL_APIC_PAGE_ADDR, 0);
 		if (cpu_need_tpr_shadow(&vmx->vcpu))
 			vmcs_write64(VIRTUAL_APIC_PAGE_ADDR,
-				     __pa(kvm_apic_get(&vmx->vcpu)->regs));
+				     __pa(kvm_get_apic(&vmx->vcpu)->regs));
 		vmcs_write32(TPR_THRESHOLD, 0);
 	}
 
@@ -4924,20 +4924,20 @@ static void vmx_inject_irq(struct kvm_vcpu *vcpu, bool reinjected)
 {
 	struct vcpu_vmx *vmx = to_vmx(vcpu);
 	uint32_t intr;
-	int irq = vcpu->arch.interrupt.nr;
+	int irq = vcpu->arch.current_vtl->interrupt.nr;
 
-	trace_kvm_inj_virq(irq, vcpu->arch.interrupt.soft, reinjected);
+	trace_kvm_inj_virq(irq, vcpu->arch.current_vtl->interrupt.soft, reinjected);
 
 	++vcpu->stat.irq_injections;
 	if (vmx->rmode.vm86_active) {
 		int inc_eip = 0;
-		if (vcpu->arch.interrupt.soft)
+		if (vcpu->arch.current_vtl->interrupt.soft)
 			inc_eip = vcpu->arch.event_exit_inst_len;
 		kvm_inject_realmode_interrupt(vcpu, irq, inc_eip);
 		return;
 	}
 	intr = irq | INTR_INFO_VALID_MASK;
-	if (vcpu->arch.interrupt.soft) {
+	if (vcpu->arch.current_vtl->interrupt.soft) {
 		intr |= INTR_TYPE_SOFT_INTR;
 		vmcs_write32(VM_ENTRY_INSTRUCTION_LEN,
 			     vmx->vcpu.arch.event_exit_inst_len);
@@ -5825,7 +5825,7 @@ static bool vmx_emulation_required_with_pending_exception(struct kvm_vcpu *vcpu)
 	struct vcpu_vmx *vmx = to_vmx(vcpu);
 
 	return vmx->emulation_required && !vmx->rmode.vm86_active &&
-	       (kvm_is_exception_pending(vcpu) || vcpu->arch.exception.injected);
+	       (kvm_is_exception_pending(vcpu) || vcpu->arch.current_vtl->exception.injected);
 }
 
 static int handle_invalid_guest_state(struct kvm_vcpu *vcpu)
@@ -8028,7 +8028,7 @@ static int vmx_set_hv_timer(struct kvm_vcpu *vcpu, u64 guest_deadline_tsc,
 {
 	struct vcpu_vmx *vmx;
 	u64 tscl, guest_tscl, delta_tsc, lapic_timer_advance_cycles;
-	struct kvm_timer *ktimer = &kvm_apic_get(vcpu)->lapic_timer;
+	struct kvm_timer *ktimer = &kvm_get_apic(vcpu)->lapic_timer;
 
 	vmx = to_vmx(vcpu);
 	tscl = rdtsc();

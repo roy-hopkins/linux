@@ -99,34 +99,34 @@ static inline bool kvm_vcpu_has_run(struct kvm_vcpu *vcpu)
 
 static inline bool kvm_is_exception_pending(struct kvm_vcpu *vcpu)
 {
-	return vcpu->arch.exception.pending ||
-	       vcpu->arch.exception_vmexit.pending ||
+	return vcpu->arch.current_vtl->exception.pending ||
+	       vcpu->arch.current_vtl->exception_vmexit.pending ||
 	       kvm_test_request(KVM_REQ_TRIPLE_FAULT, vcpu);
 }
 
 static inline void kvm_clear_exception_queue(struct kvm_vcpu *vcpu)
 {
-	vcpu->arch.exception.pending = false;
-	vcpu->arch.exception.injected = false;
-	vcpu->arch.exception_vmexit.pending = false;
+	vcpu->arch.current_vtl->exception.pending = false;
+	vcpu->arch.current_vtl->exception.injected = false;
+	vcpu->arch.current_vtl->exception_vmexit.pending = false;
 }
 
 static inline void kvm_queue_interrupt(struct kvm_vcpu *vcpu, u8 vector,
 	bool soft)
 {
-	vcpu->arch.interrupt.injected = true;
-	vcpu->arch.interrupt.soft = soft;
-	vcpu->arch.interrupt.nr = vector;
+	vcpu->arch.current_vtl->interrupt.injected = true;
+	vcpu->arch.current_vtl->interrupt.soft = soft;
+	vcpu->arch.current_vtl->interrupt.nr = vector;
 }
 
 static inline void kvm_clear_interrupt_queue(struct kvm_vcpu *vcpu)
 {
-	vcpu->arch.interrupt.injected = false;
+	vcpu->arch.current_vtl->interrupt.injected = false;
 }
 
 static inline bool kvm_event_needs_reinjection(struct kvm_vcpu *vcpu)
 {
-	return vcpu->arch.exception.injected || vcpu->arch.interrupt.injected ||
+	return vcpu->arch.current_vtl->exception.injected || vcpu->arch.current_vtl->interrupt.injected ||
 		vcpu->arch.nmi_injected;
 }
 

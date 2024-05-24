@@ -81,6 +81,7 @@ struct kvm_lapic {
 	unsigned long pending_events;
 	unsigned int sipi_vector;
 	int nr_lvt_entries;
+	unsigned int vtl;
 };
 
 struct dest_map;
@@ -148,8 +149,7 @@ void kvm_lapic_exit(void);
 
 u64 kvm_lapic_readable_reg_mask(struct kvm_lapic *apic);
 
-struct kvm_lapic *kvm_apic_get(struct kvm_vcpu *vcpu);
-void kvm_apic_set(struct kvm_vcpu *vcpu, struct kvm_lapic *apic);
+struct kvm_lapic *kvm_get_apic(struct kvm_vcpu *vcpu);
 
 #define VEC_POS(v) ((v) & (32 - 1))
 #define REG_POS(v) (((v) >> 5) << 4)
@@ -189,7 +189,7 @@ DECLARE_STATIC_KEY_FALSE(kvm_has_noapic_vcpu);
 static inline bool lapic_in_kernel(struct kvm_vcpu *vcpu)
 {
 	if (static_branch_unlikely(&kvm_has_noapic_vcpu))
-		return kvm_apic_get(vcpu);
+		return kvm_get_apic(vcpu);
 	return true;
 }
 
@@ -213,12 +213,12 @@ static inline bool kvm_apic_sw_enabled(struct kvm_lapic *apic)
 
 static inline bool kvm_apic_present(struct kvm_vcpu *vcpu)
 {
-	return lapic_in_kernel(vcpu) && kvm_apic_hw_enabled(kvm_apic_get(vcpu));
+	return lapic_in_kernel(vcpu) && kvm_apic_hw_enabled(kvm_get_apic(vcpu));
 }
 
 static inline int kvm_lapic_enabled(struct kvm_vcpu *vcpu)
 {
-	return kvm_apic_present(vcpu) && kvm_apic_sw_enabled(kvm_apic_get(vcpu));
+	return kvm_apic_present(vcpu) && kvm_apic_sw_enabled(kvm_get_apic(vcpu));
 }
 
 static inline int apic_x2apic_mode(struct kvm_lapic *apic)
@@ -228,12 +228,12 @@ static inline int apic_x2apic_mode(struct kvm_lapic *apic)
 
 static inline bool kvm_vcpu_apicv_active(struct kvm_vcpu *vcpu)
 {
-	return lapic_in_kernel(vcpu) && kvm_apic_get(vcpu)->apicv_active;
+	return lapic_in_kernel(vcpu) && kvm_get_apic(vcpu)->apicv_active;
 }
 
 static inline bool kvm_apic_has_pending_init_or_sipi(struct kvm_vcpu *vcpu)
 {
-	return lapic_in_kernel(vcpu) && kvm_apic_get(vcpu)->pending_events;
+	return lapic_in_kernel(vcpu) && kvm_get_apic(vcpu)->pending_events;
 }
 
 static inline bool kvm_apic_init_sipi_allowed(struct kvm_vcpu *vcpu)
@@ -250,7 +250,7 @@ static inline bool kvm_lowest_prio_delivery(struct kvm_lapic_irq *irq)
 
 static inline int kvm_lapic_latched_init(struct kvm_vcpu *vcpu)
 {
-	return lapic_in_kernel(vcpu) && test_bit(KVM_APIC_INIT, &kvm_apic_get(vcpu)->pending_events);
+	return lapic_in_kernel(vcpu) && test_bit(KVM_APIC_INIT, &kvm_get_apic(vcpu)->pending_events);
 }
 
 bool kvm_apic_pending_eoi(struct kvm_vcpu *vcpu, int vector);

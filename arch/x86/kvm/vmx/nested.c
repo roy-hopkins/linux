@@ -3406,7 +3406,7 @@ static int nested_vmx_check_permission(struct kvm_vcpu *vcpu)
 static u8 vmx_has_apicv_interrupt(struct kvm_vcpu *vcpu)
 {
 	u8 rvi = vmx_get_rvi();
-	u8 vppr = kvm_lapic_get_reg(kvm_apic_get(vcpu), APIC_PROCPRI);
+	u8 vppr = kvm_lapic_get_reg(kvm_get_apic(vcpu), APIC_PROCPRI);
 
 	return ((rvi & 0xf0) > (vppr & 0xf0));
 }
@@ -3796,8 +3796,8 @@ static void vmcs12_save_pending_event(struct kvm_vcpu *vcpu,
 	    ((u16)vm_exit_reason == EXIT_REASON_EXCEPTION_NMI &&
 	     is_double_fault(exit_intr_info))) {
 		vmcs12->idt_vectoring_info_field = 0;
-	} else if (vcpu->arch.exception.injected) {
-		nr = vcpu->arch.exception.vector;
+	} else if (vcpu->arch.current_vtl->exception.injected) {
+		nr = vcpu->arch.current_vtl->exception.vector;
 		idt_vectoring = nr | VECTORING_INFO_VALID_MASK;
 
 		if (kvm_exception_is_soft(nr)) {
@@ -3807,21 +3807,21 @@ static void vmcs12_save_pending_event(struct kvm_vcpu *vcpu,
 		} else
 			idt_vectoring |= INTR_TYPE_HARD_EXCEPTION;
 
-		if (vcpu->arch.exception.has_error_code) {
+		if (vcpu->arch.current_vtl->exception.has_error_code) {
 			idt_vectoring |= VECTORING_INFO_DELIVER_CODE_MASK;
 			vmcs12->idt_vectoring_error_code =
-				vcpu->arch.exception.error_code;
+				vcpu->arch.current_vtl->exception.error_code;
 		}
 
 		vmcs12->idt_vectoring_info_field = idt_vectoring;
 	} else if (vcpu->arch.nmi_injected) {
 		vmcs12->idt_vectoring_info_field =
 			INTR_TYPE_NMI_INTR | INTR_INFO_VALID_MASK | NMI_VECTOR;
-	} else if (vcpu->arch.interrupt.injected) {
-		nr = vcpu->arch.interrupt.nr;
+	} else if (vcpu->arch.current_vtl->interrupt.injected) {
+		nr = vcpu->arch.current_vtl->interrupt.nr;
 		idt_vectoring = nr | VECTORING_INFO_VALID_MASK;
 
-		if (vcpu->arch.interrupt.soft) {
+		if (vcpu->arch.current_vtl->interrupt.soft) {
 			idt_vectoring |= INTR_TYPE_SOFT_INTR;
 			vmcs12->vm_entry_instruction_len =
 				vcpu->arch.event_exit_inst_len;
@@ -3900,7 +3900,7 @@ mmio_needed:
 
 static void nested_vmx_inject_exception_vmexit(struct kvm_vcpu *vcpu)
 {
-	struct kvm_queued_exception *ex = &vcpu->arch.exception_vmexit;
+	struct kvm_queued_exception *ex = &vcpu->arch.current_vtl->exception_vmexit;
 	u32 intr_info = ex->vector | INTR_INFO_VALID_MASK;
 	struct vmcs12 *vmcs12 = get_vmcs12(vcpu);
 	unsigned long exit_qual;
@@ -3995,7 +3995,7 @@ static void nested_vmx_update_pending_dbg(struct kvm_vcpu *vcpu)
 {
 	unsigned long pending_dbg;
 
-	pending_dbg = vmx_get_pending_dbg_trap(&vcpu->arch.exception);
+	pending_dbg = vmx_get_pending_dbg_trap(&vcpu->arch.current_vtl->exception);
 	if (pending_dbg)
 		vmcs_writel(GUEST_PENDING_DBG_EXCEPTIONS, pending_dbg);
 }
@@ -4097,7 +4097,7 @@ static bool vmx_has_nested_events(struct kvm_vcpu *vcpu)
  */
 static int vmx_check_nested_events(struct kvm_vcpu *vcpu)
 {
-	struct kvm_lapic *apic = kvm_apic_get(vcpu);
+	struct kvm_lapic *apic = kvm_get_apic(vcpu);
 	struct vcpu_vmx *vmx = to_vmx(vcpu);
 	/*
 	 * Only a pending nested run blocks a pending exception.  If there is a
@@ -4152,8 +4152,8 @@ static int vmx_check_nested_events(struct kvm_vcpu *vcpu)
 	 * across SMI/RSM as it should; that needs to be addressed in order to
 	 * prioritize SMI over MTF and trap-like #DBs.
 	 */
-	if (vcpu->arch.exception_vmexit.pending &&
-	    !vmx_is_low_priority_db_trap(&vcpu->arch.exception_vmexit)) {
+	if (vcpu->arch.current_vtl->exception_vmexit.pending &&
+	    !vmx_is_low_priority_db_trap(&vcpu->arch.current_vtl->exception_vmexit)) {
 		if (block_nested_exceptions)
 			return -EBUSY;
 
@@ -4161,8 +4161,8 @@ static int vmx_check_nested_events(struct kvm_vcpu *vcpu)
 		return 0;
 	}
 
-	if (vcpu->arch.exception.pending &&
-	    !vmx_is_low_priority_db_trap(&vcpu->arch.exception)) {
+	if (vcpu->arch.current_vtl->exception.pending &&
+	    !vmx_is_low_priority_db_trap(&vcpu->arch.current_vtl->exception)) {
 		if (block_nested_exceptions)
 			return -EBUSY;
 		goto no_vmexit;
@@ -4176,7 +4176,7 @@ static int vmx_check_nested_events(struct kvm_vcpu *vcpu)
 		return 0;
 	}
 
-	if (vcpu->arch.exception_vmexit.pending) {
+	if (vcpu->arch.current_vtl->exception_vmexit.pending) {
 		if (block_nested_exceptions)
 			return -EBUSY;
 
@@ -4184,7 +4184,7 @@ static int vmx_check_nested_events(struct kvm_vcpu *vcpu)
 		return 0;
 	}
 
-	if (vcpu->arch.exception.pending) {
+	if (vcpu->arch.current_vtl->exception.pending) {
 		if (block_nested_exceptions)
 			return -EBUSY;
 		goto no_vmexit;
