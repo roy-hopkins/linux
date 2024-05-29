@@ -4065,7 +4065,7 @@ static void vmx_update_msr_bitmap_x2apic(struct kvm_vcpu *vcpu)
 	 * mode, only the current timer count needs on-demand emulation by KVM.
 	 */
 	if (mode & MSR_BITMAP_MODE_X2APIC_APICV)
-		msr_bitmap[read_idx] = ~kvm_lapic_readable_reg_mask(kvm_get_apic(vcpu));
+		msr_bitmap[read_idx] = ~kvm_lapic_readable_reg_mask(vcpu->arch.current_vtl->apic);
 	else
 		msr_bitmap[read_idx] = ~0ull;
 	msr_bitmap[write_idx] = ~0ull;
@@ -4243,7 +4243,7 @@ static int vmx_deliver_posted_interrupt(struct kvm_vcpu *vcpu, int vector)
 		return 0;
 
 	/* Note, this is called iff the local APIC is in-kernel. */
-	if (!kvm_get_apic(vcpu)->apicv_active)
+	if (!vcpu->arch.current_vtl->apic->apicv_active)
 		return -1;
 
 	if (pi_test_and_set_pir(vector, &vmx->pi_desc))
@@ -8028,7 +8028,7 @@ static int vmx_set_hv_timer(struct kvm_vcpu *vcpu, u64 guest_deadline_tsc,
 {
 	struct vcpu_vmx *vmx;
 	u64 tscl, guest_tscl, delta_tsc, lapic_timer_advance_cycles;
-	struct kvm_timer *ktimer = &kvm_get_apic(vcpu)->lapic_timer;
+	struct kvm_timer *ktimer = &vcpu->arch.current_vtl->apic->lapic_timer;
 
 	vmx = to_vmx(vcpu);
 	tscl = rdtsc();

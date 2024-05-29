@@ -75,7 +75,7 @@ int kvm_irq_delivery_to_apic(struct kvm *kvm, struct kvm_lapic *src,
 			if (r < 0)
 				r = 0;
 			r += kvm_apic_set_irq(vcpu, irq, dest_map);
-		} else if (kvm_apic_sw_enabled(kvm_get_apic(vcpu))) {
+		} else if (kvm_apic_sw_enabled(vcpu->arch.current_vtl->apic)) {
 			if (!kvm_vector_hashing_enabled()) {
 				if (!lowest)
 					lowest = vcpu;

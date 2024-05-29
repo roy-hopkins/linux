@@ -15,7 +15,7 @@
 static int vcpu_get_timer_advance_ns(void *data, u64 *val)
 {
 	struct kvm_vcpu *vcpu = (struct kvm_vcpu *) data;
-	*val = kvm_get_apic(vcpu)->lapic_timer.timer_advance_ns;
+	*val = vcpu->arch.current_vtl->apic->lapic_timer.timer_advance_ns;
 	return 0;
 }
 

@@ -13,10 +13,10 @@
 #ifndef __KVM_VTL_H
 #define __KVM_VTL_H
 
- #include <linux/kvm_host.h>
+#include <linux/kvm_host.h>
+
+#define RDH_VTL_2
 
 void kvm_vtl_init(struct kvm_vcpu *vcpu);
-struct kvm_vtl_context *kvm_current_vtl_context(struct kvm_vcpu *vcpu);
-struct kvm_vtl_context *kvm_vtl_context(struct kvm_vcpu *vcpu, unsigned ctx);
 
 #endif

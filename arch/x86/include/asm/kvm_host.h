@@ -749,8 +749,14 @@ struct kvm_queued_exception {
 
 #define KVM_MAX_VTL 4
 
-struct kvm_vtl_context {
+#define kvm_for_each_vcpu_arch_ctx(idx, ctxp, vcpu) \
+	for (idx = 0; idx < KVM_MAX_VTL; ++idx) \
+		for (ctxp = &vcpu->arch.vtl[idx]; (idx < KVM_MAX_VTL) && vcpu->arch.vtl[idx].active; ctxp = &vcpu->arch.vtl[++idx])
+
+struct kvm_vcpu_arch_ctx {
 	bool active; /* If false then the context for the highest vtl should be used */
+
+	struct kvm_vcpu *vcpu;
 
 	/* 
 	 * If false then the apic is shared with vtl[0]. If true then the apic
@@ -758,6 +764,7 @@ struct kvm_vtl_context {
 	 */
 	bool apic_per_vtl; 
 	struct kvm_lapic *apic;    /* kernel irqchip context for this vtl */
+	u64 apic_base;
 
 	int pending_ioapic_eoi;
 	int pending_external_vector;
@@ -798,7 +805,6 @@ struct kvm_vcpu_arch {
 	u32 pkru;
 	u32 hflags;
 	u64 efer;
-	u64 apic_base;
 	struct kvm_lapic *(*get_apic)(struct kvm_vcpu *vcpu);
 	bool load_eoi_exitmap_pending;
 	unsigned long apic_attention;
@@ -1069,8 +1075,8 @@ struct kvm_vcpu_arch {
 	 * Some platforms maintain certain state information for multiple privilege
 	 * levels within the same CPU. These states are accessed through this array.
 	 */
-	struct kvm_vtl_context vtl[KVM_MAX_VTL];
-	struct kvm_vtl_context *current_vtl;
+	struct kvm_vcpu_arch_ctx vtl[KVM_MAX_VTL];
+	struct kvm_vcpu_arch_ctx *current_vtl;
 
 };
 

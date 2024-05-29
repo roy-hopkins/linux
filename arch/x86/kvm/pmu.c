@@ -595,7 +595,7 @@ void kvm_pmu_deliver_pmi(struct kvm_vcpu *vcpu)
 {
 	if (lapic_in_kernel(vcpu)) {
 		static_call_cond(kvm_x86_pmu_deliver_pmi)(vcpu);
-		kvm_apic_local_deliver(kvm_get_apic(vcpu), APIC_LVTPC);
+		kvm_apic_local_deliver(vcpu->arch.current_vtl->apic, APIC_LVTPC);
 	}
 }
 

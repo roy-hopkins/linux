@@ -887,7 +887,7 @@ static int nested_vmx_msr_check_common(struct kvm_vcpu *vcpu,
 				       struct vmx_msr_entry *e)
 {
 	/* x2APIC MSR accesses are not allowed */
-	if (CC(vcpu->arch.apic_base & X2APIC_ENABLE && e->index >> 8 == 0x8))
+	if (CC(vcpu->arch.current_vtl->apic_base & X2APIC_ENABLE && e->index >> 8 == 0x8))
 		return -EINVAL;
 	if (CC(e->index == MSR_IA32_UCODE_WRITE) || /* SDM Table 35-2 */
 	    CC(e->index == MSR_IA32_UCODE_REV))
@@ -3406,7 +3406,7 @@ static int nested_vmx_check_permission(struct kvm_vcpu *vcpu)
 static u8 vmx_has_apicv_interrupt(struct kvm_vcpu *vcpu)
 {
 	u8 rvi = vmx_get_rvi();
-	u8 vppr = kvm_lapic_get_reg(kvm_get_apic(vcpu), APIC_PROCPRI);
+	u8 vppr = kvm_lapic_get_reg(vcpu->arch.current_vtl->apic, APIC_PROCPRI);
 
 	return ((rvi & 0xf0) > (vppr & 0xf0));
 }
@@ -4097,7 +4097,7 @@ static bool vmx_has_nested_events(struct kvm_vcpu *vcpu)
  */
 static int vmx_check_nested_events(struct kvm_vcpu *vcpu)
 {
-	struct kvm_lapic *apic = kvm_get_apic(vcpu);
+	struct kvm_lapic *apic = vcpu->arch.current_vtl->apic;
 	struct vcpu_vmx *vmx = to_vmx(vcpu);
 	/*
 	 * Only a pending nested run blocks a pending exception.  If there is a

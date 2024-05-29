@@ -33,6 +33,7 @@
 #include "svm_ops.h"
 #include "cpuid.h"
 #include "trace.h"
+#include "vtl.h"
 
 #ifndef CONFIG_KVM_AMD_SEV
 /*
@@ -3457,7 +3458,9 @@ static int __sev_snp_update_protected_guest_state(struct kvm_vcpu *vcpu)
 		svm->sev_es.snp_current_vmpl = svm->sev_es.snp_target_vmpl;
 		
 		/* Update the VTL context in the CPU */
+#ifdef RDH_VTL_2
 		vcpu->arch.current_vtl = &vcpu->arch.vtl[svm->sev_es.snp_current_vmpl];
+#endif
 	}
 
 	/*
@@ -3911,7 +3914,9 @@ static int __sev_run_vmpl_vmsa(struct vcpu_svm *svm, unsigned int new_vmpl)
 	svm->sev_es.snp_current_vmpl = new_vmpl;
 
 	/* Update the VTL context in the CPU */
+#ifdef RDH_VTL_2
 	vcpu->arch.current_vtl = &vcpu->arch.vtl[new_vmpl];
+#endif
 
 	vmcb_mark_all_dirty(svm->vmcb);
 

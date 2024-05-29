@@ -275,7 +275,7 @@ static void __kvm_update_cpuid_runtime(struct kvm_vcpu *vcpu, struct kvm_cpuid_e
 					   kvm_is_cr4_bit_set(vcpu, X86_CR4_OSXSAVE));
 
 		cpuid_entry_change(best, X86_FEATURE_APIC,
-			   vcpu->arch.apic_base & MSR_IA32_APICBASE_ENABLE);
+			   vcpu->arch.current_vtl->apic_base & MSR_IA32_APICBASE_ENABLE);
 	}
 
 	best = cpuid_entry2_find(entries, nent, 7, 0);
@@ -327,7 +327,6 @@ static bool kvm_cpuid_has_hyperv(struct kvm_cpuid_entry2 *entries, int nent)
 
 static void kvm_vcpu_after_set_cpuid(struct kvm_vcpu *vcpu)
 {
-	struct kvm_lapic *apic = kvm_get_apic(vcpu);
 	struct kvm_cpuid_entry2 *best;
 	bool allow_gbpages;
 
@@ -352,13 +351,18 @@ static void kvm_vcpu_after_set_cpuid(struct kvm_vcpu *vcpu)
 		kvm_governed_feature_set(vcpu, X86_FEATURE_GBPAGES);
 
 	best = kvm_find_cpuid_entry(vcpu, 1);
-	if (best && apic) {
-		if (cpuid_entry_has(best, X86_FEATURE_TSC_DEADLINE_TIMER))
-			apic->lapic_timer.timer_mode_mask = 3 << 17;
-		else
-			apic->lapic_timer.timer_mode_mask = 1 << 17;
-
-		kvm_apic_set_version(vcpu);
+	if (best) {
+		struct kvm_vcpu_arch_ctx *ctx;
+		unsigned int vtl;
+		kvm_for_each_vcpu_arch_ctx(vtl, ctx, vcpu) {
+			if (ctx->apic) {
+				if (cpuid_entry_has(best, X86_FEATURE_TSC_DEADLINE_TIMER))
+					ctx->apic->lapic_timer.timer_mode_mask = 3 << 17;
+				else
+					ctx->apic->lapic_timer.timer_mode_mask = 1 << 17;
+				kvm_apic_set_version(ctx);
+			}
+		}
 	}
 
 	vcpu->arch.guest_supported_xcr0 =
