@@ -904,7 +904,7 @@ static void pv_eoi_set_pending(struct kvm_vcpu *vcpu)
 	if (pv_eoi_put_user(vcpu, KVM_PV_EOI_ENABLED) < 0)
 		return;
 
-	__set_bit(KVM_APIC_PV_EOI_PENDING, &vcpu->arch.apic_attention);
+	__set_bit(KVM_APIC_PV_EOI_PENDING, &vcpu->arch.current_vtl->apic_attention);
 }
 
 static bool pv_eoi_test_and_clr_pending(struct kvm_vcpu *vcpu)
@@ -924,7 +924,7 @@ static bool pv_eoi_test_and_clr_pending(struct kvm_vcpu *vcpu)
 	 * While this might not be ideal from performance point of view,
 	 * this makes sure pv eoi is only enabled when we know it's safe.
 	 */
-	__clear_bit(KVM_APIC_PV_EOI_PENDING, &vcpu->arch.apic_attention);
+	__clear_bit(KVM_APIC_PV_EOI_PENDING, &vcpu->arch.current_vtl->apic_attention);
 
 	return val;
 }
@@ -1299,7 +1299,7 @@ static int __apic_accept_irq(struct kvm_lapic *apic, int delivery_mode,
 				  trig_mode, vector);
 	switch (delivery_mode) {
 	case APIC_DM_LOWEST:
-		vcpu->arch.apic_arb_prio++;
+		vcpu->arch.current_vtl->apic_arb_prio++;
 		fallthrough;
 	case APIC_DM_FIXED:
 		if (unlikely(trig_mode && !level))
@@ -1431,7 +1431,7 @@ void kvm_bitmap_or_dest_vcpus(struct kvm *kvm, struct kvm_lapic_irq *irq,
 
 int kvm_apic_compare_prio(struct kvm_vcpu *vcpu1, struct kvm_vcpu *vcpu2)
 {
-	return vcpu1->arch.apic_arb_prio - vcpu2->arch.apic_arb_prio;
+	return vcpu1->arch.current_vtl->apic_arb_prio - vcpu2->arch.current_vtl->apic_arb_prio;
 }
 
 static bool kvm_ioapic_handles_vector(struct kvm_lapic *apic, int vector)
@@ -2733,8 +2733,8 @@ void kvm_lapic_reset(struct kvm_vcpu_arch_ctx *vcpu_ctx, bool init_event)
 		static_call_cond(kvm_x86_hwapic_isr_update)(-1);
 	}
 
-	vcpu_ctx->vcpu->arch.apic_arb_prio = 0;
-	vcpu_ctx->vcpu->arch.apic_attention = 0;
+	vcpu_ctx->apic_arb_prio = 0;
+	vcpu_ctx->apic_attention = 0;
 
 	kvm_recalculate_apic_map(vcpu_ctx->vcpu->kvm);
 }
@@ -2818,6 +2818,7 @@ int kvm_create_lapic(struct kvm_vcpu_arch_ctx *vcpu_ctx, int timer_advance_ns)
 		goto nomem;
 
 	vcpu_ctx->apic = apic;
+	apic->vtl = vcpu_ctx->vtl;
 
 	if (kvm_x86_ops.alloc_apic_backing_page)
 		apic->regs = static_call(kvm_x86_alloc_apic_backing_page)(vcpu_ctx->vcpu);
@@ -3025,7 +3026,7 @@ int kvm_apic_set_state(struct kvm_vcpu_arch_ctx *vcpu_ctx, struct kvm_lapic_stat
 	if (ioapic_in_kernel(vcpu_ctx->vcpu->kvm))
 		kvm_rtc_eoi_tracking_restore_one(vcpu_ctx->vcpu);
 
-	vcpu_ctx->vcpu->arch.apic_arb_prio = 0;
+	vcpu_ctx->apic_arb_prio = 0;
 
 	return 0;
 }
@@ -3077,10 +3078,10 @@ void kvm_lapic_sync_from_vapic(struct kvm_vcpu *vcpu)
 {
 	u32 data;
 
-	if (test_bit(KVM_APIC_PV_EOI_PENDING, &vcpu->arch.apic_attention))
+	if (test_bit(KVM_APIC_PV_EOI_PENDING, &vcpu->arch.current_vtl->apic_attention))
 		apic_sync_pv_eoi_from_guest(vcpu, vcpu->arch.current_vtl->apic);
 
-	if (!test_bit(KVM_APIC_CHECK_VAPIC, &vcpu->arch.apic_attention))
+	if (!test_bit(KVM_APIC_CHECK_VAPIC, &vcpu->arch.current_vtl->apic_attention))
 		return;
 
 	if (kvm_read_guest_cached(vcpu->kvm, &vcpu->arch.current_vtl->apic->vapic_cache, &data,
@@ -3124,7 +3125,7 @@ void kvm_lapic_sync_to_vapic(struct kvm_vcpu *vcpu)
 
 	apic_sync_pv_eoi_to_guest(vcpu, apic);
 
-	if (!test_bit(KVM_APIC_CHECK_VAPIC, &vcpu->arch.apic_attention))
+	if (!test_bit(KVM_APIC_CHECK_VAPIC, &vcpu->arch.current_vtl->apic_attention))
 		return;
 
 	tpr = kvm_lapic_get_reg(apic, APIC_TASKPRI) & 0xff;
@@ -3147,9 +3148,9 @@ int kvm_lapic_set_vapic_addr(struct kvm_vcpu *vcpu, gpa_t vapic_addr)
 					&vcpu->arch.current_vtl->apic->vapic_cache,
 					vapic_addr, sizeof(u32)))
 			return -EINVAL;
-		__set_bit(KVM_APIC_CHECK_VAPIC, &vcpu->arch.apic_attention);
+		__set_bit(KVM_APIC_CHECK_VAPIC, &vcpu->arch.current_vtl->apic_attention);
 	} else {
-		__clear_bit(KVM_APIC_CHECK_VAPIC, &vcpu->arch.apic_attention);
+		__clear_bit(KVM_APIC_CHECK_VAPIC, &vcpu->arch.current_vtl->apic_attention);
 	}
 
 	vcpu->arch.current_vtl->apic->vapic_addr = vapic_addr;

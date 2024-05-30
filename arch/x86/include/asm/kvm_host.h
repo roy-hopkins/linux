@@ -758,6 +758,8 @@ struct kvm_vcpu_arch_ctx {
 
 	struct kvm_vcpu *vcpu;
 
+	unsigned int vtl;
+
 	/* 
 	 * If false then the apic is shared with vtl[0]. If true then the apic
 	 * from this context should be used.
@@ -769,6 +771,8 @@ struct kvm_vcpu_arch_ctx {
 	int pending_ioapic_eoi;
 	int pending_external_vector;
 	DECLARE_BITMAP(ioapic_handled_vectors, 256);
+	unsigned long apic_attention;
+	int32_t apic_arb_prio;
 
 	bool exception_from_userspace;
 
@@ -805,10 +809,7 @@ struct kvm_vcpu_arch {
 	u32 pkru;
 	u32 hflags;
 	u64 efer;
-	struct kvm_lapic *(*get_apic)(struct kvm_vcpu *vcpu);
 	bool load_eoi_exitmap_pending;
-	unsigned long apic_attention;
-	int32_t apic_arb_prio;
 	int mp_state;
 	u64 ia32_misc_enable_msr;
 	u64 smbase;

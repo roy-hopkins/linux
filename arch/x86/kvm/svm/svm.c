@@ -1419,6 +1419,7 @@ static int svm_vcpu_init_vtl(struct kvm_vcpu *vcpu)
 		unsigned int vtl;
 		for (vtl = 0; vtl < 4; vtl++) {
 			vcpu->arch.vtl[vtl].active = true;
+			vcpu->arch.vtl[vtl].vtl = vtl;
 			vcpu->arch.vtl[vtl].apic_per_vtl = true;
 		}
 	}
@@ -3483,7 +3484,6 @@ static bool svm_check_exit_valid(u64 exit_code)
 
 static int svm_handle_invalid_exit(struct kvm_vcpu *vcpu, u64 exit_code)
 {
-	pr_info("** svm_handle_invalid_exit\n");
 	vcpu_unimpl(vcpu, "svm: unexpected exit reason 0x%llx\n", exit_code);
 	dump_vmcb(vcpu);
 	vcpu->run->exit_reason = KVM_EXIT_INTERNAL_ERROR;
@@ -3498,8 +3498,6 @@ int svm_invoke_exit_handler(struct kvm_vcpu *vcpu, u64 exit_code)
 {
 	if (!svm_check_exit_valid(exit_code))
 		return svm_handle_invalid_exit(vcpu, exit_code);
-
-	pr_info("%s: exit_code=%llx\n", __func__, exit_code);
 
 #ifdef CONFIG_RETPOLINE
 	if (exit_code == SVM_EXIT_MSR)
@@ -3566,7 +3564,6 @@ static int svm_handle_exit(struct kvm_vcpu *vcpu, fastpath_t exit_fastpath)
 		kvm_run->fail_entry.hardware_entry_failure_reason
 			= svm->vmcb->control.exit_code;
 		kvm_run->fail_entry.cpu = vcpu->arch.last_vmentry_cpu;
-		pr_info("** SVM_EXIT_ERR\n");
 		dump_vmcb(vcpu);
 		return 0;
 	}

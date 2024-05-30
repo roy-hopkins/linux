@@ -11098,7 +11098,7 @@ static int vcpu_enter_guest(struct kvm_vcpu *vcpu)
 	if (unlikely(vcpu->arch.tsc_always_catchup))
 		kvm_make_request(KVM_REQ_CLOCK_UPDATE, vcpu);
 
-	if (vcpu->arch.apic_attention)
+	if (vcpu->arch.current_vtl->apic_attention)
 		kvm_lapic_sync_from_vapic(vcpu);
 
 	r = static_call(kvm_x86_handle_exit)(vcpu, exit_fastpath);
@@ -11108,7 +11108,7 @@ cancel_injection:
 	if (req_immediate_exit)
 		kvm_make_request(KVM_REQ_EVENT, vcpu);
 	static_call(kvm_x86_cancel_injection)(vcpu);
-	if (unlikely(vcpu->arch.apic_attention))
+	if (unlikely(vcpu->arch.current_vtl->apic_attention))
 		kvm_lapic_sync_from_vapic(vcpu);
 out:
 	return r;
@@ -11218,7 +11218,6 @@ static int vcpu_run(struct kvm_vcpu *vcpu)
 			kvm_xen_inject_pending_events(vcpu);
 
 		if (kvm_cpu_has_pending_timer(vcpu)) {
-			pr_info("%s: has pending timer\n", __func__);
 			kvm_inject_pending_timer_irqs(vcpu);
 		}
 
@@ -12116,6 +12115,7 @@ int kvm_arch_vcpu_create(struct kvm_vcpu *vcpu)
 
 	vcpu->arch.vtl[0].active = true;
 	vcpu->arch.vtl[0].apic_per_vtl = true;
+	vcpu->arch.vtl[0].vtl = 0;
 	vcpu->arch.current_vtl = &vcpu->arch.vtl[0];
 	static_call(kvm_x86_vcpu_init_vtl)(vcpu);
 
