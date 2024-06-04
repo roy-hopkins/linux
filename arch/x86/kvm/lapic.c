@@ -823,7 +823,7 @@ static int __apic_accept_irq(struct kvm_lapic *apic, int delivery_mode,
 int kvm_apic_set_irq(struct kvm_vcpu *vcpu, struct kvm_lapic_irq *irq,
 		     struct dest_map *dest_map)
 {
-	struct kvm_lapic *apic = vcpu->arch.current_vtl->apic;
+	struct kvm_lapic *apic = vcpu->arch.vtl[irq->target_vtl].apic;
 
 	return __apic_accept_irq(apic, irq->delivery_mode, irq->vector,
 			irq->level, irq->trig_mode, dest_map);
@@ -1161,7 +1161,8 @@ static inline bool kvm_apic_map_get_dest_lapic(struct kvm *kvm,
 			*bitmap = 0;
 		} else {
 			u32 dest_id = array_index_nospec(irq->dest_id, map->max_apic_id + 1);
-			*dst = &map->phys_map[dest_id];
+			//*dst = &map->phys_map[dest_id];
+			*dst = &map->phys_map[dest_id]->vcpu->arch.vtl[irq->target_vtl].apic;
 			*bitmap = 1;
 		}
 		return true;
@@ -1171,6 +1172,12 @@ static inline bool kvm_apic_map_get_dest_lapic(struct kvm *kvm,
 	if (!kvm_apic_map_get_logical_dest(map, irq->dest_id, dst,
 				(u16 *)bitmap))
 		return false;
+
+	for_each_set_bit(i, bitmap, 16) {
+		if (!(*dst)[i])
+			continue;
+		(*dst)[i] = (*dst)[i]->vcpu->arch.vtl[irq->target_vtl].apic;
+	}
 
 	if (!kvm_lowest_prio_delivery(irq))
 		return true;
@@ -1295,7 +1302,7 @@ static int __apic_accept_irq(struct kvm_lapic *apic, int delivery_mode,
 	int result = 0;
 	struct kvm_vcpu *vcpu = apic->vcpu;
 
-	trace_kvm_apic_accept_irq(vcpu->vcpu_id, delivery_mode,
+	trace_kvm_apic_accept_irq(apic->vtl, vcpu->vcpu_id, delivery_mode,
 				  trig_mode, vector);
 	switch (delivery_mode) {
 	case APIC_DM_LOWEST:
@@ -1515,6 +1522,7 @@ void kvm_apic_send_ipi(struct kvm_lapic *apic, u32 icr_low, u32 icr_high)
 	irq.trig_mode = icr_low & APIC_INT_LEVELTRIG;
 	irq.shorthand = icr_low & APIC_SHORT_MASK;
 	irq.msi_redir_hint = false;
+	irq.target_vtl = apic->vtl;
 	if (apic_x2apic_mode(apic))
 		irq.dest_id = icr_high;
 	else
@@ -1663,7 +1671,7 @@ static int kvm_lapic_reg_read(struct kvm_lapic *apic, u32 offset, int len,
 
 	result = __apic_read(apic, offset & ~0xf);
 
-	trace_kvm_apic_read(offset, result);
+	trace_kvm_apic_read(offset, result, apic->vtl);
 
 	switch (len) {
 	case 1:
@@ -2256,7 +2264,7 @@ static int kvm_lapic_reg_write(struct kvm_lapic *apic, u32 reg, u32 val)
 {
 	int ret = 0;
 
-	trace_kvm_apic_write(reg, val);
+	trace_kvm_apic_write(reg, val, apic->vtl);
 
 	switch (reg) {
 	case APIC_ID:		/* Local APIC ID */
@@ -3163,7 +3171,7 @@ int kvm_x2apic_icr_write(struct kvm_lapic *apic, u64 data)
 
 	kvm_apic_send_ipi(apic, (u32)data, (u32)(data >> 32));
 	kvm_lapic_set_reg64(apic, APIC_ICR, data);
-	trace_kvm_apic_write(APIC_ICR, data);
+	trace_kvm_apic_write(APIC_ICR, data, apic->vtl);
 	return 0;
 }
 

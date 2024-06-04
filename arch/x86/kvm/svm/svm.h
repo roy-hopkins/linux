@@ -224,6 +224,10 @@ struct vcpu_sev_es_state {
 	gpa_t ghcb_gpa[SVM_SEV_VMPL_MAX];
 	u64 ghcb_registered_gpa[SVM_SEV_VMPL_MAX];
 
+	u32 int_ctl[SVM_SEV_VMPL_MAX];
+	u32 int_vector[SVM_SEV_VMPL_MAX];
+	u32 int_state[SVM_SEV_VMPL_MAX];
+
 	bool received_first_sipi;
 	unsigned int ap_reset_hold_type;
 

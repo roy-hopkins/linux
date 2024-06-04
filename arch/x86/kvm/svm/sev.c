@@ -3446,17 +3446,34 @@ static int __sev_snp_update_protected_guest_state(struct kvm_vcpu *vcpu)
 	}
 
 	if (svm->sev_es.snp_current_vmpl != svm->sev_es.snp_target_vmpl) {
+		trace_kvm_set_current_vtl(svm->sev_es.snp_current_vmpl, svm->sev_es.snp_target_vmpl);
+
 		/* Unmap the current GHCB */
 		sev_es_unmap_ghcb(svm);
 
 		/* Save the GHCB GPA of the current VMPL */
 		svm->sev_es.ghcb_gpa[svm->sev_es.snp_current_vmpl] = svm->vmcb->control.ghcb_gpa;
 
+		/* Save the interrupt state */
+		svm->sev_es.int_ctl[svm->sev_es.snp_current_vmpl] 		= svm->vmcb->control.int_ctl;
+		svm->sev_es.int_vector[svm->sev_es.snp_current_vmpl] 		= svm->vmcb->control.int_vector;
+		svm->sev_es.int_state[svm->sev_es.snp_current_vmpl] 		= svm->vmcb->control.int_state;
+
+		/* Initialise the new interrupt state */
+		svm->sev_es.int_ctl[svm->sev_es.snp_target_vmpl] 		= svm->vmcb->control.int_ctl & ((1 << 9) | (1 << 12) | (1 << 24) | (1 << 25) | (1 << 26) | (1 << 30) | (1 << 31));
+		svm->sev_es.int_vector[svm->sev_es.snp_target_vmpl] 		= 0;
+		svm->sev_es.int_state[svm->sev_es.snp_target_vmpl] 		= 0;
+
 		/* Set the GHCB_GPA for the target VMPL and make it the current VMPL */
 		svm->vmcb->control.ghcb_gpa = svm->sev_es.ghcb_gpa[svm->sev_es.snp_target_vmpl];
 
 		svm->sev_es.snp_current_vmpl = svm->sev_es.snp_target_vmpl;
-		
+
+		/* Update the interrupt state */
+		svm->vmcb->control.int_ctl		= svm->sev_es.int_ctl[svm->sev_es.snp_current_vmpl];
+		svm->vmcb->control.int_vector		= svm->sev_es.int_vector[svm->sev_es.snp_current_vmpl];
+		svm->vmcb->control.int_state		= svm->sev_es.int_state[svm->sev_es.snp_current_vmpl];
+
 		/* Update the VTL context in the CPU */
 #ifdef RDH_VTL_2
 		vcpu->arch.current_vtl = &vcpu->arch.vtl[svm->sev_es.snp_current_vmpl];
@@ -3888,6 +3905,10 @@ static int __sev_run_vmpl_vmsa(struct vcpu_svm *svm, unsigned int new_vmpl)
 
 	/* Save some current VMCB values */
 	svm->sev_es.ghcb_gpa[old_vmpl]		= svm->vmcb->control.ghcb_gpa;
+	svm->sev_es.int_ctl[old_vmpl] 		= svm->vmcb->control.int_ctl;
+	svm->sev_es.int_vector[old_vmpl] 	= svm->vmcb->control.int_vector;
+	svm->sev_es.int_state[old_vmpl] 	= svm->vmcb->control.int_state;
+
 
 	old_vmpl_sa = &svm->sev_es.vssa[old_vmpl];
 	old_vmpl_sa->exit_int_info		= svm->vmcb->control.exit_int_info;
@@ -3901,6 +3922,9 @@ static int __sev_run_vmpl_vmsa(struct vcpu_svm *svm, unsigned int new_vmpl)
 	/* Restore some previous VMCB values */
 	svm->vmcb->control.vmsa_pa		= svm->sev_es.vmsa_pa[new_vmpl];
 	svm->vmcb->control.ghcb_gpa		= svm->sev_es.ghcb_gpa[new_vmpl];
+	svm->vmcb->control.int_ctl		= svm->sev_es.int_ctl[new_vmpl];
+	svm->vmcb->control.int_vector		= svm->sev_es.int_vector[new_vmpl];
+	svm->vmcb->control.int_state		= svm->sev_es.int_state[new_vmpl];
 
 	new_vmpl_sa = &svm->sev_es.vssa[new_vmpl];
 	svm->vmcb->control.exit_int_info	= new_vmpl_sa->exit_int_info;
@@ -3911,6 +3935,7 @@ static int __sev_run_vmpl_vmsa(struct vcpu_svm *svm, unsigned int new_vmpl)
 	vcpu->arch.cr8				= new_vmpl_sa->cr8;
 	vcpu->arch.efer				= new_vmpl_sa->efer;
 
+	trace_kvm_set_current_vtl(svm->sev_es.snp_current_vmpl, new_vmpl);
 	svm->sev_es.snp_current_vmpl = new_vmpl;
 
 	/* Update the VTL context in the CPU */

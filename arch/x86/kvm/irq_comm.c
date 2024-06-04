@@ -119,6 +119,9 @@ void kvm_set_msi_irq(struct kvm *kvm, struct kvm_kernel_irq_routing_entry *e,
 	irq->msi_redir_hint = msg.arch_addr_lo.redirect_hint;
 	irq->level = 1;
 	irq->shorthand = APIC_DEST_NOSHORT;
+
+	// RDH: Delivery to VTL2
+	irq->target_vtl = 2;
 }
 EXPORT_SYMBOL_GPL(kvm_set_msi_irq);
 

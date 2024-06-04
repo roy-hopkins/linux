@@ -3666,7 +3666,7 @@ static void svm_inject_irq(struct kvm_vcpu *vcpu, bool reinjected)
 		type = SVM_EVTINJ_TYPE_INTR;
 	}
 
-	trace_kvm_inj_virq(vcpu->arch.current_vtl->interrupt.nr,
+	trace_kvm_inj_virq(vcpu->arch.current_vtl->vtl, vcpu->arch.current_vtl->interrupt.nr,
 			   vcpu->arch.current_vtl->interrupt.soft, reinjected);
 	++vcpu->stat.irq_injections;
 

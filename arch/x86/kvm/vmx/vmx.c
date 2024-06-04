@@ -4926,7 +4926,7 @@ static void vmx_inject_irq(struct kvm_vcpu *vcpu, bool reinjected)
 	uint32_t intr;
 	int irq = vcpu->arch.current_vtl->interrupt.nr;
 
-	trace_kvm_inj_virq(irq, vcpu->arch.current_vtl->interrupt.soft, reinjected);
+	trace_kvm_inj_virq(vcpu->arch.current_vtl->vtl, irq, vcpu->arch.current_vtl->interrupt.soft, reinjected);
 
 	++vcpu->stat.irq_injections;
 	if (vmx->rmode.vm86_active) {

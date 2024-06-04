@@ -1618,6 +1618,7 @@ struct kvm_lapic_irq {
 	u32 shorthand;
 	u32 dest_id;
 	bool msi_redir_hint;
+	u32 target_vtl;
 };
 
 static inline u16 kvm_lapic_irq_dest_mode(bool dest_mode_logical)

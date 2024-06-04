@@ -10670,7 +10670,6 @@ static void vcpu_scan_ioapic(struct kvm_vcpu *vcpu)
 
 static void vcpu_load_eoi_exitmap(struct kvm_vcpu *vcpu)
 {
-	unsigned int vtl = static_call(kvm_x86_vcpu_current_vtl)(vcpu);
 	if (!kvm_apic_hw_enabled(vcpu->arch.current_vtl->apic))
 		return;
 
@@ -10679,14 +10678,14 @@ static void vcpu_load_eoi_exitmap(struct kvm_vcpu *vcpu)
 		u64 eoi_exit_bitmap[4];
 
 		bitmap_or((ulong *)eoi_exit_bitmap,
-			  vcpu->arch.vtl[vtl].ioapic_handled_vectors,
+			  vcpu->arch.current_vtl->ioapic_handled_vectors,
 			  to_hv_synic(vcpu)->vec_bitmap, 256);
 		static_call_cond(kvm_x86_load_eoi_exitmap)(vcpu, eoi_exit_bitmap);
 		return;
 	}
 #endif
 	static_call_cond(kvm_x86_load_eoi_exitmap)(
-		vcpu, (u64 *)vcpu->arch.vtl[vtl].ioapic_handled_vectors);
+		vcpu, (u64 *)vcpu->arch.current_vtl->ioapic_handled_vectors);
 }
 
 void kvm_arch_guest_memory_reclaimed(struct kvm *kvm)
@@ -13994,6 +13993,7 @@ EXPORT_TRACEPOINT_SYMBOL_GPL(kvm_vmgexit_enter);
 EXPORT_TRACEPOINT_SYMBOL_GPL(kvm_vmgexit_exit);
 EXPORT_TRACEPOINT_SYMBOL_GPL(kvm_vmgexit_msr_protocol_enter);
 EXPORT_TRACEPOINT_SYMBOL_GPL(kvm_vmgexit_msr_protocol_exit);
+EXPORT_TRACEPOINT_SYMBOL_GPL(kvm_set_current_vtl);
 
 static int __init kvm_x86_init(void)
 {

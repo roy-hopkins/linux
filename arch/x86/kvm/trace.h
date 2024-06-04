@@ -21,14 +21,16 @@ TRACE_EVENT(kvm_entry,
 	TP_STRUCT__entry(
 		__field(	unsigned int,	vcpu_id		)
 		__field(	unsigned long,	rip		)
+		__field(	unsigned int, 	vtl		)
 	),
 
 	TP_fast_assign(
 		__entry->vcpu_id        = vcpu->vcpu_id;
 		__entry->rip		= kvm_rip_read(vcpu);
+		__entry->vtl		= vcpu->arch.current_vtl->vtl ;
 	),
 
-	TP_printk("vcpu %u, rip 0x%lx", __entry->vcpu_id, __entry->rip)
+	TP_printk("vcpu %u, vtl %u, rip 0x%lx", __entry->vcpu_id, __entry->vtl, __entry->rip)
 );
 
 /*
@@ -256,29 +258,31 @@ TRACE_EVENT(kvm_cpuid,
  * Tracepoint for apic access.
  */
 TRACE_EVENT(kvm_apic,
-	TP_PROTO(unsigned int rw, unsigned int reg, u64 val),
-	TP_ARGS(rw, reg, val),
+	TP_PROTO(unsigned int rw, unsigned int reg, u64 val, unsigned int vtl),
+	TP_ARGS(rw, reg, val, vtl),
 
 	TP_STRUCT__entry(
 		__field(	unsigned int,	rw		)
 		__field(	unsigned int,	reg		)
 		__field(	u64,		val		)
+		__field(	unsigned int,	vtl		)
 	),
 
 	TP_fast_assign(
 		__entry->rw		= rw;
 		__entry->reg		= reg;
 		__entry->val		= val;
+		__entry->vtl		= vtl;
 	),
 
-	TP_printk("apic_%s %s = 0x%llx",
+	TP_printk("apic_%s %s = 0x%llx vtl = %u",
 		  __entry->rw ? "write" : "read",
 		  __print_symbolic(__entry->reg, kvm_trace_symbol_apic),
-		  __entry->val)
+		  __entry->val, __entry->vtl)
 );
 
-#define trace_kvm_apic_read(reg, val)		trace_kvm_apic(0, reg, val)
-#define trace_kvm_apic_write(reg, val)		trace_kvm_apic(1, reg, val)
+#define trace_kvm_apic_read(reg, val, vtl)	trace_kvm_apic(0, reg, val, vtl)
+#define trace_kvm_apic_write(reg, val, vtl)	trace_kvm_apic(1, reg, val, vtl)
 
 #define KVM_ISA_VMX   1
 #define KVM_ISA_SVM   2
@@ -305,12 +309,14 @@ TRACE_EVENT(name,							     \
 		__field(	u32,	        intr_info	)	     \
 		__field(	u32,	        error_code	)	     \
 		__field(	unsigned int,	vcpu_id         )	     \
+		__field(	unsigned int, 	vtl		)	     \
 	),								     \
 									     \
 	TP_fast_assign(							     \
 		__entry->guest_rip	= kvm_rip_read(vcpu);		     \
 		__entry->isa            = isa;				     \
 		__entry->vcpu_id        = vcpu->vcpu_id;		     \
+		__entry->vtl		= vcpu->arch.current_vtl->vtl;	     \
 		static_call(kvm_x86_get_exit_info)(vcpu,		     \
 					  &__entry->exit_reason,	     \
 					  &__entry->info1,		     \
@@ -319,10 +325,11 @@ TRACE_EVENT(name,							     \
 					  &__entry->error_code);	     \
 	),								     \
 									     \
-	TP_printk("vcpu %u reason %s%s%s rip 0x%lx info1 0x%016llx "	     \
+	TP_printk("vcpu %u reason %s%s%s vtl %u rip 0x%lx info1 0x%016llx "  \
 		  "info2 0x%016llx intr_info 0x%08x error_code 0x%08x",	     \
 		  __entry->vcpu_id,					     \
 		  kvm_print_exit_reason(__entry->exit_reason, __entry->isa), \
+		  __entry->vtl,						     \
 		  __entry->guest_rip, __entry->info1, __entry->info2,	     \
 		  __entry->intr_info, __entry->error_code)		     \
 )
@@ -336,22 +343,25 @@ TRACE_EVENT_KVM_EXIT(kvm_exit);
  * Tracepoint for kvm interrupt injection:
  */
 TRACE_EVENT(kvm_inj_virq,
-	TP_PROTO(unsigned int vector, bool soft, bool reinjected),
-	TP_ARGS(vector, soft, reinjected),
+	TP_PROTO(unsigned int vtl, unsigned int vector, bool soft, bool reinjected),
+	TP_ARGS(vtl, vector, soft, reinjected),
 
 	TP_STRUCT__entry(
+		__field(	unsigned int,	vtl		)
 		__field(	unsigned int,	vector		)
 		__field(	bool,		soft		)
 		__field(	bool,		reinjected	)
 	),
 
 	TP_fast_assign(
+		__entry->vtl		= vtl;
 		__entry->vector		= vector;
 		__entry->soft		= soft;
 		__entry->reinjected	= reinjected;
 	),
 
-	TP_printk("%s 0x%x%s",
+	TP_printk("vtl %u, %s 0x%x%s",
+		  __entry->vtl,
 		  __entry->soft ? "Soft/INTn" : "IRQ", __entry->vector,
 		  __entry->reinjected ? " [reinjected]" : "")
 );
@@ -537,10 +547,11 @@ TRACE_EVENT(kvm_apic_ipi,
 );
 
 TRACE_EVENT(kvm_apic_accept_irq,
-	    TP_PROTO(__u32 apicid, __u16 dm, __u16 tm, __u8 vec),
-	    TP_ARGS(apicid, dm, tm, vec),
+	    TP_PROTO(__u32 vtl, __u32 apicid, __u16 dm, __u16 tm, __u8 vec),
+	    TP_ARGS(vtl, apicid, dm, tm, vec),
 
 	TP_STRUCT__entry(
+		__field(	__u32,		vtl		)
 		__field(	__u32,		apicid		)
 		__field(	__u16,		dm		)
 		__field(	__u16,		tm		)
@@ -548,13 +559,15 @@ TRACE_EVENT(kvm_apic_accept_irq,
 	),
 
 	TP_fast_assign(
+		__entry->vtl		= vtl;
 		__entry->apicid		= apicid;
 		__entry->dm		= dm;
 		__entry->tm		= tm;
 		__entry->vec		= vec;
 	),
 
-	TP_printk("apicid %x vec %u (%s|%s)",
+	TP_printk("vtl %u apicid %x vec %u (%s|%s)",
+		  __entry->vtl,
 		  __entry->apicid, __entry->vec,
 		  __print_symbolic((__entry->dm >> 8 & 0x7), kvm_deliver_mode),
 		  __entry->tm ? "level" : "edge")
@@ -1785,6 +1798,24 @@ TRACE_EVENT(kvm_vmgexit_exit,
 	TP_printk("vcpu %u, exit_reason %llx, exit_info1 %llx, exit_info2 %llx",
 		  __entry->vcpu_id, __entry->exit_reason,
 		  __entry->info1, __entry->info2)
+);
+
+TRACE_EVENT(kvm_set_current_vtl,
+	TP_PROTO(unsigned int current_vtl, unsigned int new_vtl),
+	TP_ARGS(current_vtl, new_vtl),
+
+	TP_STRUCT__entry(
+		__field(unsigned int, current_vtl)
+		__field(unsigned int, new_vtl)
+	),
+
+	TP_fast_assign(
+		__entry->current_vtl 	= current_vtl;
+		__entry->new_vtl 	= new_vtl;
+	),
+
+	TP_printk("current_vtl %u, new_vtl %u",
+		__entry->current_vtl, __entry->new_vtl)
 );
 
 /*
