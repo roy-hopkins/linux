@@ -1418,6 +1418,7 @@ static int svm_vcpu_create(struct kvm_vcpu *vcpu)
 	struct vcpu_svm *svm;
 	struct page *vmcb01_page;
 	struct page *vmsa_page = NULL;
+	struct vcpu_snp_vtl_ctx *snp_ctx;
 	int err;
 
 	BUILD_BUG_ON(offsetof(struct vcpu_svm, vcpu) != 0);
@@ -1446,6 +1447,18 @@ static int svm_vcpu_create(struct kvm_vcpu *vcpu)
 		fpstate_set_confidential(&vcpu->arch.guest_fpu);
 	}
 
+	/*
+	 * SEV-SNP supports running the CPU at multiple privilege levels.
+	 * Maintain an array of context structures that contain the state that
+	 * needs to be unique for each VMPL. We will use these to save/restore
+	 * state between VMPL switches
+	 */
+	vcpu->vtl_ctx = kzalloc(sizeof(*snp_ctx) * SVM_SEV_VMPL_MAX, GFP_KERNEL_ACCOUNT);
+	if (!vcpu->vtl_ctx) {
+		err = -ENOMEM;
+		goto error_free_vmsa_page;
+	}
+
 	err = avic_init_vcpu(svm);
 	if (err)
 		goto error_free_vmsa_page;
@@ -1469,7 +1482,7 @@ static int svm_vcpu_create(struct kvm_vcpu *vcpu)
 		 * Do not include the encryption mask on the VMSA physical
 		 * address since hardware will access it using the guest key.
 		 */
-		svm->sev_es.vmsa_pa[SVM_SEV_VMPL0] = __pa(svm->sev_es.vmsa);
+		to_snp_vtl_ctx(vcpu, SVM_SEV_VMPL0)->vmsa_pa = __pa(svm->sev_es.vmsa);
 	}
 
 	svm->guest_state_loaded = false;

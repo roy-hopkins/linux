@@ -33,6 +33,7 @@
 #include "svm_ops.h"
 #include "cpuid.h"
 #include "trace.h"
+#include "lapic.h"
 
 #ifndef CONFIG_KVM_AMD_SEV
 /*
@@ -3389,26 +3390,171 @@ static int snp_complete_psc(struct kvm_vcpu *vcpu)
 	return 1; /* resume guest */
 }
 
+static int snp_save_vmpl(struct kvm_vcpu *vcpu, unsigned int vmpl)
+{
+	struct vcpu_svm *svm = to_svm(vcpu);
+	struct vcpu_snp_vtl_ctx *snp_ctx = to_snp_vtl_ctx(vcpu, vmpl);
+
+	snp_ctx->ghcb_gpa 			= svm->vmcb->control.ghcb_gpa;
+	snp_ctx->vmsa_pa			= svm->vmcb->control.vmsa_pa;
+	snp_ctx->exit_int_info			= svm->vmcb->control.exit_int_info;
+	snp_ctx->exit_int_info_err		= svm->vmcb->control.exit_int_info_err;
+	snp_ctx->cr0				= vcpu->arch.cr0;
+	snp_ctx->cr2				= vcpu->arch.cr2;
+	snp_ctx->cr4				= vcpu->arch.cr4;
+	snp_ctx->cr8				= vcpu->arch.cr8;
+	snp_ctx->efer				= vcpu->arch.efer;
+
+	snp_ctx->apic				= vcpu->arch.apic;
+	snp_ctx->apic_base			= vcpu->arch.apic_base;
+
+	snp_ctx->pending_ioapic_eoi		= vcpu->arch.pending_ioapic_eoi;
+	snp_ctx->pending_external_vector	= vcpu->arch.pending_external_vector;
+	memcpy(snp_ctx->ioapic_handled_vectors, vcpu->arch.ioapic_handled_vectors, sizeof(snp_ctx->ioapic_handled_vectors));
+	snp_ctx->apic_attention			= vcpu->arch.apic_attention;
+	snp_ctx->apic_arb_prio			= vcpu->arch.apic_arb_prio;
+
+	snp_ctx->exception_from_userspace 	= vcpu->arch.exception_from_userspace;
+
+	memcpy(&snp_ctx->exception, &vcpu->arch.exception, sizeof(snp_ctx->exception));
+	memcpy(&snp_ctx->exception_vmexit, &vcpu->arch.exception_vmexit, sizeof(snp_ctx->exception_vmexit));
+	memcpy(&snp_ctx->interrupt, &vcpu->arch.interrupt, sizeof(snp_ctx->interrupt));
+
+	snp_ctx->valid = true;
+
+	return 0;
+}
+
+static int snp_restore_vmpl(struct kvm_vcpu *vcpu, unsigned int vmpl)
+{
+	struct vcpu_snp_vtl_ctx *snp_ctx = to_snp_vtl_ctx(vcpu, vmpl);
+	struct vcpu_svm *svm = to_svm(vcpu);
+
+	if (!snp_ctx || !snp_ctx->valid) {
+		return -EINVAL;
+	}
+
+	/* If the VMSA is not valid, return an error */
+	if (!VALID_PAGE(snp_ctx->vmsa_pa))
+		return -EINVAL;
+
+	svm->vmcb->control.ghcb_gpa 		= snp_ctx->ghcb_gpa;
+	svm->vmcb->control.vmsa_pa		= snp_ctx->vmsa_pa;
+	svm->vmcb->control.exit_int_info 	= snp_ctx->exit_int_info	;
+	svm->vmcb->control.exit_int_info_err 	= snp_ctx->exit_int_info_err;
+	vcpu->arch.cr0 				= snp_ctx->cr0;
+	vcpu->arch.cr2 				= snp_ctx->cr2;
+	vcpu->arch.cr4 				= snp_ctx->cr4;
+	vcpu->arch.cr8 				= snp_ctx->cr8;
+	vcpu->arch.efer 			= snp_ctx->efer;
+
+	snp_ctx->apic				= vcpu->arch.apic;
+	snp_ctx->apic_base			= vcpu->arch.apic_base;
+
+	vcpu->arch.pending_ioapic_eoi 		= snp_ctx->pending_ioapic_eoi;
+	vcpu->arch.pending_external_vector	= snp_ctx->pending_external_vector;
+	memcpy(vcpu->arch.ioapic_handled_vectors, snp_ctx->ioapic_handled_vectors, sizeof(snp_ctx->ioapic_handled_vectors));
+	vcpu->arch.apic_attention		= snp_ctx->apic_attention;
+	vcpu->arch.apic_arb_prio		= snp_ctx->apic_arb_prio;
+
+	vcpu->arch.exception_from_userspace	= snp_ctx->exception_from_userspace;
+
+	memcpy(&vcpu->arch.exception, &snp_ctx->exception, sizeof(snp_ctx->exception));
+	memcpy(&vcpu->arch.exception_vmexit, &snp_ctx->exception_vmexit, sizeof(snp_ctx->exception_vmexit));
+	memcpy(&vcpu->arch.interrupt, &snp_ctx->interrupt, sizeof(snp_ctx->interrupt));
+
+	return 0;
+}
+
+static int snp_switch_vmpl(struct kvm_vcpu *vcpu, unsigned int new_vmpl)
+{
+	struct vcpu_svm *svm = to_svm(vcpu);
+	int result = 0;
+
+	/* Unmap the current GHCB */
+	sev_es_unmap_ghcb(svm);
+
+	result = snp_save_vmpl(vcpu, svm->sev_es.snp_current_vmpl);
+	if (result < 0) {
+		return result;
+	}
+	result = snp_restore_vmpl(vcpu, new_vmpl);
+
+	/* Update the new current VMPL */
+	svm->sev_es.snp_current_vmpl = new_vmpl;
+
+	vmcb_mark_all_dirty(svm->vmcb);
+
+	return result;
+}
+
+static int snp_init_vmpl(struct kvm_vcpu *vcpu, unsigned int vmpl)
+{
+	int result = 0;
+	unsigned int current_vmpl;
+	int timer_advance_ns;
+	struct vcpu_svm *svm = to_svm(vcpu);
+	struct vcpu_snp_vtl_ctx *new_snp_ctx = to_snp_vtl_ctx(vcpu, vmpl);
+	if (!new_snp_ctx || new_snp_ctx->valid) {
+		return -EINVAL;
+	}
+
+	/* 
+	 * Some of the settings in the new context structure should be
+	 * initialized to the current state
+	 */
+	new_snp_ctx->cr0				= vcpu->arch.cr0;
+	new_snp_ctx->cr2				= vcpu->arch.cr2;
+	new_snp_ctx->cr4				= vcpu->arch.cr4;
+	new_snp_ctx->cr8				= vcpu->arch.cr8;
+	new_snp_ctx->efer				= vcpu->arch.efer;
+
+	/* Detach the current APIC from this VMPL */
+	timer_advance_ns = vcpu->arch.apic->lapic_timer.timer_advance_ns;
+	new_snp_ctx->apic = NULL;
+
+	/* 
+	 * Set the context as current to allow for the remainder of the
+	 * context creation. We will return with the new context as the
+	 * current context.
+	 */
+	current_vmpl = 	svm->sev_es.snp_current_vmpl;
+	new_snp_ctx->valid = true;
+	result = snp_switch_vmpl(vcpu, vmpl);
+	if (result < 0) {
+		return result;
+	}
+
+	result = kvm_create_lapic(vcpu, timer_advance_ns);
+	// TEMP: Copy the APIC from VMPL0
+	vcpu->arch.apic = to_snp_vtl_ctx(vcpu, 0)->apic;
+	vcpu->arch.apic_base = to_snp_vtl_ctx(vcpu, 0)->apic_base;
+
+	return result;
+}
+
 static int __sev_snp_update_protected_guest_state(struct kvm_vcpu *vcpu)
 {
 	struct vcpu_svm *svm = to_svm(vcpu);
+	struct vcpu_snp_vtl_ctx *target_snp_ctx = to_snp_vtl_ctx(vcpu, svm->sev_es.snp_target_vmpl);
 	hpa_t cur_pa, *pa;
 
 	WARN_ON(!mutex_is_locked(&svm->sev_es.snp_vmsa_mutex));
+
+	snp_save_vmpl(vcpu, svm->sev_es.snp_current_vmpl);
 
 	/* Mark the vCPU as offline and not runnable */
 	vcpu->arch.pv.pv_unhalted = false;
 	vcpu->arch.mp_state = KVM_MP_STATE_HALTED;
 
 	/* Target the proper VMPL level VMSA */
-	pa = &svm->sev_es.vmsa_pa[svm->sev_es.snp_target_vmpl];
+	pa = &target_snp_ctx->vmsa_pa;
 
 	/* Save off the current value for later checks */
 	cur_pa = *pa;
 
 	/* Clear use of the VMSA */
 	*pa = INVALID_PAGE;
-	svm->vmcb->control.vmsa_pa = INVALID_PAGE;
 
 	/*
 	 * sev->sev_es.vmsa holds the virtual address of the VMSA initially
@@ -3420,8 +3566,8 @@ static int __sev_snp_update_protected_guest_state(struct kvm_vcpu *vcpu)
 	if (cur_pa != __pa(svm->sev_es.vmsa) && VALID_PAGE(cur_pa))
 		kvm_release_pfn_dirty(__phys_to_pfn(cur_pa));
 
-	if (VALID_PAGE(svm->sev_es.snp_vmsa[svm->sev_es.snp_target_vmpl].gpa)) {
-		gfn_t gfn = gpa_to_gfn(svm->sev_es.snp_vmsa[svm->sev_es.snp_target_vmpl].gpa);
+	if (VALID_PAGE(target_snp_ctx->snp_vmsa.gpa)) {
+		gfn_t gfn = gpa_to_gfn(target_snp_ctx->snp_vmsa.gpa);
 		struct kvm_memory_slot *slot;
 		kvm_pfn_t pfn;
 
@@ -3438,29 +3584,23 @@ static int __sev_snp_update_protected_guest_state(struct kvm_vcpu *vcpu)
 		if (kvm_gmem_get_pfn(vcpu->kvm, slot, gfn, &pfn, NULL))
 			return -EINVAL;
 
-		/* Use the new VMSA */
+		/* 
+		 * Use the new VMSA. This updates the target context
+		 * vmsa_pa value.
+		 */
 		*pa = pfn_to_hpa(pfn);
-		svm->vmcb->control.vmsa_pa = *pa;
 
 		/* Mark the vCPU as runnable */
 		vcpu->arch.pv.pv_unhalted = false;
 		vcpu->arch.mp_state = KVM_MP_STATE_RUNNABLE;
 
-		svm->sev_es.snp_vmsa[svm->sev_es.snp_target_vmpl].gpa = INVALID_PAGE;
+		target_snp_ctx->snp_vmsa.gpa = INVALID_PAGE;
 	}
 
-	if (svm->sev_es.snp_current_vmpl != svm->sev_es.snp_target_vmpl) {
-		/* Unmap the current GHCB */
-		sev_es_unmap_ghcb(svm);
-
-		/* Save the GHCB GPA of the current VMPL */
-		svm->sev_es.ghcb_gpa[svm->sev_es.snp_current_vmpl] = svm->vmcb->control.ghcb_gpa;
-
-		/* Set the GHCB_GPA for the target VMPL and make it the current VMPL */
-		svm->vmcb->control.ghcb_gpa = svm->sev_es.ghcb_gpa[svm->sev_es.snp_target_vmpl];
-
-		svm->sev_es.snp_current_vmpl = svm->sev_es.snp_target_vmpl;
-	}
+	if (svm->sev_es.snp_current_vmpl != svm->sev_es.snp_target_vmpl)
+		snp_init_vmpl(vcpu, svm->sev_es.snp_target_vmpl);
+	else
+		snp_restore_vmpl(vcpu, svm->sev_es.snp_current_vmpl);
 
 	/*
 	 * When replacing the VMSA during SEV-SNP AP creation,
@@ -3478,20 +3618,21 @@ static int __sev_snp_update_protected_guest_state(struct kvm_vcpu *vcpu)
 bool sev_snp_init_protected_guest_state(struct kvm_vcpu *vcpu)
 {
 	struct vcpu_svm *svm = to_svm(vcpu);
+	struct vcpu_snp_vtl_ctx *snp_ctx = to_snp_vtl_ctx(vcpu, svm->sev_es.snp_target_vmpl);
 	bool init = false;
 	int ret;
 
-	if (!sev_snp_guest(vcpu->kvm))
+	if (!sev_snp_guest(vcpu->kvm) || !snp_ctx)
 		return false;
 
 	mutex_lock(&svm->sev_es.snp_vmsa_mutex);
 
-	if (!svm->sev_es.snp_vmsa[svm->sev_es.snp_target_vmpl].ap_create)
+	if (!snp_ctx->snp_vmsa.ap_create)
 		goto unlock;
 
 	init = true;
 
-	svm->sev_es.snp_vmsa[svm->sev_es.snp_target_vmpl].ap_create = false;
+	snp_ctx->snp_vmsa.ap_create = false;
 
 	ret = __sev_snp_update_protected_guest_state(vcpu);
 	if (ret)
@@ -3509,6 +3650,7 @@ static int sev_snp_ap_creation(struct vcpu_svm *svm)
 	struct kvm_vcpu *vcpu = &svm->vcpu;
 	struct kvm_vcpu *target_vcpu;
 	struct vcpu_svm *target_svm;
+	struct vcpu_snp_vtl_ctx *target_snp_ctx;
 	unsigned int request;
 	unsigned int apic_id;
 	unsigned int vmpl;
@@ -3540,6 +3682,7 @@ static int sev_snp_ap_creation(struct vcpu_svm *svm)
 	ret = 0;
 
 	target_svm = to_svm(target_vcpu);
+	target_snp_ctx = to_snp_vtl_ctx(target_vcpu, vmpl);
 
 	/*
 	 * The target vCPU is valid, so the vCPU will be kicked unless the
@@ -3550,13 +3693,14 @@ static int sev_snp_ap_creation(struct vcpu_svm *svm)
 
 	mutex_lock(&target_svm->sev_es.snp_vmsa_mutex);
 
-	target_svm->sev_es.snp_vmsa[vmpl].gpa = INVALID_PAGE;
-	target_svm->sev_es.snp_vmsa[vmpl].ap_create = true;
+	
+	target_snp_ctx->snp_vmsa.gpa = INVALID_PAGE;
+	target_snp_ctx->snp_vmsa.ap_create = true;
 
 	/* VMPL0 can only be replaced by another vCPU running VMPL0 */
 	if (vmpl == SVM_SEV_VMPL0 &&
 	    (vcpu == target_vcpu ||
-	     svm->sev_es.vmsa_pa[SVM_SEV_VMPL0] != svm->vmcb->control.vmsa_pa)) {
+	     to_snp_vtl_ctx(&svm->vcpu, SVM_SEV_VMPL0)->vmsa_pa != svm->vmcb->control.vmsa_pa)) {
 		ret = -EINVAL;
 		goto out;
 	}
@@ -3616,7 +3760,7 @@ static int sev_snp_ap_creation(struct vcpu_svm *svm)
 	case SVM_VMGEXIT_AP_CREATE:
 		/* Switch to new VMSA on the next VMRUN */
 		target_svm->sev_es.snp_target_vmpl = vmpl;
-		target_svm->sev_es.snp_vmsa[vmpl].gpa = svm->vmcb->control.exit_info_2 & PAGE_MASK;
+		target_snp_ctx->snp_vmsa.gpa = svm->vmcb->control.exit_info_2 & PAGE_MASK;
 		break;
 	case SVM_VMGEXIT_AP_DESTROY:
 		break;
@@ -3863,8 +4007,6 @@ static void sev_get_apic_ids(struct vcpu_svm *svm)
 static int __sev_run_vmpl_vmsa(struct vcpu_svm *svm, unsigned int new_vmpl)
 {
 	struct kvm_vcpu *vcpu = &svm->vcpu;
-	struct vmpl_switch_sa *old_vmpl_sa;
-	struct vmpl_switch_sa *new_vmpl_sa;
 	unsigned int old_vmpl;
 
 	if (new_vmpl >= SVM_SEV_VMPL_MAX)
@@ -3878,43 +4020,7 @@ static int __sev_run_vmpl_vmsa(struct vcpu_svm *svm, unsigned int new_vmpl)
 	    sev_snp_init_protected_guest_state(vcpu))
 		return 0;
 
-	/* If the VMSA is not valid, return an error */
-	if (!VALID_PAGE(svm->sev_es.vmsa_pa[new_vmpl]))
-		return -EINVAL;
-
-	/* Unmap the current GHCB */
-	sev_es_unmap_ghcb(svm);
-
-	/* Save some current VMCB values */
-	svm->sev_es.ghcb_gpa[old_vmpl]		= svm->vmcb->control.ghcb_gpa;
-
-	old_vmpl_sa = &svm->sev_es.vssa[old_vmpl];
-	old_vmpl_sa->exit_int_info		= svm->vmcb->control.exit_int_info;
-	old_vmpl_sa->exit_int_info_err		= svm->vmcb->control.exit_int_info_err;
-	old_vmpl_sa->cr0			= vcpu->arch.cr0;
-	old_vmpl_sa->cr2			= vcpu->arch.cr2;
-	old_vmpl_sa->cr4			= vcpu->arch.cr4;
-	old_vmpl_sa->cr8			= vcpu->arch.cr8;
-	old_vmpl_sa->efer			= vcpu->arch.efer;
-
-	/* Restore some previous VMCB values */
-	svm->vmcb->control.vmsa_pa		= svm->sev_es.vmsa_pa[new_vmpl];
-	svm->vmcb->control.ghcb_gpa		= svm->sev_es.ghcb_gpa[new_vmpl];
-
-	new_vmpl_sa = &svm->sev_es.vssa[new_vmpl];
-	svm->vmcb->control.exit_int_info	= new_vmpl_sa->exit_int_info;
-	svm->vmcb->control.exit_int_info_err	= new_vmpl_sa->exit_int_info_err;
-	vcpu->arch.cr0				= new_vmpl_sa->cr0;
-	vcpu->arch.cr2				= new_vmpl_sa->cr2;
-	vcpu->arch.cr4				= new_vmpl_sa->cr4;
-	vcpu->arch.cr8				= new_vmpl_sa->cr8;
-	vcpu->arch.efer				= new_vmpl_sa->efer;
-
-	svm->sev_es.snp_current_vmpl = new_vmpl;
-
-	vmcb_mark_all_dirty(svm->vmcb);
-
-	return 0;
+	return snp_switch_vmpl(vcpu, new_vmpl);
 }
 
 static void sev_run_vmpl_vmsa(struct vcpu_svm *svm)
@@ -4334,7 +4440,7 @@ static void sev_es_init_vmcb(struct vcpu_svm *svm)
 	 * the VMSA will be NULL if this vCPU is the destination for intrahost
 	 * migration, and will be copied later.
 	 */
-	svm->vmcb->control.vmsa_pa = svm->sev_es.vmsa_pa[svm->sev_es.snp_current_vmpl];
+	svm->vmcb->control.vmsa_pa = to_snp_vtl_ctx(vcpu, svm->sev_es.snp_current_vmpl)->vmsa_pa;
 
 	/* Can't intercept CR register access, HV can't modify CR registers */
 	svm_clr_intercept(svm, INTERCEPT_CR0_READ);
@@ -4409,7 +4515,7 @@ void sev_es_vcpu_reset(struct vcpu_svm *svm)
 	sev_info = GHCB_MSR_SEV_INFO(GHCB_VERSION_MAX, GHCB_VERSION_MIN,
 				     sev_enc_bit);
 	set_ghcb_msr(svm, sev_info);
-	svm->sev_es.ghcb_gpa[SVM_SEV_VMPL0] = sev_info;
+	to_snp_vtl_ctx(&svm->vcpu, SVM_SEV_VMPL0)->ghcb_gpa = sev_info;
 
 	mutex_init(&svm->sev_es.snp_vmsa_mutex);
 
@@ -4420,8 +4526,9 @@ void sev_es_vcpu_reset(struct vcpu_svm *svm)
 	 * be run, so initialize these values appropriately.
 	 */
 	for (i = 1; i < SVM_SEV_VMPL_MAX; i++) {
-		svm->sev_es.vmsa_pa[i] = INVALID_PAGE;
-		svm->sev_es.ghcb_gpa[i] = sev_info;
+		struct vcpu_snp_vtl_ctx *snp_ctx = to_snp_vtl_ctx(&svm->vcpu, i);
+		snp_ctx->vmsa_pa = INVALID_PAGE;
+		snp_ctx->ghcb_gpa = sev_info;
 	}
 }
 

@@ -15,6 +15,7 @@
 #ifndef __SVM_SVM_H
 #define __SVM_SVM_H
 
+#include "linux/types.h"
 #include <linux/kvm_types.h>
 #include <linux/kvm_host.h>
 #include <linux/bits.h>
@@ -220,8 +221,6 @@ struct vcpu_sev_es_state {
 	u8 valid_bitmap[16];
 	struct kvm_host_map ghcb_map;
 
-	hpa_t vmsa_pa[SVM_SEV_VMPL_MAX];
-	gpa_t ghcb_gpa[SVM_SEV_VMPL_MAX];
 	u64 ghcb_registered_gpa[SVM_SEV_VMPL_MAX];
 
 	bool received_first_sipi;
@@ -235,11 +234,45 @@ struct vcpu_sev_es_state {
 	bool ghcb_sa_free;
 
 	struct mutex snp_vmsa_mutex; /* Used to handle concurrent updates of VMSA. */
-	struct snp_vmsa_update snp_vmsa[SVM_SEV_VMPL_MAX];
 	unsigned int snp_current_vmpl;
 	unsigned int snp_target_vmpl;
+};
 
-	struct vmpl_switch_sa vssa[SVM_SEV_VMPL_MAX];
+struct vcpu_snp_vtl_ctx {
+	struct kvm_vcpu_vtl_ctx vcpu_ctx;
+
+	bool valid;
+
+	u32  exit_int_info;
+	u32  exit_int_info_err;
+
+	unsigned long cr0;
+	unsigned long cr2;
+	unsigned long cr4;
+	unsigned long cr8;
+	u64 efer;
+
+	hpa_t vmsa_pa;
+	gpa_t ghcb_gpa;
+	struct snp_vmsa_update snp_vmsa;
+
+	struct kvm_lapic *apic; 	/* kernel irqchip context for this vtl */
+	u64 apic_base;
+
+	int pending_ioapic_eoi;
+	int pending_external_vector;
+	DECLARE_BITMAP(ioapic_handled_vectors, 256);
+	unsigned long apic_attention;
+	int32_t apic_arb_prio;
+
+	bool exception_from_userspace;
+
+	/* Exceptions to be injected to the guest. */
+	struct kvm_queued_exception exception;
+	/* Exception VM-Exits to be synthesized to L1. */
+	struct kvm_queued_exception exception_vmexit;
+
+	struct kvm_queued_interrupt interrupt;
 };
 
 struct vcpu_svm {
@@ -420,6 +453,12 @@ static inline bool vmcb_is_dirty(struct vmcb *vmcb, int bit)
 static __always_inline struct vcpu_svm *to_svm(struct kvm_vcpu *vcpu)
 {
 	return container_of(vcpu, struct vcpu_svm, vcpu);
+}
+
+static __always_inline struct vcpu_snp_vtl_ctx *to_snp_vtl_ctx(struct kvm_vcpu *vcpu, unsigned int vtx)
+{
+	struct vcpu_snp_vtl_ctx *ctx = container_of(vcpu->vtl_ctx, struct vcpu_snp_vtl_ctx, vcpu_ctx);
+	return &ctx[vtx];
 }
 
 /*

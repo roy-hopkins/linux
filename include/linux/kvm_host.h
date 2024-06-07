@@ -320,6 +320,15 @@ struct kvm_mmio_fragment {
 	unsigned len;
 };
 
+/*
+ * Some VCPUs support operating at different virtual privilege or trust
+ * levels (VTL). This placeholder structure can be contained within a larger
+ * per-arch structure that will be used to contain the context for a particular
+ * VTL.
+ */
+struct kvm_vcpu_vtl_ctx {
+};
+
 struct kvm_vcpu {
 	struct kvm *kvm;
 #ifdef CONFIG_PREEMPT_NOTIFIERS
@@ -384,6 +393,12 @@ struct kvm_vcpu {
 	struct kvm_vcpu_stat stat;
 	char stats_id[KVM_STATS_NAME_SIZE];
 	struct kvm_dirty_ring dirty_ring;
+
+	/*
+	 * For architectures that support it, this will point to an array that
+	 * contains the context at each VTL.
+	 */
+	struct kvm_vcpu_vtl_ctx *vtl_ctx;
 
 	/*
 	 * The most recently used memslot by this vCPU and the slots generation

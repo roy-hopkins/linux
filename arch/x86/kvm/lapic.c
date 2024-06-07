@@ -224,6 +224,12 @@ static int kvm_recalculate_phys_map(struct kvm_apic_map *new,
 	u32 physical_id;
 
 	/*
+	 * TEMP: Just bail out without a phys map until we can support
+	 * multiple VTLs
+	 */
+	return -EINVAL;
+
+	/*
 	 * For simplicity, KVM always allocates enough space for all possible
 	 * xAPIC IDs.  Yell, but don't kill the VM, as KVM can continue on
 	 * without the optimized map.
@@ -413,8 +419,15 @@ retry:
 	xapic_id_mismatch = false;
 
 	kvm_for_each_vcpu(i, vcpu, kvm)
-		if (kvm_apic_present(vcpu))
-			max_id = max(max_id, kvm_x2apic_id(vcpu->arch.apic));
+		if (kvm_apic_present(vcpu)) {
+			// TEMP: Looking for crash
+			if (vcpu->arch.apic) {
+				max_id = max(max_id, kvm_x2apic_id(vcpu->arch.apic));
+			}
+			else {
+				pr_info("NULL APIC!!\n");
+			}
+		}
 
 	new = kvzalloc(sizeof(struct kvm_apic_map) +
 	                   sizeof(struct kvm_lapic *) * ((u64)max_id + 1),
@@ -2854,6 +2867,7 @@ nomem_free_apic:
 nomem:
 	return -ENOMEM;
 }
+EXPORT_SYMBOL_GPL(kvm_create_lapic);
 
 int kvm_apic_has_interrupt(struct kvm_vcpu *vcpu)
 {
