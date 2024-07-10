@@ -2278,6 +2278,7 @@ struct sev_gmem_populate_args {
 	__u8 vmpl3_perms;
 	int sev_fd;
 	int fw_error;
+	struct kvm_vcpu *vcpu;
 };
 
 static int sev_gmem_post_populate(struct kvm *kvm, gfn_t gfn_start, kvm_pfn_t pfn,
@@ -2334,6 +2335,17 @@ static int sev_gmem_post_populate(struct kvm *kvm, gfn_t gfn_start, kvm_pfn_t pf
 				      &fw_args, &sev_populate_args->fw_error);
 		if (ret)
 			goto fw_err;
+
+		/*
+		 * For the VMSA page type, update the VMSA physical address in the
+		 * relevant CPU, identified by the APIC ID passed in via as part of
+		 * the update ioctl.
+		 */
+		if (sev_populate_args->type == KVM_SEV_SNP_PAGE_TYPE_VMSA) {
+			struct vcpu_svm *svm = to_svm(sev_populate_args->vcpu);
+			svm->vmcb->control.vmsa_pa = pfn_to_hpa(pfn);
+			vmpl_vmsa_hpa(svm) = pfn_to_hpa(pfn);
+		}
 	}
 
 	return 0;
@@ -2378,22 +2390,29 @@ err:
 static int __snp_launch_update(struct kvm *kvm, struct kvm_sev_cmd *argp,
 			       struct kvm_sev_snp_launch_update_vmpls *params)
 {
+	struct kvm_sev_info *sev = &to_kvm_svm(kvm)->sev_info;
 	struct sev_gmem_populate_args sev_populate_args = {0};
 	struct kvm_memory_slot *memslot;
 	long npages, count;
 	void __user *src;
 	int ret = 0;
+	struct kvm_vcpu *vcpu = NULL;
 
 	pr_debug("%s: GFN start 0x%llx length 0x%llx type %d flags %d\n", __func__,
 		 params->lu.gfn_start, params->lu.len, params->lu.type, params->lu.flags);
 
 	if (!PAGE_ALIGNED(params->lu.len) || params->lu.flags ||
 	    (params->lu.type != KVM_SEV_SNP_PAGE_TYPE_NORMAL &&
+	     params->lu.type != KVM_SEV_SNP_PAGE_TYPE_VMSA &&
 	     params->lu.type != KVM_SEV_SNP_PAGE_TYPE_ZERO &&
 	     params->lu.type != KVM_SEV_SNP_PAGE_TYPE_UNMEASURED &&
 	     params->lu.type != KVM_SEV_SNP_PAGE_TYPE_SECRETS &&
 	     params->lu.type != KVM_SEV_SNP_PAGE_TYPE_CPUID))
 		return -EINVAL;
+
+	/* VCPU ID is only valid for the VMSA page type */
+	if  (params->lu.vcpu_id && params->lu.type != KVM_SEV_SNP_PAGE_TYPE_VMSA)
+			return -EINVAL;
 
 	npages = params->lu.len / PAGE_SIZE;
 
@@ -2424,8 +2443,14 @@ static int __snp_launch_update(struct kvm *kvm, struct kvm_sev_cmd *argp,
 		goto out;
 	}
 
+	/* For VMSA pages we need to get the vCPU associated with the VMSA */
+	if (params->lu.type == KVM_SEV_SNP_PAGE_TYPE_VMSA) {
+		vcpu = kvm_get_vcpu_by_id(kvm, params->lu.vcpu_id);
+	}
+
 	sev_populate_args.sev_fd = argp->sev_fd;
 	sev_populate_args.type = params->lu.type;
+	sev_populate_args.vcpu = vcpu;
 	sev_populate_args.vmpl1_perms = params->vmpl1_perms;
 	sev_populate_args.vmpl2_perms = params->vmpl2_perms;
 	sev_populate_args.vmpl3_perms = params->vmpl3_perms;
@@ -2450,6 +2475,24 @@ static int __snp_launch_update(struct kvm *kvm, struct kvm_sev_cmd *argp,
 		if (copy_to_user(u64_to_user_ptr(argp->data), params,
 				 sizeof(struct kvm_sev_snp_launch_update)))
 			ret = -EFAULT;
+	}
+	/*
+	 * If any VMSA pages are provided via launch updated then flag the VMSA as
+	 * already updated. This prevents the CPU state from being synced and measured
+	 * during launch finish, providing an alternative way for userspace to have
+	 * full control over the VMSA GPA, contents and CPU count.
+	 */
+	if (!ret && vcpu) {
+		vcpu->arch.guest_state_protected = true;
+		/*
+		* SEV-ES (and thus SNP) guest mandates LBR Virtualization to
+		* be _always_ ON. Enable it only after setting
+		* guest_state_protected because KVM_SET_MSRS allows dynamic
+		* toggling of LBRV (for performance reason) on write access to
+		* MSR_IA32_DEBUGCTLMSR when guest_state_protected is not set.
+		*/
+		svm_enable_lbrv(vcpu);
+		sev->vmsa_updated = true;
 	}
 
 out:
@@ -2568,10 +2611,17 @@ static int snp_launch_finish(struct kvm *kvm, struct kvm_sev_cmd *argp)
 	if (params.flags)
 		return -EINVAL;
 
-	/* Measure vCPUs using LAUNCH_UPDATE before we finalize the launch flow. */
-	ret = snp_launch_update_vmsa(kvm, argp);
-	if (ret)
-		return ret;
+	/*
+	 * The VMSA can be provided in two ways. Either via KVM_SEV_SNP_LAUNCH_UPDATE
+	 * or by synching the CPU state to the VMSA at launch time. If the 
+	 * KVM_SEV_SNP_LAUNCH_UPDATE method is not used then we need to sync and update
+	 * the VMSA here.
+	 */
+	if (!sev->vmsa_updated) {
+		ret = snp_launch_update_vmsa(kvm, argp);
+		if (ret)
+			return ret;
+	}
 
 	data = kzalloc(sizeof(*data), GFP_KERNEL_ACCOUNT);
 	if (!data)
