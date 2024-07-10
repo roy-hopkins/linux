@@ -99,6 +99,7 @@ struct kvm_sev_info {
 	void *guest_resp_buf;   /* Bounce buffer for SNP Guest Request output */
 	struct mutex guest_req_mutex; /* Must acquire before using bounce buffers */
 	unsigned int snp_init_flags;
+	bool vmsa_updated;	/* VMSA has been updated via KVM_SEV_SNP_LAUNCH_UPDATE */
 };
 
 struct kvm_svm {
