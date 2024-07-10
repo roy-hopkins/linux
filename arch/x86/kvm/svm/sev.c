@@ -2193,6 +2193,7 @@ struct sev_gmem_populate_args {
 	__u8 type;
 	int sev_fd;
 	int fw_error;
+	int apic_id;
 };
 
 static int sev_gmem_post_populate(struct kvm *kvm, gfn_t gfn_start, kvm_pfn_t pfn,
@@ -2252,6 +2253,21 @@ static int sev_gmem_post_populate(struct kvm *kvm, gfn_t gfn_start, kvm_pfn_t pf
 				      &fw_args, &sev_populate_args->fw_error);
 		if (ret)
 			goto fw_err;
+
+		/*
+		 * For the VMSA page type, update the VMSA physical address in the
+		 * relevant CPU, identified by the APIC ID passed in via as part of
+		 * the update ioctl.
+		 */
+		if (sev_populate_args->type == KVM_SEV_SNP_PAGE_TYPE_VMSA) {
+			struct kvm_vcpu *vcpu;
+			vcpu = kvm_get_vcpu_by_id(kvm, sev_populate_args->apic_id);
+			if (vcpu) {
+				struct vcpu_svm *svm = to_svm(vcpu);
+				svm->vmcb->control.vmsa_pa = pfn * PAGE_SIZE;
+				svm->sev_es.vmsa_pa[SVM_SEV_VMPL0] = svm->vmcb->control.vmsa_pa;
+			}
+		}
 	}
 
 	return 0;
@@ -2312,13 +2328,18 @@ static int snp_launch_update(struct kvm *kvm, struct kvm_sev_cmd *argp)
 	pr_debug("%s: GFN start 0x%llx length 0x%llx type %d flags %d\n", __func__,
 		 params.gfn_start, params.len, params.type, params.flags);
 
-	if (!PAGE_ALIGNED(params.len) || params.flags ||
+	if (!PAGE_ALIGNED(params.len) ||
 	    (params.type != KVM_SEV_SNP_PAGE_TYPE_NORMAL &&
+	     params.type != KVM_SEV_SNP_PAGE_TYPE_VMSA &&
 	     params.type != KVM_SEV_SNP_PAGE_TYPE_ZERO &&
 	     params.type != KVM_SEV_SNP_PAGE_TYPE_UNMEASURED &&
 	     params.type != KVM_SEV_SNP_PAGE_TYPE_SECRETS &&
 	     params.type != KVM_SEV_SNP_PAGE_TYPE_CPUID))
 		return -EINVAL;
+
+	/* Flags contains the APIC ID of the CPU for VMSA page type */
+	if  (params.flags && params.type != KVM_SEV_SNP_PAGE_TYPE_VMSA)
+			return -EINVAL;
 
 	npages = params.len / PAGE_SIZE;
 
@@ -2351,6 +2372,7 @@ static int snp_launch_update(struct kvm *kvm, struct kvm_sev_cmd *argp)
 
 	sev_populate_args.sev_fd = argp->sev_fd;
 	sev_populate_args.type = params.type;
+	sev_populate_args.apic_id = params.flags;
 	src = params.type == KVM_SEV_SNP_PAGE_TYPE_ZERO ? NULL : u64_to_user_ptr(params.uaddr);
 
 	count = kvm_gmem_populate(kvm, params.gfn_start, src, npages,
@@ -2369,6 +2391,15 @@ static int snp_launch_update(struct kvm *kvm, struct kvm_sev_cmd *argp)
 		ret = 0;
 		if (copy_to_user(u64_to_user_ptr(argp->data), &params, sizeof(params)))
 			ret = -EFAULT;
+	}
+	/*
+	 * If any VMSA pages are provided via launch updated then flag the VMSA as
+	 * already updated. This prevents the CPU state from being synced and measured
+	 * during launch finish, providing an alternative way for userspace to have
+	 * full control over the VMSA GPA, contents and CPU count.
+	 */
+	if (!ret && (params.type == KVM_SEV_SNP_PAGE_TYPE_VMSA)) {
+		sev->vmsa_updated = true;
 	}
 
 out:
@@ -2390,35 +2421,44 @@ static int snp_launch_update_vmsa(struct kvm *kvm, struct kvm_sev_cmd *argp)
 
 	kvm_for_each_vcpu(i, vcpu, kvm) {
 		struct vcpu_svm *svm = to_svm(vcpu);
-		u64 pfn = __pa(svm->sev_es.vmsa) >> PAGE_SHIFT;
 
-		ret = sev_es_sync_vmsa(svm);
-		if (ret)
-			return ret;
+		/*
+		 * The VMSA can be provided in two ways. Either via KVM_SEV_SNP_LAUNCH_UPDATE
+		 * or by synching the CPU state to the VMSA at launch time. If the 
+		 * KVM_SEV_SNP_LAUNCH_UPDATE method is not used then we need to sync and update
+		 * the VMSA here.
+		 */
+		if (!sev->vmsa_updated) {
+			u64 pfn = __pa(svm->sev_es.vmsa) >> PAGE_SHIFT;
 
-		/* Transition the VMSA page to a firmware state. */
-		ret = rmp_make_private(pfn, INITIAL_VMSA_GPA, PG_LEVEL_4K, sev->asid, true);
-		if (ret)
-			return ret;
+			ret = sev_es_sync_vmsa(svm);
+			if (ret)
+				return ret;
 
-		/* Issue the SNP command to encrypt the VMSA */
-		data.address = __sme_pa(svm->sev_es.vmsa);
-		ret = __sev_issue_cmd(argp->sev_fd, SEV_CMD_SNP_LAUNCH_UPDATE,
-				      &data, &argp->error);
-		if (ret) {
-			snp_page_reclaim(kvm, pfn);
+			/* Transition the VMSA page to a firmware state. */
+			ret = rmp_make_private(pfn, INITIAL_VMSA_GPA, PG_LEVEL_4K, sev->asid, true);
+			if (ret)
+				return ret;
 
-			return ret;
+			/* Issue the SNP command to encrypt the VMSA */
+			data.address = __sme_pa(svm->sev_es.vmsa);
+			ret = __sev_issue_cmd(argp->sev_fd, SEV_CMD_SNP_LAUNCH_UPDATE,
+					&data, &argp->error);
+			if (ret) {
+				snp_page_reclaim(kvm, pfn);
+
+				return ret;
+			}
 		}
 
 		svm->vcpu.arch.guest_state_protected = true;
 		/*
-		 * SEV-ES (and thus SNP) guest mandates LBR Virtualization to
-		 * be _always_ ON. Enable it only after setting
-		 * guest_state_protected because KVM_SET_MSRS allows dynamic
-		 * toggling of LBRV (for performance reason) on write access to
-		 * MSR_IA32_DEBUGCTLMSR when guest_state_protected is not set.
-		 */
+		* SEV-ES (and thus SNP) guest mandates LBR Virtualization to
+		* be _always_ ON. Enable it only after setting
+		* guest_state_protected because KVM_SET_MSRS allows dynamic
+		* toggling of LBRV (for performance reason) on write access to
+		* MSR_IA32_DEBUGCTLMSR when guest_state_protected is not set.
+		*/
 		svm_enable_lbrv(vcpu);
 	}
 
