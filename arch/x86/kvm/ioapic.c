@@ -413,6 +413,8 @@ static void ioapic_write_indirect(struct kvm_ioapic *ioapic, u32 val)
 			irq.shorthand = APIC_DEST_NOSHORT;
 			irq.dest_id = e->fields.dest_id;
 			irq.msi_redir_hint = false;
+			irq.target_vmpl = ioapic->kvm->arch.default_irq_vmpl;
+
 			bitmap_zero(vcpu_bitmap, KVM_MAX_VCPUS);
 			kvm_bitmap_or_dest_vcpus(ioapic->kvm, &irq,
 						 vcpu_bitmap);
@@ -458,6 +460,7 @@ static int ioapic_service(struct kvm_ioapic *ioapic, int irq, bool line_status)
 	irqe.level = 1;
 	irqe.shorthand = APIC_DEST_NOSHORT;
 	irqe.msi_redir_hint = false;
+	irqe.target_vmpl = ioapic->kvm->arch.default_irq_vmpl;
 
 	if (irqe.trig_mode == IOAPIC_EDGE_TRIG)
 		ioapic->irr_delivered |= 1 << irq;

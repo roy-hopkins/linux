@@ -119,6 +119,7 @@ void kvm_set_msi_irq(struct kvm *kvm, struct kvm_kernel_irq_routing_entry *e,
 	irq->msi_redir_hint = msg.arch_addr_lo.redirect_hint;
 	irq->level = 1;
 	irq->shorthand = APIC_DEST_NOSHORT;
+	irq->target_vmpl = kvm->arch.default_irq_vmpl;
 }
 EXPORT_SYMBOL_GPL(kvm_set_msi_irq);
 
