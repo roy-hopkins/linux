@@ -834,7 +834,9 @@ static int __apic_accept_irq(struct kvm_lapic *apic, int delivery_mode,
 int kvm_apic_set_irq(struct kvm_vcpu *vcpu, struct kvm_lapic_irq *irq,
 		     struct dest_map *dest_map)
 {
-	struct kvm_lapic *apic = vcpu->arch.apic;
+	struct kvm_lapic *apic = vcpu->vcpu_parent->vcpu_vmpl[irq->target_vmpl]->arch.apic;
+	if (!apic)
+		return -EINVAL;
 
 	return __apic_accept_irq(apic, irq->delivery_mode, irq->vector,
 			irq->level, irq->trig_mode, dest_map);
@@ -1526,6 +1528,8 @@ void kvm_apic_send_ipi(struct kvm_lapic *apic, u32 icr_low, u32 icr_high)
 	irq.trig_mode = icr_low & APIC_INT_LEVELTRIG;
 	irq.shorthand = icr_low & APIC_SHORT_MASK;
 	irq.msi_redir_hint = false;
+	/* IPIs always target the same VMPL as the source */
+	irq.target_vmpl = apic->vcpu->vmpl;
 	if (apic_x2apic_mode(apic))
 		irq.dest_id = icr_high;
 	else
