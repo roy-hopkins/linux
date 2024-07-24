@@ -211,25 +211,11 @@ struct vmpl_switch_sa {
 	u64 efer;
 };
 
-#define vmpl_vmsa(s, v)				((s)->sev_es.vmsa_info[(v)].vmsa)
-#define vmpl_vmsa_gpa(s, v)			((s)->sev_es.vmsa_info[(v)].gpa)
-#define vmpl_vmsa_hpa(s, v)			((s)->sev_es.vmsa_info[(v)].hpa)
-#define vmpl_ap_waiting_for_reset(s, v)		((s)->sev_es.vmsa_info[(v)].ap_waiting_for_reset)
-#define vmpl_has_guest_vmsa(s, v)		((s)->sev_es.vmsa_info[(v)].has_guest_vmsa)
-
-#define cur_vmpl(s)				((s)->sev_es.snp_current_vmpl)
-#define cur_vmpl_vmsa(s)			vmpl_vmsa((s), cur_vmpl(s))
-#define cur_vmpl_vmsa_gpa(s)			vmpl_vmsa_gpa((s), cur_vmpl(s))
-#define cur_vmpl_vmsa_hpa(s)			vmpl_vmsa_hpa((s), cur_vmpl(s))
-#define cur_vmpl_ap_waiting_for_reset(s)	vmpl_ap_waiting_for_reset((s), cur_vmpl(s))
-#define cur_vmpl_has_guest_vmsa(s)		vmpl_has_guest_vmsa((s), cur_vmpl(s))
-
-#define tgt_vmpl(s)				((s)->sev_es.snp_target_vmpl)
-#define tgt_vmpl_vmsa(s)			vmpl_vmsa((s), tgt_vmpl(s))
-#define tgt_vmpl_vmsa_gpa(s)			vmpl_vmsa_gpa((s), tgt_vmpl(s))
-#define tgt_vmpl_vmsa_hpa(s)			vmpl_vmsa_hpa((s), tgt_vmpl(s))
-#define tgt_vmpl_ap_waiting_for_reset(s)	vmpl_ap_waiting_for_reset((s), tgt_vmpl(s))
-#define tgt_vmpl_has_guest_vmsa(s)		vmpl_has_guest_vmsa((s), tgt_vmpl(s))
+#define vmpl_vmsa(s)				((s)->sev_es.vmsa_info.vmsa)
+#define vmpl_vmsa_gpa(s)			((s)->sev_es.vmsa_info.gpa)
+#define vmpl_vmsa_hpa(s)			((s)->sev_es.vmsa_info.hpa)
+#define vmpl_ap_waiting_for_reset(s)	((s)->sev_es.vmsa_info.ap_waiting_for_reset)
+#define vmpl_has_guest_vmsa(s)		((s)->sev_es.vmsa_info.has_guest_vmsa)
 
 struct sev_vmsa_info {
 	/* SEV-ES and SEV-SNP */
@@ -262,15 +248,13 @@ struct vcpu_sev_es_state {
 	u16 psc_inflight;
 	bool psc_2m;
 
-	gpa_t ghcb_gpa[SVM_SEV_VMPL_MAX];
-	u64 ghcb_registered_gpa[SVM_SEV_VMPL_MAX];
-	struct sev_vmsa_info vmsa_info[SVM_SEV_VMPL_MAX];
+	gpa_t ghcb_gpa;
+	u64 ghcb_registered_gpa;
+	struct sev_vmsa_info vmsa_info;
 
 	struct mutex snp_vmsa_mutex; /* Used to handle concurrent updates of VMSA. */
-	unsigned int snp_current_vmpl;
-	unsigned int snp_target_vmpl;
 
-	struct vmpl_switch_sa vssa[SVM_SEV_VMPL_MAX];
+	struct vmpl_switch_sa vssa;
 };
 
 struct vcpu_svm {
@@ -426,7 +410,7 @@ static __always_inline bool sev_snp_guest(struct kvm *kvm)
 
 static inline bool ghcb_gpa_is_registered(struct vcpu_svm *svm, u64 val)
 {
-	return svm->sev_es.ghcb_registered_gpa[cur_vmpl(svm)] == val;
+	return svm->sev_es.ghcb_registered_gpa == val;
 }
 
 static inline void vmcb_mark_all_dirty(struct vmcb *vmcb)

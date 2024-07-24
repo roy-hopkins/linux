@@ -996,40 +996,54 @@ void svm_copy_lbrs(struct vmcb *to_vmcb, struct vmcb *from_vmcb)
 
 void svm_enable_lbrv(struct kvm_vcpu *vcpu)
 {
-	struct vcpu_svm *svm = to_svm(vcpu);
+	int vtl;
+	struct vcpu_svm *svm;
+	struct kvm_vcpu_vmpl_state *vcpu_parent = vcpu->vcpu_parent;
 
-	svm->vmcb->control.virt_ext |= LBR_CTL_ENABLE_MASK;
-	set_msr_interception(vcpu, svm->msrpm, MSR_IA32_LASTBRANCHFROMIP, 1, 1);
-	set_msr_interception(vcpu, svm->msrpm, MSR_IA32_LASTBRANCHTOIP, 1, 1);
-	set_msr_interception(vcpu, svm->msrpm, MSR_IA32_LASTINTFROMIP, 1, 1);
-	set_msr_interception(vcpu, svm->msrpm, MSR_IA32_LASTINTTOIP, 1, 1);
+	for (vtl = 0; vtl <= vcpu_parent->max_vmpl; ++vtl) {
+		vcpu = vcpu_parent->vcpu_vmpl[vtl];
+		svm = to_svm(vcpu);
 
-	if (sev_es_guest(vcpu->kvm))
-		set_msr_interception(vcpu, svm->msrpm, MSR_IA32_DEBUGCTLMSR, 1, 1);
+		svm->vmcb->control.virt_ext |= LBR_CTL_ENABLE_MASK;
+		set_msr_interception(vcpu, svm->msrpm, MSR_IA32_LASTBRANCHFROMIP, 1, 1);
+		set_msr_interception(vcpu, svm->msrpm, MSR_IA32_LASTBRANCHTOIP, 1, 1);
+		set_msr_interception(vcpu, svm->msrpm, MSR_IA32_LASTINTFROMIP, 1, 1);
+		set_msr_interception(vcpu, svm->msrpm, MSR_IA32_LASTINTTOIP, 1, 1);
 
-	/* Move the LBR msrs to the vmcb02 so that the guest can see them. */
-	if (is_guest_mode(vcpu))
-		svm_copy_lbrs(svm->vmcb, svm->vmcb01.ptr);
+		if (sev_es_guest(vcpu->kvm))
+			set_msr_interception(vcpu, svm->msrpm, MSR_IA32_DEBUGCTLMSR, 1, 1);
+
+		/* Move the LBR msrs to the vmcb02 so that the guest can see them. */
+		if (is_guest_mode(vcpu))
+			svm_copy_lbrs(svm->vmcb, svm->vmcb01.ptr);
+	}
 }
 
 static void svm_disable_lbrv(struct kvm_vcpu *vcpu)
 {
-	struct vcpu_svm *svm = to_svm(vcpu);
+	int vtl;
+	struct vcpu_svm *svm;
+	struct kvm_vcpu_vmpl_state *vcpu_parent = vcpu->vcpu_parent;
 
-	KVM_BUG_ON(sev_es_guest(vcpu->kvm), vcpu->kvm);
+	for (vtl = 0; vtl <= vcpu_parent->max_vmpl; ++vtl) {
+		vcpu = vcpu_parent->vcpu_vmpl[vtl];
+		svm = to_svm(vcpu);
 
-	svm->vmcb->control.virt_ext &= ~LBR_CTL_ENABLE_MASK;
-	set_msr_interception(vcpu, svm->msrpm, MSR_IA32_LASTBRANCHFROMIP, 0, 0);
-	set_msr_interception(vcpu, svm->msrpm, MSR_IA32_LASTBRANCHTOIP, 0, 0);
-	set_msr_interception(vcpu, svm->msrpm, MSR_IA32_LASTINTFROMIP, 0, 0);
-	set_msr_interception(vcpu, svm->msrpm, MSR_IA32_LASTINTTOIP, 0, 0);
+		KVM_BUG_ON(sev_es_guest(vcpu->kvm), vcpu->kvm);
 
-	/*
-	 * Move the LBR msrs back to the vmcb01 to avoid copying them
-	 * on nested guest entries.
-	 */
-	if (is_guest_mode(vcpu))
-		svm_copy_lbrs(svm->vmcb01.ptr, svm->vmcb);
+		svm->vmcb->control.virt_ext &= ~LBR_CTL_ENABLE_MASK;
+		set_msr_interception(vcpu, svm->msrpm, MSR_IA32_LASTBRANCHFROMIP, 0, 0);
+		set_msr_interception(vcpu, svm->msrpm, MSR_IA32_LASTBRANCHTOIP, 0, 0);
+		set_msr_interception(vcpu, svm->msrpm, MSR_IA32_LASTINTFROMIP, 0, 0);
+		set_msr_interception(vcpu, svm->msrpm, MSR_IA32_LASTINTTOIP, 0, 0);
+
+		/*
+		* Move the LBR msrs back to the vmcb01 to avoid copying them
+		* on nested guest entries.
+		*/
+		if (is_guest_mode(vcpu))
+			svm_copy_lbrs(svm->vmcb01.ptr, svm->vmcb);
+	}
 }
 
 static struct vmcb *svm_get_lbr_vmcb(struct vcpu_svm *svm)
@@ -1464,8 +1478,8 @@ static int svm_vcpu_create(struct kvm_vcpu *vcpu)
 	svm_switch_vmcb(svm, &svm->vmcb01);
 
 	if (vmsa_page) {
-		vmpl_vmsa(svm, SVM_SEV_VMPL0) = page_address(vmsa_page);
-		vmpl_vmsa_hpa(svm, SVM_SEV_VMPL0) = __pa(page_address(vmsa_page));
+		vmpl_vmsa(svm) = page_address(vmsa_page);
+		vmpl_vmsa_hpa(svm) = __pa(page_address(vmsa_page));
 	}
 
 	svm->guest_state_loaded = false;
