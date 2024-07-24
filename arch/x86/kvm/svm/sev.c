@@ -147,7 +147,7 @@ static bool sev_vcpu_has_debug_swap(struct vcpu_svm *svm)
 	struct kvm_vcpu *vcpu = &svm->vcpu;
 	struct kvm_sev_info *sev = &to_kvm_svm(vcpu->kvm)->sev_info;
 
-	return sev->vmsa_features[cur_vmpl(svm)] & SVM_SEV_FEAT_DEBUG_SWAP;
+	return sev->vmsa_features[vcpu->vmpl] & SVM_SEV_FEAT_DEBUG_SWAP;
 }
 
 /* Must be called with the sev_bitmap_lock held */
@@ -818,7 +818,7 @@ static int sev_es_sync_vmsa(struct vcpu_svm *svm)
 {
 	struct kvm_vcpu *vcpu = &svm->vcpu;
 	struct kvm_sev_info *sev = &to_kvm_svm(vcpu->kvm)->sev_info;
-	struct sev_es_save_area *save = vmpl_vmsa(svm, SVM_SEV_VMPL0);
+	struct sev_es_save_area *save = vmpl_vmsa(svm);
 	struct xregs_state *xsave;
 	const u8 *s;
 	u8 *d;
@@ -931,11 +931,11 @@ static int __sev_launch_update_vmsa(struct kvm *kvm, struct kvm_vcpu *vcpu,
 	 * the VMSA memory content (i.e it will write the same memory region
 	 * with the guest's key), so invalidate it first.
 	 */
-	clflush_cache_range(vmpl_vmsa(svm, SVM_SEV_VMPL0), PAGE_SIZE);
+	clflush_cache_range(vmpl_vmsa(svm), PAGE_SIZE);
 
 	vmsa.reserved = 0;
 	vmsa.handle = to_kvm_sev_info(kvm)->handle;
-	vmsa.address = __sme_pa(vmpl_vmsa(svm, SVM_SEV_VMPL0));
+	vmsa.address = __sme_pa(vmpl_vmsa(svm));
 	vmsa.len = PAGE_SIZE;
 	ret = sev_issue_cmd(kvm, SEV_CMD_LAUNCH_UPDATE_VMSA, &vmsa, error);
 	if (ret)
@@ -2505,7 +2505,7 @@ static int snp_launch_update_vmsa(struct kvm *kvm, struct kvm_sev_cmd *argp)
 
 	kvm_for_each_vcpu(i, vcpu, kvm) {
 		struct vcpu_svm *svm = to_svm(vcpu);
-		u64 pfn = __pa(vmpl_vmsa(svm, SVM_SEV_VMPL0)) >> PAGE_SHIFT;
+		u64 pfn = __pa(vmpl_vmsa(svm)) >> PAGE_SHIFT;
 
 		/* If SVSM support is requested, only measure the boot vCPU */
 		if ((sev->snp_init_flags & KVM_SEV_SNP_SVSM) && vcpu->vcpu_id != 0)
@@ -2521,7 +2521,7 @@ static int snp_launch_update_vmsa(struct kvm *kvm, struct kvm_sev_cmd *argp)
 			return ret;
 
 		/* Issue the SNP command to encrypt the VMSA */
-		data.address = __sme_pa(vmpl_vmsa(svm, SVM_SEV_VMPL0));
+		data.address = __sme_pa(vmpl_vmsa(svm));
 		ret = __sev_issue_cmd(argp->sev_fd, SEV_CMD_SNP_LAUNCH_UPDATE,
 				      &data, &argp->error);
 		if (ret) {
@@ -3243,16 +3243,16 @@ void sev_free_vcpu(struct kvm_vcpu *vcpu)
 	 * releasing it back to the system.
 	 */
 	if (sev_snp_guest(vcpu->kvm)) {
-		u64 pfn = __pa(vmpl_vmsa(svm, SVM_SEV_VMPL0)) >> PAGE_SHIFT;
+		u64 pfn = __pa(vmpl_vmsa(svm)) >> PAGE_SHIFT;
 
 		if (kvm_rmp_make_shared(vcpu->kvm, pfn, PG_LEVEL_4K))
 			goto skip_vmsa_free;
 	}
 
 	if (vcpu->arch.guest_state_protected)
-		sev_flush_encrypted_page(vcpu, vmpl_vmsa(svm, SVM_SEV_VMPL0));
+		sev_flush_encrypted_page(vcpu, vmpl_vmsa(svm));
 
-	__free_page(virt_to_page(vmpl_vmsa(svm, SVM_SEV_VMPL0)));
+	__free_page(virt_to_page(vmpl_vmsa(svm)));
 
 skip_vmsa_free:
 	if (svm->sev_es.ghcb_sa_free)
@@ -3925,12 +3925,17 @@ static int __sev_snp_update_protected_guest_state(struct kvm_vcpu *vcpu)
 
 	/* Clear use of the VMSA */
 	svm->vmcb->control.vmsa_pa = INVALID_PAGE;
-	tgt_vmpl_vmsa_hpa(svm) = INVALID_PAGE;
+	vmpl_vmsa_hpa(svm) = INVALID_PAGE;
 
-	if (VALID_PAGE(tgt_vmpl_vmsa_gpa(svm))) {
-		gfn_t gfn = gpa_to_gfn(tgt_vmpl_vmsa_gpa(svm));
+	if (VALID_PAGE(vmpl_vmsa_gpa(svm))) {
+		gfn_t gfn = gpa_to_gfn(vmpl_vmsa_gpa(svm));
 		struct kvm_memory_slot *slot;
 		kvm_pfn_t pfn;
+
+		if (vcpu->vmpl != 0) {
+			svm->vmcb->control.asid = to_svm(vcpu->vcpu_parent->vcpu_vmpl[0])->vmcb->control.asid;
+			svm->vmcb->control.nested_cr3 = to_svm(vcpu->vcpu_parent->vcpu_vmpl[0])->vmcb->control.nested_cr3;
+		}
 
 		slot = gfn_to_memslot(vcpu->kvm, gfn);
 		if (!slot)
@@ -3953,11 +3958,11 @@ static int __sev_snp_update_protected_guest_state(struct kvm_vcpu *vcpu)
 		 * guest boot. Deferring that also allows the existing logic for
 		 * SEV-ES VMSAs to be re-used with minimal SNP-specific changes.
 		 */
-		tgt_vmpl_has_guest_vmsa(svm) = true;
+		vmpl_has_guest_vmsa(svm) = true;
 
 		/* Use the new VMSA */
 		svm->vmcb->control.vmsa_pa = pfn_to_hpa(pfn);
-		tgt_vmpl_vmsa_hpa(svm) = pfn_to_hpa(pfn);
+		vmpl_vmsa_hpa(svm) = pfn_to_hpa(pfn);
 
 		/*
 		 * Since the vCPU may not have gone through the LAUNCH_UPDATE_VMSA path,
@@ -3970,7 +3975,7 @@ static int __sev_snp_update_protected_guest_state(struct kvm_vcpu *vcpu)
 		vcpu->arch.pv.pv_unhalted = false;
 		vcpu->arch.mp_state = KVM_MP_STATE_RUNNABLE;
 
-		tgt_vmpl_vmsa_gpa(svm) = INVALID_PAGE;
+		vmpl_vmsa_gpa(svm) = INVALID_PAGE;
 
 		/*
 		 * gmem pages aren't currently migratable, but if this ever
@@ -3980,25 +3985,6 @@ static int __sev_snp_update_protected_guest_state(struct kvm_vcpu *vcpu)
 		 */
 		kvm_release_pfn_clean(pfn);
 	}
-
-	if (cur_vmpl(svm) != tgt_vmpl(svm)) {
-		/* Unmap the current GHCB */
-		sev_es_unmap_ghcb(svm);
-
-		/* Save the GHCB GPA of the current VMPL */
-		svm->sev_es.ghcb_gpa[cur_vmpl(svm)] = svm->vmcb->control.ghcb_gpa;
-
-		/* Set the GHCB_GPA for the target VMPL and make it the current VMPL */
-		svm->vmcb->control.ghcb_gpa = svm->sev_es.ghcb_gpa[tgt_vmpl(svm)];
-
-		cur_vmpl(svm) = tgt_vmpl(svm);
-	}
-
-	/*
-	 * When replacing the VMSA during SEV-SNP AP creation,
-	 * mark the VMCB dirty so that full state is always reloaded.
-	 */
-	vmcb_mark_all_dirty(svm->vmcb);
 
 	return 0;
 }
@@ -4018,12 +4004,12 @@ bool sev_snp_init_protected_guest_state(struct kvm_vcpu *vcpu)
 
 	mutex_lock(&svm->sev_es.snp_vmsa_mutex);
 
-	if (!tgt_vmpl_ap_waiting_for_reset(svm))
+	if (!vmpl_ap_waiting_for_reset(svm))
 		goto unlock;
 
 	init = true;
 
-	tgt_vmpl_ap_waiting_for_reset(svm) = false;
+	vmpl_ap_waiting_for_reset(svm) = false;
 
 	ret = __sev_snp_update_protected_guest_state(vcpu);
 	if (ret)
@@ -4068,6 +4054,8 @@ static int sev_snp_ap_creation(struct vcpu_svm *svm)
 			    apic_id);
 		return -EINVAL;
 	}
+	/* Ensure we have the target CPU for the correct VMPL */
+	target_vcpu = target_vcpu->vcpu_parent->vcpu_vmpl[vmpl];
 
 	ret = 0;
 
@@ -4082,13 +4070,13 @@ static int sev_snp_ap_creation(struct vcpu_svm *svm)
 
 	mutex_lock(&target_svm->sev_es.snp_vmsa_mutex);
 
-	vmpl_vmsa_gpa(target_svm, vmpl) = INVALID_PAGE;
-	vmpl_ap_waiting_for_reset(target_svm, vmpl) = true;
+	vmpl_vmsa_gpa(target_svm) = INVALID_PAGE;
+	vmpl_ap_waiting_for_reset(target_svm) = true;
 
 	/* VMPL0 can only be replaced by another vCPU running VMPL0 */
 	if (vmpl == SVM_SEV_VMPL0 &&
 	    (vcpu == target_vcpu ||
-	     vmpl_vmsa_hpa(svm, SVM_SEV_VMPL0) != svm->vmcb->control.vmsa_pa)) {
+	     vmpl_vmsa_hpa(svm) != svm->vmcb->control.vmsa_pa)) {
 		ret = -EINVAL;
 		goto out;
 	}
@@ -4146,9 +4134,7 @@ static int sev_snp_ap_creation(struct vcpu_svm *svm)
 		kick = false;
 		fallthrough;
 	case SVM_VMGEXIT_AP_CREATE:
-		/* Switch to new VMSA on the next VMRUN */
-		target_svm->sev_es.snp_target_vmpl = vmpl;
-		vmpl_vmsa_gpa(target_svm, vmpl) = svm->vmcb->control.exit_info_2 & PAGE_MASK;
+		vmpl_vmsa_gpa(target_svm) = svm->vmcb->control.exit_info_2 & PAGE_MASK;
 		break;
 	case SVM_VMGEXIT_AP_DESTROY:
 		break;
@@ -4161,7 +4147,12 @@ static int sev_snp_ap_creation(struct vcpu_svm *svm)
 
 out:
 	if (kick) {
-		kvm_make_request(KVM_REQ_UPDATE_PROTECTED_GUEST_STATE, target_vcpu);
+		/*
+		 * Make the request on the current vCPU but on the current VMPL on that
+		 * CPU as this is a request to updated the protected guest state from
+		 * the current VMPL to a new VMPL
+		 */
+		kvm_make_request(KVM_REQ_UPDATE_PROTECTED_GUEST_STATE, target_vcpu->vcpu_parent->vcpu_vmpl[target_vcpu->vcpu_parent->current_vmpl]);
 		kvm_vcpu_kick(target_vcpu);
 	}
 
@@ -4340,59 +4331,33 @@ static void sev_get_apic_ids(struct vcpu_svm *svm)
 
 static int __sev_run_vmpl_vmsa(struct vcpu_svm *svm, unsigned int new_vmpl)
 {
-	struct kvm_vcpu *vcpu = &svm->vcpu;
-	struct vmpl_switch_sa *old_vmpl_sa;
-	struct vmpl_switch_sa *new_vmpl_sa;
-	unsigned int old_vmpl;
+	struct kvm_vcpu_vmpl_state *vcpu_parent = svm->vcpu.vcpu_parent;
+	struct kvm_vcpu *vcpu_current = &svm->vcpu;
+	struct kvm_vcpu *vcpu_target = vcpu_parent->vcpu_vmpl[new_vmpl];
+	struct vcpu_svm *svm_current = svm;
+	struct vcpu_svm *svm_target = to_svm(vcpu_target);
 
 	if (new_vmpl >= SVM_SEV_VMPL_MAX)
 		return -EINVAL;
 	new_vmpl = array_index_nospec(new_vmpl, SVM_SEV_VMPL_MAX);
+	vcpu_current->vcpu_parent->target_vmpl = new_vmpl;
 
-	old_vmpl = svm->sev_es.snp_current_vmpl;
-	svm->sev_es.snp_target_vmpl = new_vmpl;
-
-	if (svm->sev_es.snp_target_vmpl == svm->sev_es.snp_current_vmpl ||
-	    sev_snp_init_protected_guest_state(vcpu))
+	if (new_vmpl == vcpu_parent->current_vmpl) {
 		return 0;
+	}
+
+	if (sev_snp_init_protected_guest_state(vcpu_target)) {
+		return 0;
+	}
 
 	/* If the VMSA is not valid, return an error */
-	if (!VALID_PAGE(vmpl_vmsa_hpa(svm, new_vmpl)))
+	if (!VALID_PAGE(vmpl_vmsa_hpa(svm_target)))
 		return -EINVAL;
 
 	/* Unmap the current GHCB */
-	sev_es_unmap_ghcb(svm);
+	sev_es_unmap_ghcb(svm_current);
 
-	/* Save some current VMCB values */
-	svm->sev_es.ghcb_gpa[old_vmpl]		= svm->vmcb->control.ghcb_gpa;
-
-	old_vmpl_sa = &svm->sev_es.vssa[old_vmpl];
-	old_vmpl_sa->int_state			= svm->vmcb->control.int_state;
-	old_vmpl_sa->exit_int_info		= svm->vmcb->control.exit_int_info;
-	old_vmpl_sa->exit_int_info_err		= svm->vmcb->control.exit_int_info_err;
-	old_vmpl_sa->cr0			= vcpu->arch.cr0;
-	old_vmpl_sa->cr2			= vcpu->arch.cr2;
-	old_vmpl_sa->cr4			= vcpu->arch.cr4;
-	old_vmpl_sa->cr8			= vcpu->arch.cr8;
-	old_vmpl_sa->efer			= vcpu->arch.efer;
-
-	/* Restore some previous VMCB values */
-	svm->vmcb->control.vmsa_pa		= vmpl_vmsa_hpa(svm, new_vmpl);
-	svm->vmcb->control.ghcb_gpa		= svm->sev_es.ghcb_gpa[new_vmpl];
-
-	new_vmpl_sa = &svm->sev_es.vssa[new_vmpl];
-	svm->vmcb->control.int_state		= new_vmpl_sa->int_state;
-	svm->vmcb->control.exit_int_info	= new_vmpl_sa->exit_int_info;
-	svm->vmcb->control.exit_int_info_err	= new_vmpl_sa->exit_int_info_err;
-	vcpu->arch.cr0				= new_vmpl_sa->cr0;
-	vcpu->arch.cr2				= new_vmpl_sa->cr2;
-	vcpu->arch.cr4				= new_vmpl_sa->cr4;
-	vcpu->arch.cr8				= new_vmpl_sa->cr8;
-	vcpu->arch.efer				= new_vmpl_sa->efer;
-
-	svm->sev_es.snp_current_vmpl = new_vmpl;
-
-	vmcb_mark_all_dirty(svm->vmcb);
+	vcpu_parent->target_vmpl = new_vmpl;
 
 	return 0;
 }
@@ -4521,7 +4486,7 @@ static int sev_handle_vmgexit_msr_protocol(struct vcpu_svm *svm)
 		gfn = get_ghcb_msr_bits(svm, GHCB_MSR_GPA_VALUE_MASK,
 					GHCB_MSR_GPA_VALUE_POS);
 
-		svm->sev_es.ghcb_registered_gpa[cur_vmpl(svm)] = gfn_to_gpa(gfn);
+		svm->sev_es.ghcb_registered_gpa = gfn_to_gpa(gfn);
 
 		set_ghcb_msr_bits(svm, gfn, GHCB_MSR_GPA_VALUE_MASK,
 				  GHCB_MSR_GPA_VALUE_POS);
@@ -4826,8 +4791,8 @@ static void sev_es_init_vmcb(struct vcpu_svm *svm)
 	 * the VMSA will be NULL if this vCPU is the destination for intrahost
 	 * migration, and will be copied later.
 	 */
-	if (cur_vmpl_vmsa(svm) && !cur_vmpl_has_guest_vmsa(svm))
-		svm->vmcb->control.vmsa_pa = __pa(cur_vmpl_vmsa(svm));
+	if (vmpl_vmsa(svm) && !vmpl_has_guest_vmsa(svm))
+		svm->vmcb->control.vmsa_pa = __pa(vmpl_vmsa(svm));
 
 	/* Can't intercept CR register access, HV can't modify CR registers */
 	svm_clr_intercept(svm, INTERCEPT_CR0_READ);
@@ -4890,7 +4855,6 @@ void sev_es_vcpu_reset(struct vcpu_svm *svm)
 {
 	struct kvm_vcpu *vcpu = &svm->vcpu;
 	struct kvm_sev_info *sev = &to_kvm_svm(vcpu->kvm)->sev_info;
-	unsigned int i;
 	u64 sev_info;
 
 	/*
@@ -4900,20 +4864,9 @@ void sev_es_vcpu_reset(struct vcpu_svm *svm)
 	sev_info = GHCB_MSR_SEV_INFO((__u64)sev->ghcb_version, GHCB_VERSION_MIN,
 				     sev_enc_bit);
 	set_ghcb_msr(svm, sev_info);
-	svm->sev_es.ghcb_gpa[SVM_SEV_VMPL0] = sev_info;
+	svm->sev_es.ghcb_gpa = sev_info;
 
 	mutex_init(&svm->sev_es.snp_vmsa_mutex);
-
-	/*
-	 * When not running under SNP, the "current VMPL" tracking for a guest
-	 * is always 0 and the base tracking of GPAs and SPAs will be as before
-	 * multiple VMPL support. However, under SNP, multiple VMPL levels can
-	 * be run, so initialize these values appropriately.
-	 */
-	for (i = 1; i < SVM_SEV_VMPL_MAX; i++) {
-		svm->sev_es.vmsa_info[i].hpa = INVALID_PAGE;
-		svm->sev_es.ghcb_gpa[i] = sev_info;
-	}
 }
 
 void sev_es_prepare_switch_to_guest(struct vcpu_svm *svm, struct sev_es_save_area *hostsa)
@@ -5302,7 +5255,7 @@ bool sev_snp_is_rinj_active(struct kvm_vcpu *vcpu)
 		return false;
 
 	sev = &to_kvm_svm(vcpu->kvm)->sev_info;
-	vmpl = to_svm(vcpu)->sev_es.snp_current_vmpl;
+	vmpl = vcpu->vcpu_parent->current_vmpl;
 
 	return sev->vmsa_features[vmpl] & SVM_SEV_FEAT_RESTRICTED_INJECTION;
 }
