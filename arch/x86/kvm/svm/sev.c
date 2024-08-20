@@ -3984,6 +3984,14 @@ static int __sev_snp_update_protected_guest_state(struct kvm_vcpu *vcpu)
 		 * means.
 		 */
 		kvm_release_pfn_clean(pfn);
+
+		/*
+		 * TEMP: If the newly created VMSA is for a lower VMPL then
+		 * set this VMPL to be the default for sending IRQs to.
+		 */
+		if (vcpu->vmpl > vcpu->kvm->arch.default_irq_vmpl) {
+			vcpu->kvm->arch.default_irq_vmpl = vcpu->vmpl;
+		}
 	}
 
 	return 0;

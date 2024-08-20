@@ -1537,6 +1537,13 @@ struct kvm_arch {
 	 */
 #define SPLIT_DESC_CACHE_MIN_NR_OBJECTS (SPTE_ENT_PER_PAGE + 1)
 	struct kvm_mmu_memory_cache split_desc_cache;
+
+	/*
+	 * When a system supports multiple VMPLs, injected interrupts need to be
+	 * sent to the correct context. The default VMPL that IRQs should be sent
+	 * to is indicated in this variable.
+	 */
+	unsigned int default_irq_vmpl;
 };
 
 struct kvm_vm_stat {
