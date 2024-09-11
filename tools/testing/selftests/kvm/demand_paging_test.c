@@ -33,7 +33,7 @@ static void vcpu_worker(struct memstress_vcpu_args *vcpu_args)
 {
 	struct kvm_vcpu *vcpu = vcpu_args->vcpu;
 	int vcpu_idx = vcpu_args->vcpu_idx;
-	struct kvm_run *run = vcpu->run;
+	struct kvm_run *run = vcpu->common->run;
 	struct timespec start;
 	struct timespec ts_diff;
 	int ret;

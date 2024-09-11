@@ -244,7 +244,7 @@ static u8 kvm_smccc_get_action(struct kvm_vcpu *vcpu, u32 func_id)
 static void kvm_prepare_hypercall_exit(struct kvm_vcpu *vcpu, u32 func_id)
 {
 	u8 ec = ESR_ELx_EC(kvm_vcpu_get_esr(vcpu));
-	struct kvm_run *run = vcpu->run;
+	struct kvm_run *run = vcpu->common->run;
 	u64 flags = 0;
 
 	if (ec == ESR_ELx_EC_SMC32 || ec == ESR_ELx_EC_SMC64)

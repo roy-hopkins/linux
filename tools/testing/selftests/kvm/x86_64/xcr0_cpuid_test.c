@@ -107,7 +107,7 @@ int main(int argc, char *argv[])
 	TEST_REQUIRE(kvm_cpu_has(X86_FEATURE_XSAVE));
 
 	vm = vm_create_with_one_vcpu(&vcpu, guest_code);
-	run = vcpu->run;
+	run = vcpu->common->run;
 
 	while (1) {
 		vcpu_run(vcpu);

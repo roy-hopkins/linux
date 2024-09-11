@@ -34,7 +34,7 @@ static void guest_code(void)
 static void *run_vcpu(void *arg)
 {
 	struct kvm_vcpu *vcpu = arg;
-	struct kvm_run *run = vcpu->run;
+	struct kvm_run *run = vcpu->common->run;
 
 	vcpu_run(vcpu);
 

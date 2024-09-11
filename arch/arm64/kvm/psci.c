@@ -182,11 +182,11 @@ static void kvm_prepare_system_event(struct kvm_vcpu *vcpu, u32 type, u64 flags)
 	}
 	kvm_make_all_cpus_request(vcpu->kvm, KVM_REQ_SLEEP);
 
-	memset(&vcpu->run->system_event, 0, sizeof(vcpu->run->system_event));
-	vcpu->run->system_event.type = type;
-	vcpu->run->system_event.ndata = 1;
-	vcpu->run->system_event.data[0] = flags;
-	vcpu->run->exit_reason = KVM_EXIT_SYSTEM_EVENT;
+	memset(&vcpu->common->run->system_event, 0, sizeof(vcpu->common->run->system_event));
+	vcpu->common->run->system_event.type = type;
+	vcpu->common->run->system_event.ndata = 1;
+	vcpu->common->run->system_event.data[0] = flags;
+	vcpu->common->run->exit_reason = KVM_EXIT_SYSTEM_EVENT;
 }
 
 static void kvm_psci_system_off(struct kvm_vcpu *vcpu)
@@ -207,9 +207,9 @@ static void kvm_psci_system_reset2(struct kvm_vcpu *vcpu)
 
 static void kvm_psci_system_suspend(struct kvm_vcpu *vcpu)
 {
-	struct kvm_run *run = vcpu->run;
+	struct kvm_run *run = vcpu->common->run;
 
-	memset(&run->system_event, 0, sizeof(vcpu->run->system_event));
+	memset(&run->system_event, 0, sizeof(vcpu->common->run->system_event));
 	run->system_event.type = KVM_SYSTEM_EVENT_SUSPEND;
 	run->exit_reason = KVM_EXIT_SYSTEM_EVENT;
 }

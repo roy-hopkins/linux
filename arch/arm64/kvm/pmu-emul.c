@@ -373,7 +373,7 @@ static void kvm_pmu_update_state(struct kvm_vcpu *vcpu)
 bool kvm_pmu_should_notify_user(struct kvm_vcpu *vcpu)
 {
 	struct kvm_pmu *pmu = &vcpu->arch.pmu;
-	struct kvm_sync_regs *sregs = &vcpu->run->s.regs;
+	struct kvm_sync_regs *sregs = &vcpu->common->run->s.regs;
 	bool run_level = sregs->device_irq_level & KVM_ARM_DEV_PMU;
 
 	if (likely(irqchip_in_kernel(vcpu->kvm)))
@@ -387,7 +387,7 @@ bool kvm_pmu_should_notify_user(struct kvm_vcpu *vcpu)
  */
 void kvm_pmu_update_run(struct kvm_vcpu *vcpu)
 {
-	struct kvm_sync_regs *regs = &vcpu->run->s.regs;
+	struct kvm_sync_regs *regs = &vcpu->common->run->s.regs;
 
 	/* Populate the timer bitmap for user space */
 	regs->device_irq_level &= ~KVM_ARM_DEV_PMU;

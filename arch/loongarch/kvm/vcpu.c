@@ -156,7 +156,7 @@ static int kvm_pre_enter_guest(struct kvm_vcpu *vcpu)
 		kvm_deliver_intr(vcpu);
 		kvm_deliver_exception(vcpu);
 		/* Make sure the vcpu mode has been written */
-		smp_store_mb(vcpu->mode, IN_GUEST_MODE);
+		smp_store_mb(vcpu->common->mode, IN_GUEST_MODE);
 		kvm_check_vpid(vcpu);
 
 		/*
@@ -171,7 +171,7 @@ static int kvm_pre_enter_guest(struct kvm_vcpu *vcpu)
 
 		if (kvm_request_pending(vcpu) || xfer_to_guest_mode_work_pending()) {
 			/* make sure the vcpu mode has been written */
-			smp_store_mb(vcpu->mode, OUTSIDE_GUEST_MODE);
+			smp_store_mb(vcpu->common->mode, OUTSIDE_GUEST_MODE);
 			local_irq_enable();
 			ret = -EAGAIN;
 		}
@@ -190,7 +190,7 @@ static int kvm_handle_exit(struct kvm_run *run, struct kvm_vcpu *vcpu)
 	u32 intr = estat & 0x1fff; /* Ignore NMI */
 	u32 ecode = (estat & CSR_ESTAT_EXC) >> CSR_ESTAT_EXC_SHIFT;
 
-	vcpu->mode = OUTSIDE_GUEST_MODE;
+	vcpu->common->mode = OUTSIDE_GUEST_MODE;
 
 	/* Set a default exit reason */
 	run->exit_reason = KVM_EXIT_UNKNOWN;
@@ -204,7 +204,7 @@ static int kvm_handle_exit(struct kvm_run *run, struct kvm_vcpu *vcpu)
 		ret = kvm_handle_fault(vcpu, ecode);
 	} else {
 		WARN(!intr, "vm exiting with suspicious irq\n");
-		++vcpu->stat.int_exits;
+		++vcpu->common->stat.int_exits;
 	}
 
 	if (ret == RESUME_GUEST)
@@ -316,9 +316,9 @@ int kvm_arch_vcpu_ioctl_set_guest_debug(struct kvm_vcpu *vcpu,
 		return -EINVAL;
 
 	if (dbg->control & KVM_GUESTDBG_ENABLE)
-		vcpu->guest_debug = dbg->control;
+		vcpu->common->guest_debug = dbg->control;
 	else
-		vcpu->guest_debug = 0;
+		vcpu->common->guest_debug = 0;
 
 	return 0;
 }
@@ -1403,12 +1403,12 @@ void kvm_arch_vcpu_put(struct kvm_vcpu *vcpu)
 int kvm_arch_vcpu_ioctl_run(struct kvm_vcpu *vcpu)
 {
 	int r = -EINTR;
-	struct kvm_run *run = vcpu->run;
+	struct kvm_run *run = vcpu->common->run;
 
-	if (vcpu->mmio_needed) {
-		if (!vcpu->mmio_is_write)
+	if (vcpu->common->mmio_needed) {
+		if (!vcpu->common->mmio_is_write)
 			kvm_complete_mmio_read(vcpu, run);
-		vcpu->mmio_needed = 0;
+		vcpu->common->mmio_needed = 0;
 	}
 
 	if (run->exit_reason == KVM_EXIT_LOONGARCH_IOCSR) {
@@ -1416,7 +1416,7 @@ int kvm_arch_vcpu_ioctl_run(struct kvm_vcpu *vcpu)
 			kvm_complete_iocsr_read(vcpu, run);
 	}
 
-	if (!vcpu->wants_to_run)
+	if (!vcpu->common->wants_to_run)
 		return r;
 
 	/* Clear exit_reason */

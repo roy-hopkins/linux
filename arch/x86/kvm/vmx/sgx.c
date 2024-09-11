@@ -394,8 +394,8 @@ int handle_encls(struct kvm_vcpu *vcpu)
 		if (leaf == EINIT)
 			return handle_encls_einit(vcpu);
 		WARN_ONCE(1, "unexpected exit on ENCLS[%u]", leaf);
-		vcpu->run->exit_reason = KVM_EXIT_UNKNOWN;
-		vcpu->run->hw.hardware_exit_reason = EXIT_REASON_ENCLS;
+		vcpu->common->run->exit_reason = KVM_EXIT_UNKNOWN;
+		vcpu->common->run->hw.hardware_exit_reason = EXIT_REASON_ENCLS;
 		return 0;
 	}
 	return 1;

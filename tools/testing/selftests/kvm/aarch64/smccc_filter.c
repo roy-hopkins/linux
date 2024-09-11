@@ -207,7 +207,7 @@ static void test_filter_denied(void)
 static void expect_call_fwd_to_user(struct kvm_vcpu *vcpu, uint32_t func_id,
 				    enum smccc_conduit conduit)
 {
-	struct kvm_run *run = vcpu->run;
+	struct kvm_run *run = vcpu->common->run;
 
 	TEST_ASSERT(run->exit_reason == KVM_EXIT_HYPERCALL,
 		    "Unexpected exit reason: %u", run->exit_reason);

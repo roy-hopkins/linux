@@ -162,7 +162,7 @@ static void race_sync_regs(struct kvm_vcpu *vcpu, void *racer)
 	pthread_t thread;
 	time_t t;
 
-	run = vcpu->run;
+	run = vcpu->common->run;
 
 	run->kvm_valid_regs = KVM_SYNC_X86_SREGS;
 	vcpu_run(vcpu);
@@ -207,7 +207,7 @@ static void race_sync_regs(struct kvm_vcpu *vcpu, void *racer)
 
 KVM_ONE_VCPU_TEST(sync_regs_test, read_invalid, guest_code)
 {
-	struct kvm_run *run = vcpu->run;
+	struct kvm_run *run = vcpu->common->run;
 	int rv;
 
 	/* Request reading invalid register set from VCPU. */
@@ -228,7 +228,7 @@ KVM_ONE_VCPU_TEST(sync_regs_test, read_invalid, guest_code)
 
 KVM_ONE_VCPU_TEST(sync_regs_test, set_invalid, guest_code)
 {
-	struct kvm_run *run = vcpu->run;
+	struct kvm_run *run = vcpu->common->run;
 	int rv;
 
 	/* Request setting invalid register set into VCPU. */
@@ -249,7 +249,7 @@ KVM_ONE_VCPU_TEST(sync_regs_test, set_invalid, guest_code)
 
 KVM_ONE_VCPU_TEST(sync_regs_test, req_and_verify_all_valid, guest_code)
 {
-	struct kvm_run *run = vcpu->run;
+	struct kvm_run *run = vcpu->common->run;
 	struct kvm_vcpu_events events;
 	struct kvm_sregs sregs;
 	struct kvm_regs regs;
@@ -272,7 +272,7 @@ KVM_ONE_VCPU_TEST(sync_regs_test, req_and_verify_all_valid, guest_code)
 
 KVM_ONE_VCPU_TEST(sync_regs_test, set_and_verify_various, guest_code)
 {
-	struct kvm_run *run = vcpu->run;
+	struct kvm_run *run = vcpu->common->run;
 	struct kvm_vcpu_events events;
 	struct kvm_sregs sregs;
 	struct kvm_regs regs;
@@ -310,7 +310,7 @@ KVM_ONE_VCPU_TEST(sync_regs_test, set_and_verify_various, guest_code)
 
 KVM_ONE_VCPU_TEST(sync_regs_test, clear_kvm_dirty_regs_bits, guest_code)
 {
-	struct kvm_run *run = vcpu->run;
+	struct kvm_run *run = vcpu->common->run;
 
 	/* Clear kvm_dirty_regs bits, verify new s.regs values are
 	 * overwritten with existing guest values.
@@ -327,7 +327,7 @@ KVM_ONE_VCPU_TEST(sync_regs_test, clear_kvm_dirty_regs_bits, guest_code)
 
 KVM_ONE_VCPU_TEST(sync_regs_test, clear_kvm_valid_and_dirty_regs, guest_code)
 {
-	struct kvm_run *run = vcpu->run;
+	struct kvm_run *run = vcpu->common->run;
 	struct kvm_regs regs;
 
 	/* Run once to get register set */
@@ -358,7 +358,7 @@ KVM_ONE_VCPU_TEST(sync_regs_test, clear_kvm_valid_and_dirty_regs, guest_code)
 
 KVM_ONE_VCPU_TEST(sync_regs_test, clear_kvm_valid_regs_bits, guest_code)
 {
-	struct kvm_run *run = vcpu->run;
+	struct kvm_run *run = vcpu->common->run;
 	struct kvm_regs regs;
 
 	/* Run once to get register set */

@@ -86,7 +86,7 @@ int main(void)
 	}
 
 	vm_enable_cap(vm, KVM_CAP_X86_TRIPLE_FAULT_EVENT, 1);
-	run = vcpu->run;
+	run = vcpu->common->run;
 	vcpu_run(vcpu);
 
 	TEST_ASSERT_KVM_EXIT_REASON(vcpu, KVM_EXIT_IO);

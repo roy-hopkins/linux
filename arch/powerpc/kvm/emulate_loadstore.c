@@ -97,7 +97,7 @@ int kvmppc_emulate_loadstore(struct kvm_vcpu *vcpu)
 		int type = op.type & INSTR_TYPE_MASK;
 		int size = GETSIZE(op.type);
 
-		vcpu->mmio_is_write = OP_IS_STORE(type);
+		vcpu->common->mmio_is_write = OP_IS_STORE(type);
 
 		switch (type) {
 		case LOAD:  {

@@ -47,8 +47,8 @@ static void test_step_int(void *guest_code, size_t new_psw_off)
 
 	vm = test_step_int_1(&vcpu, guest_code, new_psw_off, new_psw);
 	TEST_ASSERT_KVM_EXIT_REASON(vcpu, KVM_EXIT_DEBUG);
-	TEST_ASSERT_EQ(vcpu->run->psw_mask, new_psw[0]);
-	TEST_ASSERT_EQ(vcpu->run->psw_addr, new_psw[1]);
+	TEST_ASSERT_EQ(vcpu->common->run->psw_mask, new_psw[0]);
+	TEST_ASSERT_EQ(vcpu->common->run->psw_addr, new_psw[1]);
 	kvm_vm_free(vm);
 }
 
@@ -85,13 +85,13 @@ static void test_step_pgm_diag(void)
 	vm = test_step_int_1(&vcpu, test_step_pgm_diag_guest_code,
 			     __LC_PGM_NEW_PSW, new_psw);
 	TEST_ASSERT_KVM_EXIT_REASON(vcpu, KVM_EXIT_S390_SIEIC);
-	TEST_ASSERT_EQ(vcpu->run->s390_sieic.icptcode, ICPT_INSTRUCTION);
-	TEST_ASSERT_EQ(vcpu->run->s390_sieic.ipa & 0xff00, IPA0_DIAG);
+	TEST_ASSERT_EQ(vcpu->common->run->s390_sieic.icptcode, ICPT_INSTRUCTION);
+	TEST_ASSERT_EQ(vcpu->common->run->s390_sieic.ipa & 0xff00, IPA0_DIAG);
 	vcpu_ioctl(vcpu, KVM_S390_IRQ, &irq);
 	vcpu_run(vcpu);
 	TEST_ASSERT_KVM_EXIT_REASON(vcpu, KVM_EXIT_DEBUG);
-	TEST_ASSERT_EQ(vcpu->run->psw_mask, new_psw[0]);
-	TEST_ASSERT_EQ(vcpu->run->psw_addr, new_psw[1]);
+	TEST_ASSERT_EQ(vcpu->common->run->psw_mask, new_psw[0]);
+	TEST_ASSERT_EQ(vcpu->common->run->psw_addr, new_psw[1]);
 	kvm_vm_free(vm);
 }
 

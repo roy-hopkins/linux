@@ -19,7 +19,7 @@ static inline void flds(uint64_t address)
 
 static inline void handle_flds_emulation_failure_exit(struct kvm_vcpu *vcpu)
 {
-	struct kvm_run *run = vcpu->run;
+	struct kvm_run *run = vcpu->common->run;
 	struct kvm_regs regs;
 	uint8_t *insn_bytes;
 	uint64_t flags;

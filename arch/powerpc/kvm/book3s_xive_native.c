@@ -1045,16 +1045,16 @@ static void kvmppc_xive_native_release(struct kvm_device *dev)
 	 */
 	kvm_for_each_vcpu(i, vcpu, kvm) {
 		/*
-		 * Take vcpu->mutex to ensure that no one_reg get/set ioctl
+		 * Take vcpu->common->mutex to ensure that no one_reg get/set ioctl
 		 * (i.e. kvmppc_xive_native_[gs]et_vp) can be being done.
-		 * Holding the vcpu->mutex also means that the vcpu cannot
+		 * Holding the vcpu->common->mutex also means that the vcpu cannot
 		 * be executing the KVM_RUN ioctl, and therefore it cannot
 		 * be executing the XIVE push or pull code or accessing
 		 * the XIVE MMIO regions.
 		 */
-		mutex_lock(&vcpu->mutex);
+		mutex_lock(&vcpu->common->mutex);
 		kvmppc_xive_native_cleanup_vcpu(vcpu);
-		mutex_unlock(&vcpu->mutex);
+		mutex_unlock(&vcpu->common->mutex);
 	}
 
 	/*

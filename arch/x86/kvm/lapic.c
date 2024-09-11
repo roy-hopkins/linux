@@ -173,7 +173,7 @@ bool kvm_can_use_hv_timer(struct kvm_vcpu *vcpu)
 
 static bool kvm_use_posted_timer_interrupt(struct kvm_vcpu *vcpu)
 {
-	return kvm_can_post_timer_interrupt(vcpu) && vcpu->mode == IN_GUEST_MODE;
+	return kvm_can_post_timer_interrupt(vcpu) && vcpu->common->mode == IN_GUEST_MODE;
 }
 
 static inline u32 kvm_apic_calc_x2apic_ldr(u32 id)
@@ -1562,7 +1562,7 @@ static u32 apic_get_tmcct(struct kvm_lapic *apic)
 static void __report_tpr_access(struct kvm_lapic *apic, bool write)
 {
 	struct kvm_vcpu *vcpu = apic->vcpu;
-	struct kvm_run *run = vcpu->run;
+	struct kvm_run *run = vcpu->common->run;
 
 	kvm_make_request(KVM_REQ_REPORT_TPR_ACCESS, vcpu);
 	run->tpr_access.rip = kvm_rip_read(vcpu);

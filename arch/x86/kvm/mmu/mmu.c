@@ -658,9 +658,9 @@ static void walk_shadow_page_lockless_begin(struct kvm_vcpu *vcpu)
 
 		/*
 		 * Make sure a following spte read is not reordered ahead of the write
-		 * to vcpu->mode.
+		 * to vcpu->common->mode.
 		 */
-		smp_store_mb(vcpu->mode, READING_SHADOW_PAGE_TABLES);
+		smp_store_mb(vcpu->common->mode, READING_SHADOW_PAGE_TABLES);
 	}
 }
 
@@ -670,11 +670,11 @@ static void walk_shadow_page_lockless_end(struct kvm_vcpu *vcpu)
 		kvm_tdp_mmu_walk_lockless_end();
 	} else {
 		/*
-		 * Make sure the write to vcpu->mode is not reordered in front of
+		 * Make sure the write to vcpu->common->mode is not reordered in front of
 		 * reads to sptes.  If it does, kvm_mmu_commit_zap_page() can see us
 		 * OUTSIDE_GUEST_MODE and proceed to free the shadow page table.
 		 */
-		smp_store_release(&vcpu->mode, OUTSIDE_GUEST_MODE);
+		smp_store_release(&vcpu->common->mode, OUTSIDE_GUEST_MODE);
 		local_irq_enable();
 	}
 }
@@ -2609,7 +2609,7 @@ static void kvm_mmu_commit_zap_page(struct kvm *kvm,
 
 	/*
 	 * We need to make sure everyone sees our modifications to
-	 * the page tables and see changes to vcpu->mode here. The barrier
+	 * the page tables and see changes to vcpu->common->mode here. The barrier
 	 * in the kvm_flush_remote_tlbs() achieves this. This pairs
 	 * with vcpu_enter_guest and walk_shadow_page_lockless_begin/end.
 	 *
@@ -2880,7 +2880,7 @@ static int mmu_set_spte(struct kvm_vcpu *vcpu, struct kvm_memory_slot *slot,
 	bool write_fault = fault && fault->write;
 
 	if (unlikely(is_noslot_pfn(pfn))) {
-		vcpu->stat.pf_mmio_spte_created++;
+		vcpu->common->stat.pf_mmio_spte_created++;
 		mark_mmio_spte(vcpu, sptep, gfn, pte_access);
 		return RET_PF_EMULATE;
 	}
@@ -3547,7 +3547,7 @@ static int fast_page_fault(struct kvm_vcpu *vcpu, struct kvm_page_fault *fault)
 	walk_shadow_page_lockless_end(vcpu);
 
 	if (ret != RET_PF_INVALID)
-		vcpu->stat.pf_fast++;
+		vcpu->common->stat.pf_fast++;
 
 	return ret;
 }
@@ -4299,7 +4299,7 @@ void kvm_arch_async_page_ready(struct kvm_vcpu *vcpu, struct kvm_async_pf *work)
 	 * truly spurious and never trigger emulation
 	 */
 	if (r == RET_PF_FIXED)
-		vcpu->stat.pf_fixed++;
+		vcpu->common->stat.pf_fixed++;
 }
 
 static inline u8 kvm_max_level_for_order(int order)
@@ -5997,7 +5997,7 @@ int noinline kvm_mmu_page_fault(struct kvm_vcpu *vcpu, gpa_t cr2_or_gpa, u64 err
 	}
 
 	if (r == RET_PF_INVALID) {
-		vcpu->stat.pf_taken++;
+		vcpu->common->stat.pf_taken++;
 
 		r = kvm_mmu_do_page_fault(vcpu, cr2_or_gpa, error_code, false,
 					  &emulation_type, NULL);
@@ -6009,11 +6009,11 @@ int noinline kvm_mmu_page_fault(struct kvm_vcpu *vcpu, gpa_t cr2_or_gpa, u64 err
 		return r;
 
 	if (r == RET_PF_FIXED)
-		vcpu->stat.pf_fixed++;
+		vcpu->common->stat.pf_fixed++;
 	else if (r == RET_PF_EMULATE)
-		vcpu->stat.pf_emulate++;
+		vcpu->common->stat.pf_emulate++;
 	else if (r == RET_PF_SPURIOUS)
-		vcpu->stat.pf_spurious++;
+		vcpu->common->stat.pf_spurious++;
 
 	if (r != RET_PF_EMULATE)
 		return 1;
@@ -6145,7 +6145,7 @@ void kvm_mmu_invlpg(struct kvm_vcpu *vcpu, gva_t gva)
 	 * done here for them.
 	 */
 	kvm_mmu_invalidate_addr(vcpu, vcpu->arch.walk_mmu, gva, KVM_MMU_ROOTS_ALL);
-	++vcpu->stat.invlpg;
+	++vcpu->common->stat.invlpg;
 }
 EXPORT_SYMBOL_GPL(kvm_mmu_invlpg);
 
@@ -6167,7 +6167,7 @@ void kvm_mmu_invpcid_gva(struct kvm_vcpu *vcpu, gva_t gva, unsigned long pcid)
 
 	if (roots)
 		kvm_mmu_invalidate_addr(vcpu, mmu, gva, roots);
-	++vcpu->stat.invlpg;
+	++vcpu->common->stat.invlpg;
 
 	/*
 	 * Mappings not reachable via the current cr3 or the prev_roots will be

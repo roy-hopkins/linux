@@ -1360,7 +1360,7 @@ static int kvm_xen_hypercall_set_result(struct kvm_vcpu *vcpu, u64 result)
 
 static int kvm_xen_hypercall_complete_userspace(struct kvm_vcpu *vcpu)
 {
-	struct kvm_run *run = vcpu->run;
+	struct kvm_run *run = vcpu->common->run;
 
 	if (unlikely(!kvm_is_linear_rip(vcpu, vcpu->arch.xen.hypercall_rip)))
 		return 1;
@@ -1696,17 +1696,17 @@ int kvm_xen_hypercall(struct kvm_vcpu *vcpu)
 		return kvm_xen_hypercall_set_result(vcpu, r);
 
 handle_in_userspace:
-	vcpu->run->exit_reason = KVM_EXIT_XEN;
-	vcpu->run->xen.type = KVM_EXIT_XEN_HCALL;
-	vcpu->run->xen.u.hcall.longmode = longmode;
-	vcpu->run->xen.u.hcall.cpl = cpl;
-	vcpu->run->xen.u.hcall.input = input;
-	vcpu->run->xen.u.hcall.params[0] = params[0];
-	vcpu->run->xen.u.hcall.params[1] = params[1];
-	vcpu->run->xen.u.hcall.params[2] = params[2];
-	vcpu->run->xen.u.hcall.params[3] = params[3];
-	vcpu->run->xen.u.hcall.params[4] = params[4];
-	vcpu->run->xen.u.hcall.params[5] = params[5];
+	vcpu->common->run->exit_reason = KVM_EXIT_XEN;
+	vcpu->common->run->xen.type = KVM_EXIT_XEN_HCALL;
+	vcpu->common->run->xen.u.hcall.longmode = longmode;
+	vcpu->common->run->xen.u.hcall.cpl = cpl;
+	vcpu->common->run->xen.u.hcall.input = input;
+	vcpu->common->run->xen.u.hcall.params[0] = params[0];
+	vcpu->common->run->xen.u.hcall.params[1] = params[1];
+	vcpu->common->run->xen.u.hcall.params[2] = params[2];
+	vcpu->common->run->xen.u.hcall.params[3] = params[3];
+	vcpu->common->run->xen.u.hcall.params[4] = params[4];
+	vcpu->common->run->xen.u.hcall.params[5] = params[5];
 	vcpu->arch.xen.hypercall_rip = kvm_get_linear_rip(vcpu);
 	vcpu->arch.complete_userspace_io =
 		kvm_xen_hypercall_complete_userspace;

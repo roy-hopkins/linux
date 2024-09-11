@@ -108,7 +108,7 @@ static void kvm_arm_setup_mdcr_el2(struct kvm_vcpu *vcpu)
 				MDCR_EL2_TDOSA);
 
 	/* Is the VM being debugged by userspace? */
-	if (vcpu->guest_debug)
+	if (vcpu->common->guest_debug)
 		/* Route all software debug exceptions to EL2 */
 		vcpu->arch.mdcr_el2 |= MDCR_EL2_TDE;
 
@@ -119,7 +119,7 @@ static void kvm_arm_setup_mdcr_el2(struct kvm_vcpu *vcpu)
 	 *  - The guest is not using debug (DEBUG_DIRTY clear).
 	 *  - The guest has enabled the OS Lock (debug exceptions are blocked).
 	 */
-	if ((vcpu->guest_debug & KVM_GUESTDBG_USE_HW) ||
+	if ((vcpu->common->guest_debug & KVM_GUESTDBG_USE_HW) ||
 	    !vcpu_get_flag(vcpu, DEBUG_DIRTY) ||
 	    kvm_vcpu_os_lock_enabled(vcpu))
 		vcpu->arch.mdcr_el2 |= MDCR_EL2_TDA;
@@ -171,12 +171,12 @@ void kvm_arm_setup_debug(struct kvm_vcpu *vcpu)
 {
 	unsigned long mdscr, orig_mdcr_el2 = vcpu->arch.mdcr_el2;
 
-	trace_kvm_arm_setup_debug(vcpu, vcpu->guest_debug);
+	trace_kvm_arm_setup_debug(vcpu, vcpu->common->guest_debug);
 
 	kvm_arm_setup_mdcr_el2(vcpu);
 
 	/* Check if we need to use the debug registers. */
-	if (vcpu->guest_debug || kvm_vcpu_os_lock_enabled(vcpu)) {
+	if (vcpu->common->guest_debug || kvm_vcpu_os_lock_enabled(vcpu)) {
 		/* Save guest debug state */
 		save_guest_debug_regs(vcpu);
 
@@ -200,7 +200,7 @@ void kvm_arm_setup_debug(struct kvm_vcpu *vcpu)
 		 * returns to normal once the host is no longer
 		 * debugging the system.
 		 */
-		if (vcpu->guest_debug & KVM_GUESTDBG_SINGLESTEP) {
+		if (vcpu->common->guest_debug & KVM_GUESTDBG_SINGLESTEP) {
 			/*
 			 * If the software step state at the last guest exit
 			 * was Active-pending, we don't set DBG_SPSR_SS so
@@ -232,7 +232,7 @@ void kvm_arm_setup_debug(struct kvm_vcpu *vcpu)
 		 * debug ioctl. The existing DEBUG_DIRTY mechanism ensures
 		 * the registers are updated on the world switch.
 		 */
-		if (vcpu->guest_debug & KVM_GUESTDBG_USE_HW) {
+		if (vcpu->common->guest_debug & KVM_GUESTDBG_USE_HW) {
 			/* Enable breakpoints/watchpoints */
 			mdscr = vcpu_read_sys_reg(vcpu, MDSCR_EL1);
 			mdscr |= DBG_MDSCR_MDE;
@@ -264,7 +264,7 @@ void kvm_arm_setup_debug(struct kvm_vcpu *vcpu)
 		}
 	}
 
-	BUG_ON(!vcpu->guest_debug &&
+	BUG_ON(!vcpu->common->guest_debug &&
 		vcpu->arch.debug_ptr != &vcpu->arch.vcpu_debug_state);
 
 	/* If KDE or MDE are set, perform a full save/restore cycle. */
@@ -280,13 +280,13 @@ void kvm_arm_setup_debug(struct kvm_vcpu *vcpu)
 
 void kvm_arm_clear_debug(struct kvm_vcpu *vcpu)
 {
-	trace_kvm_arm_clear_debug(vcpu->guest_debug);
+	trace_kvm_arm_clear_debug(vcpu->common->guest_debug);
 
 	/*
 	 * Restore the guest's debug registers if we were using them.
 	 */
-	if (vcpu->guest_debug || kvm_vcpu_os_lock_enabled(vcpu)) {
-		if (vcpu->guest_debug & KVM_GUESTDBG_SINGLESTEP) {
+	if (vcpu->common->guest_debug || kvm_vcpu_os_lock_enabled(vcpu)) {
+		if (vcpu->common->guest_debug & KVM_GUESTDBG_SINGLESTEP) {
 			if (!(*vcpu_cpsr(vcpu) & DBG_SPSR_SS))
 				/*
 				 * Mark the vcpu as ACTIVE_PENDING
@@ -301,7 +301,7 @@ void kvm_arm_clear_debug(struct kvm_vcpu *vcpu)
 		 * If we were using HW debug we need to restore the
 		 * debug_ptr to the guest debug state.
 		 */
-		if (vcpu->guest_debug & KVM_GUESTDBG_USE_HW) {
+		if (vcpu->common->guest_debug & KVM_GUESTDBG_USE_HW) {
 			kvm_arm_reset_debug_ptr(vcpu);
 
 			trace_kvm_arm_set_regset("BKPTS", get_num_brps(),

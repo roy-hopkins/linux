@@ -33,7 +33,7 @@ static uint64_t diag318_handler(void)
 
 	vm = vm_create_with_one_vcpu(&vcpu, guest_code);
 	vcpu_run(vcpu);
-	run = vcpu->run;
+	run = vcpu->common->run;
 
 	TEST_ASSERT_KVM_EXIT_REASON(vcpu, KVM_EXIT_S390_SIEIC);
 	TEST_ASSERT(run->s390_sieic.icptcode == ICPT_INSTRUCTION,

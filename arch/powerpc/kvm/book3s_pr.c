@@ -493,7 +493,7 @@ static void kvmppc_set_msr_pr(struct kvm_vcpu *vcpu, u64 msr)
 	if (msr & MSR_POW) {
 		if (!vcpu->arch.pending_exceptions) {
 			kvm_vcpu_halt(vcpu);
-			vcpu->stat.generic.halt_wakeup++;
+			vcpu->common->stat.generic.halt_wakeup++;
 
 			/* Unset POW bit after we woke up */
 			msr &= ~MSR_POW;
@@ -774,17 +774,17 @@ static int kvmppc_handle_pagefault(struct kvm_vcpu *vcpu,
 		/* The guest's PTE is not mapped yet. Map on the host */
 		if (kvmppc_mmu_map_page(vcpu, &pte, iswrite) == -EIO) {
 			/* Exit KVM if mapping failed */
-			vcpu->run->exit_reason = KVM_EXIT_INTERNAL_ERROR;
+			vcpu->common->run->exit_reason = KVM_EXIT_INTERNAL_ERROR;
 			return RESUME_HOST;
 		}
 		if (data)
-			vcpu->stat.sp_storage++;
+			vcpu->common->stat.sp_storage++;
 		else if (vcpu->arch.mmu.is_dcbz32(vcpu) &&
 			 (!(vcpu->arch.hflags & BOOK3S_HFLAG_DCBZ32)))
 			kvmppc_patch_dcbz(vcpu, &pte);
 	} else {
 		/* MMIO */
-		vcpu->stat.mmio_exits++;
+		vcpu->common->stat.mmio_exits++;
 		vcpu->arch.paddr_accessed = pte.raddr;
 		vcpu->arch.vaddr_accessed = pte.eaddr;
 		r = kvmppc_emulate_mmio(vcpu);
@@ -1056,7 +1056,7 @@ void kvmppc_set_fscr(struct kvm_vcpu *vcpu, u64 fscr)
 
 static void kvmppc_setup_debug(struct kvm_vcpu *vcpu)
 {
-	if (vcpu->guest_debug & KVM_GUESTDBG_SINGLESTEP) {
+	if (vcpu->common->guest_debug & KVM_GUESTDBG_SINGLESTEP) {
 		u64 msr = kvmppc_get_msr(vcpu);
 
 		kvmppc_set_msr(vcpu, msr | MSR_SE);
@@ -1065,7 +1065,7 @@ static void kvmppc_setup_debug(struct kvm_vcpu *vcpu)
 
 static void kvmppc_clear_debug(struct kvm_vcpu *vcpu)
 {
-	if (vcpu->guest_debug & KVM_GUESTDBG_SINGLESTEP) {
+	if (vcpu->common->guest_debug & KVM_GUESTDBG_SINGLESTEP) {
 		u64 msr = kvmppc_get_msr(vcpu);
 
 		kvmppc_set_msr(vcpu, msr & ~MSR_SE);
@@ -1105,7 +1105,7 @@ static int kvmppc_exit_pr_progint(struct kvm_vcpu *vcpu, unsigned int exit_nr)
 		}
 	}
 
-	vcpu->stat.emulated_inst_exits++;
+	vcpu->common->stat.emulated_inst_exits++;
 	er = kvmppc_emulate_instruction(vcpu);
 	switch (er) {
 	case EMULATE_DONE:
@@ -1121,7 +1121,7 @@ static int kvmppc_exit_pr_progint(struct kvm_vcpu *vcpu, unsigned int exit_nr)
 		r = RESUME_GUEST;
 		break;
 	case EMULATE_DO_MMIO:
-		vcpu->run->exit_reason = KVM_EXIT_MMIO;
+		vcpu->common->run->exit_reason = KVM_EXIT_MMIO;
 		r = RESUME_HOST_NV;
 		break;
 	case EMULATE_EXIT_USER:
@@ -1136,11 +1136,11 @@ static int kvmppc_exit_pr_progint(struct kvm_vcpu *vcpu, unsigned int exit_nr)
 
 int kvmppc_handle_exit_pr(struct kvm_vcpu *vcpu, unsigned int exit_nr)
 {
-	struct kvm_run *run = vcpu->run;
+	struct kvm_run *run = vcpu->common->run;
 	int r = RESUME_HOST;
 	int s;
 
-	vcpu->stat.sum_exits++;
+	vcpu->common->stat.sum_exits++;
 
 	run->exit_reason = KVM_EXIT_UNKNOWN;
 	run->ready_for_interrupt_injection = 1;
@@ -1154,7 +1154,7 @@ int kvmppc_handle_exit_pr(struct kvm_vcpu *vcpu, unsigned int exit_nr)
 	case BOOK3S_INTERRUPT_INST_STORAGE:
 	{
 		ulong shadow_srr1 = vcpu->arch.shadow_srr1;
-		vcpu->stat.pf_instruc++;
+		vcpu->common->stat.pf_instruc++;
 
 		if (kvmppc_is_split_real(vcpu))
 			kvmppc_fixup_split_real(vcpu);
@@ -1182,7 +1182,7 @@ int kvmppc_handle_exit_pr(struct kvm_vcpu *vcpu, unsigned int exit_nr)
 			int idx = srcu_read_lock(&vcpu->kvm->srcu);
 			r = kvmppc_handle_pagefault(vcpu, kvmppc_get_pc(vcpu), exit_nr);
 			srcu_read_unlock(&vcpu->kvm->srcu, idx);
-			vcpu->stat.sp_instruc++;
+			vcpu->common->stat.sp_instruc++;
 		} else if (vcpu->arch.mmu.is_dcbz32(vcpu) &&
 			  (!(vcpu->arch.hflags & BOOK3S_HFLAG_DCBZ32))) {
 			/*
@@ -1203,7 +1203,7 @@ int kvmppc_handle_exit_pr(struct kvm_vcpu *vcpu, unsigned int exit_nr)
 	{
 		ulong dar = kvmppc_get_fault_dar(vcpu);
 		u32 fault_dsisr = vcpu->arch.fault_dsisr;
-		vcpu->stat.pf_storage++;
+		vcpu->common->stat.pf_storage++;
 
 #ifdef CONFIG_PPC_BOOK3S_32
 		/* We set segments as unused segments when invalidating them. So
@@ -1258,13 +1258,13 @@ int kvmppc_handle_exit_pr(struct kvm_vcpu *vcpu, unsigned int exit_nr)
 	case BOOK3S_INTERRUPT_HV_DECREMENTER:
 	case BOOK3S_INTERRUPT_DOORBELL:
 	case BOOK3S_INTERRUPT_H_DOORBELL:
-		vcpu->stat.dec_exits++;
+		vcpu->common->stat.dec_exits++;
 		r = RESUME_GUEST;
 		break;
 	case BOOK3S_INTERRUPT_EXTERNAL:
 	case BOOK3S_INTERRUPT_EXTERNAL_HV:
 	case BOOK3S_INTERRUPT_H_VIRT:
-		vcpu->stat.ext_intr_exits++;
+		vcpu->common->stat.ext_intr_exits++;
 		r = RESUME_GUEST;
 		break;
 	case BOOK3S_INTERRUPT_HMI:
@@ -1333,7 +1333,7 @@ int kvmppc_handle_exit_pr(struct kvm_vcpu *vcpu, unsigned int exit_nr)
 			r = RESUME_GUEST;
 		} else {
 			/* Guest syscalls */
-			vcpu->stat.syscall_exits++;
+			vcpu->common->stat.syscall_exits++;
 			kvmppc_book3s_queue_irqprio(vcpu, exit_nr);
 			r = RESUME_GUEST;
 		}
@@ -1407,7 +1407,7 @@ int kvmppc_handle_exit_pr(struct kvm_vcpu *vcpu, unsigned int exit_nr)
 		r = RESUME_GUEST;
 		break;
 	case BOOK3S_INTERRUPT_TRACE:
-		if (vcpu->guest_debug & KVM_GUESTDBG_SINGLESTEP) {
+		if (vcpu->common->guest_debug & KVM_GUESTDBG_SINGLESTEP) {
 			run->exit_reason = KVM_EXIT_DEBUG;
 			r = RESUME_HOST;
 		} else {
@@ -1813,7 +1813,7 @@ static int kvmppc_vcpu_run_pr(struct kvm_vcpu *vcpu)
 
 	/* Check if we can run the vcpu at all */
 	if (!vcpu->arch.sane) {
-		vcpu->run->exit_reason = KVM_EXIT_INTERNAL_ERROR;
+		vcpu->common->run->exit_reason = KVM_EXIT_INTERNAL_ERROR;
 		ret = -EINVAL;
 		goto out;
 	}
@@ -1855,7 +1855,7 @@ static int kvmppc_vcpu_run_pr(struct kvm_vcpu *vcpu)
 
 	srr_regs_clobbered();
 out:
-	vcpu->mode = OUTSIDE_GUEST_MODE;
+	vcpu->common->mode = OUTSIDE_GUEST_MODE;
 	return ret;
 }
 

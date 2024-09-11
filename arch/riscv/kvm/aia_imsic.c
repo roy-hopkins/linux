@@ -734,7 +734,7 @@ int kvm_riscv_vcpu_aia_imsic_update(struct kvm_vcpu *vcpu)
 	struct imsic_mrif tmrif;
 	void __iomem *new_vsfile_va;
 	struct kvm *kvm = vcpu->kvm;
-	struct kvm_run *run = vcpu->run;
+	struct kvm_run *run = vcpu->common->run;
 	struct kvm_vcpu_aia *vaia = &vcpu->arch.aia_context;
 	struct imsic *imsic = vaia->imsic_state;
 	int ret = 0, new_vsfile_hgei = -1, old_vsfile_hgei, old_vsfile_cpu;

@@ -98,7 +98,7 @@ int main(void)
 	TEST_REQUIRE(kvm_has_cap(KVM_CAP_SET_GUEST_DEBUG));
 
 	vm = vm_create_with_one_vcpu(&vcpu, guest_code);
-	run = vcpu->run;
+	run = vcpu->common->run;
 
 	/* Test software BPs - int3 */
 	memset(&debug, 0, sizeof(debug));

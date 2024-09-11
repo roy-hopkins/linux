@@ -947,7 +947,7 @@ enum emulation_result kvm_mips_emul_wait(struct kvm_vcpu *vcpu)
 	kvm_debug("[%#lx] !!!WAIT!!! (%#lx)\n", vcpu->arch.pc,
 		  vcpu->arch.pending_exceptions);
 
-	++vcpu->stat.wait_exits;
+	++vcpu->common->stat.wait_exits;
 	trace_kvm_exit(vcpu, KVM_TRACE_EXIT_WAIT);
 	if (!vcpu->arch.pending_exceptions) {
 		kvm_vz_lose_htimer(vcpu);
@@ -959,7 +959,7 @@ enum emulation_result kvm_mips_emul_wait(struct kvm_vcpu *vcpu)
 		 * check if any I/O interrupts are pending.
 		 */
 		if (kvm_arch_vcpu_runnable(vcpu))
-			vcpu->run->exit_reason = KVM_EXIT_IRQ_WINDOW_OPEN;
+			vcpu->common->run->exit_reason = KVM_EXIT_IRQ_WINDOW_OPEN;
 	}
 
 	return EMULATE_DONE;
@@ -972,7 +972,7 @@ enum emulation_result kvm_mips_emulate_store(union mips_instruction inst,
 	int r;
 	enum emulation_result er;
 	u32 rt;
-	struct kvm_run *run = vcpu->run;
+	struct kvm_run *run = vcpu->common->run;
 	void *data = run->mmio.data;
 	unsigned int imme;
 	unsigned long curr_pc;
@@ -1245,15 +1245,15 @@ enum emulation_result kvm_mips_emulate_store(union mips_instruction inst,
 		goto out_fail;
 	}
 
-	vcpu->mmio_needed = 1;
+	vcpu->common->mmio_needed = 1;
 	run->mmio.is_write = 1;
-	vcpu->mmio_is_write = 1;
+	vcpu->common->mmio_is_write = 1;
 
 	r = kvm_io_bus_write(vcpu, KVM_MMIO_BUS,
 			run->mmio.phys_addr, run->mmio.len, data);
 
 	if (!r) {
-		vcpu->mmio_needed = 0;
+		vcpu->common->mmio_needed = 0;
 		return EMULATE_DONE;
 	}
 
@@ -1268,7 +1268,7 @@ out_fail:
 enum emulation_result kvm_mips_emulate_load(union mips_instruction inst,
 					    u32 cause, struct kvm_vcpu *vcpu)
 {
-	struct kvm_run *run = vcpu->run;
+	struct kvm_run *run = vcpu->common->run;
 	int r;
 	enum emulation_result er;
 	unsigned long curr_pc;
@@ -1297,7 +1297,7 @@ enum emulation_result kvm_mips_emulate_load(union mips_instruction inst,
 	if (run->mmio.phys_addr == KVM_INVALID_ADDR)
 		return EMULATE_FAIL;
 
-	vcpu->mmio_needed = 2;	/* signed */
+	vcpu->common->mmio_needed = 2;	/* signed */
 	switch (op) {
 #if defined(CONFIG_64BIT)
 	case ld_op:
@@ -1305,7 +1305,7 @@ enum emulation_result kvm_mips_emulate_load(union mips_instruction inst,
 		break;
 
 	case lwu_op:
-		vcpu->mmio_needed = 1;	/* unsigned */
+		vcpu->common->mmio_needed = 1;	/* unsigned */
 		fallthrough;
 #endif
 	case lw_op:
@@ -1313,14 +1313,14 @@ enum emulation_result kvm_mips_emulate_load(union mips_instruction inst,
 		break;
 
 	case lhu_op:
-		vcpu->mmio_needed = 1;	/* unsigned */
+		vcpu->common->mmio_needed = 1;	/* unsigned */
 		fallthrough;
 	case lh_op:
 		run->mmio.len = 2;
 		break;
 
 	case lbu_op:
-		vcpu->mmio_needed = 1;	/* unsigned */
+		vcpu->common->mmio_needed = 1;	/* unsigned */
 		fallthrough;
 	case lb_op:
 		run->mmio.len = 1;
@@ -1334,16 +1334,16 @@ enum emulation_result kvm_mips_emulate_load(union mips_instruction inst,
 		imme = vcpu->arch.host_cp0_badvaddr & 0x3;
 		switch (imme) {
 		case 0:
-			vcpu->mmio_needed = 3;	/* 1 byte */
+			vcpu->common->mmio_needed = 3;	/* 1 byte */
 			break;
 		case 1:
-			vcpu->mmio_needed = 4;	/* 2 bytes */
+			vcpu->common->mmio_needed = 4;	/* 2 bytes */
 			break;
 		case 2:
-			vcpu->mmio_needed = 5;	/* 3 bytes */
+			vcpu->common->mmio_needed = 5;	/* 3 bytes */
 			break;
 		case 3:
-			vcpu->mmio_needed = 6;	/* 4 bytes */
+			vcpu->common->mmio_needed = 6;	/* 4 bytes */
 			break;
 		default:
 			break;
@@ -1358,16 +1358,16 @@ enum emulation_result kvm_mips_emulate_load(union mips_instruction inst,
 		imme = vcpu->arch.host_cp0_badvaddr & 0x3;
 		switch (imme) {
 		case 0:
-			vcpu->mmio_needed = 7;	/* 4 bytes */
+			vcpu->common->mmio_needed = 7;	/* 4 bytes */
 			break;
 		case 1:
-			vcpu->mmio_needed = 8;	/* 3 bytes */
+			vcpu->common->mmio_needed = 8;	/* 3 bytes */
 			break;
 		case 2:
-			vcpu->mmio_needed = 9;	/* 2 bytes */
+			vcpu->common->mmio_needed = 9;	/* 2 bytes */
 			break;
 		case 3:
-			vcpu->mmio_needed = 10;	/* 1 byte */
+			vcpu->common->mmio_needed = 10;	/* 1 byte */
 			break;
 		default:
 			break;
@@ -1383,28 +1383,28 @@ enum emulation_result kvm_mips_emulate_load(union mips_instruction inst,
 		imme = vcpu->arch.host_cp0_badvaddr & 0x7;
 		switch (imme) {
 		case 0:
-			vcpu->mmio_needed = 11;	/* 1 byte */
+			vcpu->common->mmio_needed = 11;	/* 1 byte */
 			break;
 		case 1:
-			vcpu->mmio_needed = 12;	/* 2 bytes */
+			vcpu->common->mmio_needed = 12;	/* 2 bytes */
 			break;
 		case 2:
-			vcpu->mmio_needed = 13;	/* 3 bytes */
+			vcpu->common->mmio_needed = 13;	/* 3 bytes */
 			break;
 		case 3:
-			vcpu->mmio_needed = 14;	/* 4 bytes */
+			vcpu->common->mmio_needed = 14;	/* 4 bytes */
 			break;
 		case 4:
-			vcpu->mmio_needed = 15;	/* 5 bytes */
+			vcpu->common->mmio_needed = 15;	/* 5 bytes */
 			break;
 		case 5:
-			vcpu->mmio_needed = 16;	/* 6 bytes */
+			vcpu->common->mmio_needed = 16;	/* 6 bytes */
 			break;
 		case 6:
-			vcpu->mmio_needed = 17;	/* 7 bytes */
+			vcpu->common->mmio_needed = 17;	/* 7 bytes */
 			break;
 		case 7:
-			vcpu->mmio_needed = 18;	/* 8 bytes */
+			vcpu->common->mmio_needed = 18;	/* 8 bytes */
 			break;
 		default:
 			break;
@@ -1419,28 +1419,28 @@ enum emulation_result kvm_mips_emulate_load(union mips_instruction inst,
 		imme = vcpu->arch.host_cp0_badvaddr & 0x7;
 		switch (imme) {
 		case 0:
-			vcpu->mmio_needed = 19;	/* 8 bytes */
+			vcpu->common->mmio_needed = 19;	/* 8 bytes */
 			break;
 		case 1:
-			vcpu->mmio_needed = 20;	/* 7 bytes */
+			vcpu->common->mmio_needed = 20;	/* 7 bytes */
 			break;
 		case 2:
-			vcpu->mmio_needed = 21;	/* 6 bytes */
+			vcpu->common->mmio_needed = 21;	/* 6 bytes */
 			break;
 		case 3:
-			vcpu->mmio_needed = 22;	/* 5 bytes */
+			vcpu->common->mmio_needed = 22;	/* 5 bytes */
 			break;
 		case 4:
-			vcpu->mmio_needed = 23;	/* 4 bytes */
+			vcpu->common->mmio_needed = 23;	/* 4 bytes */
 			break;
 		case 5:
-			vcpu->mmio_needed = 24;	/* 3 bytes */
+			vcpu->common->mmio_needed = 24;	/* 3 bytes */
 			break;
 		case 6:
-			vcpu->mmio_needed = 25;	/* 2 bytes */
+			vcpu->common->mmio_needed = 25;	/* 2 bytes */
 			break;
 		case 7:
-			vcpu->mmio_needed = 26;	/* 1 byte */
+			vcpu->common->mmio_needed = 26;	/* 1 byte */
 			break;
 		default:
 			break;
@@ -1462,19 +1462,19 @@ enum emulation_result kvm_mips_emulate_load(union mips_instruction inst,
 		 */
 		case 0x0:
 			run->mmio.len = 1;
-			vcpu->mmio_needed = 27;	/* signed */
+			vcpu->common->mmio_needed = 27;	/* signed */
 			break;
 		case 0x1:
 			run->mmio.len = 2;
-			vcpu->mmio_needed = 28;	/* signed */
+			vcpu->common->mmio_needed = 28;	/* signed */
 			break;
 		case 0x2:
 			run->mmio.len = 4;
-			vcpu->mmio_needed = 29;	/* signed */
+			vcpu->common->mmio_needed = 29;	/* signed */
 			break;
 		case 0x3:
 			run->mmio.len = 8;
-			vcpu->mmio_needed = 30;	/* signed */
+			vcpu->common->mmio_needed = 30;	/* signed */
 			break;
 		default:
 			kvm_err("Godson Extended GS-Load for float not yet supported (inst=0x%08x)\n",
@@ -1487,19 +1487,19 @@ enum emulation_result kvm_mips_emulate_load(union mips_instruction inst,
 	default:
 		kvm_err("Load not yet supported (inst=0x%08x)\n",
 			inst.word);
-		vcpu->mmio_needed = 0;
+		vcpu->common->mmio_needed = 0;
 		return EMULATE_FAIL;
 	}
 
 	run->mmio.is_write = 0;
-	vcpu->mmio_is_write = 0;
+	vcpu->common->mmio_is_write = 0;
 
 	r = kvm_io_bus_read(vcpu, KVM_MMIO_BUS,
 			run->mmio.phys_addr, run->mmio.len, run->mmio.data);
 
 	if (!r) {
 		kvm_mips_complete_mmio_load(vcpu);
-		vcpu->mmio_needed = 0;
+		vcpu->common->mmio_needed = 0;
 		return EMULATE_DONE;
 	}
 
@@ -1508,7 +1508,7 @@ enum emulation_result kvm_mips_emulate_load(union mips_instruction inst,
 
 enum emulation_result kvm_mips_complete_mmio_load(struct kvm_vcpu *vcpu)
 {
-	struct kvm_run *run = vcpu->run;
+	struct kvm_run *run = vcpu->common->run;
 	unsigned long *gpr = &vcpu->arch.gprs[vcpu->arch.io_gpr];
 	enum emulation_result er = EMULATE_DONE;
 
@@ -1523,7 +1523,7 @@ enum emulation_result kvm_mips_complete_mmio_load(struct kvm_vcpu *vcpu)
 
 	switch (run->mmio.len) {
 	case 8:
-		switch (vcpu->mmio_needed) {
+		switch (vcpu->common->mmio_needed) {
 		case 11:
 			*gpr = (vcpu->arch.gprs[vcpu->arch.io_gpr] & 0xffffffffffffff) |
 				(((*(s64 *)run->mmio.data) & 0xff) << 56);
@@ -1590,7 +1590,7 @@ enum emulation_result kvm_mips_complete_mmio_load(struct kvm_vcpu *vcpu)
 		break;
 
 	case 4:
-		switch (vcpu->mmio_needed) {
+		switch (vcpu->common->mmio_needed) {
 		case 1:
 			*gpr = *(u32 *)run->mmio.data;
 			break;
@@ -1631,14 +1631,14 @@ enum emulation_result kvm_mips_complete_mmio_load(struct kvm_vcpu *vcpu)
 		break;
 
 	case 2:
-		if (vcpu->mmio_needed == 1)
+		if (vcpu->common->mmio_needed == 1)
 			*gpr = *(u16 *)run->mmio.data;
 		else
 			*gpr = *(s16 *)run->mmio.data;
 
 		break;
 	case 1:
-		if (vcpu->mmio_needed == 1)
+		if (vcpu->common->mmio_needed == 1)
 			*gpr = *(u8 *)run->mmio.data;
 		else
 			*gpr = *(s8 *)run->mmio.data;

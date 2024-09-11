@@ -91,7 +91,7 @@ int main(int argc, char *argv[])
 	vcpu_args_set(vcpu, 2, vmx_pages_gva, high_gpa);
 
 	while (!done) {
-		volatile struct kvm_run *run = vcpu->run;
+		volatile struct kvm_run *run = vcpu->common->run;
 		struct ucall uc;
 
 		vcpu_run(vcpu);

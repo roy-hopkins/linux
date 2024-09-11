@@ -59,7 +59,7 @@ int main(int argc, char *argv[])
 	struct ucall uc;
 
 	vm = vm_create_with_one_vcpu(&vcpu, guest_code);
-	run = vcpu->run;
+	run = vcpu->common->run;
 
 	memset(&regs, 0, sizeof(regs));
 

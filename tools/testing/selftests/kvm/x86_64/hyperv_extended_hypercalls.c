@@ -53,7 +53,7 @@ int main(void)
 	}
 
 	vm = vm_create_with_one_vcpu(&vcpu, guest_code);
-	run = vcpu->run;
+	run = vcpu->common->run;
 	vcpu_set_hv_cpuid(vcpu);
 
 	/* Hypercall input */

@@ -208,7 +208,7 @@ void vmx_vcpu_pi_put(struct kvm_vcpu *vcpu)
 	 * as blocking and preempted, e.g. if it's preempted between setting
 	 * its wait state and manually scheduling out.
 	 */
-	if (vcpu->preempted)
+	if (vcpu->common->preempted)
 		pi_set_sn(pi_desc);
 }
 

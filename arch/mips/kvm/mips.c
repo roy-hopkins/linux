@@ -265,7 +265,7 @@ static enum hrtimer_restart kvm_mips_comparecount_wakeup(struct hrtimer *timer)
 	kvm_mips_callbacks->queue_timer_int(vcpu);
 
 	vcpu->arch.wait = 0;
-	rcuwait_wake_up(&vcpu->wait);
+	rcuwait_wake_up(&vcpu->common->wait);
 
 	return kvm_mips_count_timeout(vcpu);
 }
@@ -428,13 +428,13 @@ int kvm_arch_vcpu_ioctl_run(struct kvm_vcpu *vcpu)
 
 	kvm_sigset_activate(vcpu);
 
-	if (vcpu->mmio_needed) {
-		if (!vcpu->mmio_is_write)
+	if (vcpu->common->mmio_needed) {
+		if (!vcpu->common->mmio_is_write)
 			kvm_mips_complete_mmio_load(vcpu);
-		vcpu->mmio_needed = 0;
+		vcpu->common->mmio_needed = 0;
 	}
 
-	if (!vcpu->wants_to_run)
+	if (!vcpu->common->wants_to_run)
 		goto out;
 
 	lose_fpu(1);
@@ -445,11 +445,11 @@ int kvm_arch_vcpu_ioctl_run(struct kvm_vcpu *vcpu)
 
 	/*
 	 * Make sure the read of VCPU requests in vcpu_run() callback is not
-	 * reordered ahead of the write to vcpu->mode, or we could miss a TLB
+	 * reordered ahead of the write to vcpu->common->mode, or we could miss a TLB
 	 * flush request while the requester sees the VCPU as outside of guest
 	 * mode and not needing an IPI.
 	 */
-	smp_store_mb(vcpu->mode, IN_GUEST_MODE);
+	smp_store_mb(vcpu->common->mode, IN_GUEST_MODE);
 
 	r = kvm_mips_vcpu_enter_exit(vcpu);
 
@@ -1168,7 +1168,7 @@ static void kvm_mips_set_c0_status(void)
  */
 static int __kvm_mips_handle_exit(struct kvm_vcpu *vcpu)
 {
-	struct kvm_run *run = vcpu->run;
+	struct kvm_run *run = vcpu->common->run;
 	u32 cause = vcpu->arch.host_cp0_cause;
 	u32 exccode = (cause >> CAUSEB_EXCCODE) & 0x1f;
 	u32 __user *opc = (u32 __user *) vcpu->arch.pc;
@@ -1177,7 +1177,7 @@ static int __kvm_mips_handle_exit(struct kvm_vcpu *vcpu)
 	u32 inst;
 	int ret = RESUME_GUEST;
 
-	vcpu->mode = OUTSIDE_GUEST_MODE;
+	vcpu->common->mode = OUTSIDE_GUEST_MODE;
 
 	/* Set a default exit reason */
 	run->exit_reason = KVM_EXIT_UNKNOWN;
@@ -1199,7 +1199,7 @@ static int __kvm_mips_handle_exit(struct kvm_vcpu *vcpu)
 	case EXCCODE_INT:
 		kvm_debug("[%d]EXCCODE_INT @ %p\n", vcpu->vcpu_id, opc);
 
-		++vcpu->stat.int_exits;
+		++vcpu->common->stat.int_exits;
 
 		if (need_resched())
 			cond_resched();
@@ -1210,7 +1210,7 @@ static int __kvm_mips_handle_exit(struct kvm_vcpu *vcpu)
 	case EXCCODE_CPU:
 		kvm_debug("EXCCODE_CPU: @ PC: %p\n", opc);
 
-		++vcpu->stat.cop_unusable_exits;
+		++vcpu->common->stat.cop_unusable_exits;
 		ret = kvm_mips_callbacks->handle_cop_unusable(vcpu);
 		/* XXXKYMA: Might need to return to user space */
 		if (run->exit_reason == KVM_EXIT_IRQ_WINDOW_OPEN)
@@ -1218,7 +1218,7 @@ static int __kvm_mips_handle_exit(struct kvm_vcpu *vcpu)
 		break;
 
 	case EXCCODE_MOD:
-		++vcpu->stat.tlbmod_exits;
+		++vcpu->common->stat.tlbmod_exits;
 		ret = kvm_mips_callbacks->handle_tlb_mod(vcpu);
 		break;
 
@@ -1227,7 +1227,7 @@ static int __kvm_mips_handle_exit(struct kvm_vcpu *vcpu)
 			  cause, kvm_read_c0_guest_status(&vcpu->arch.cop0), opc,
 			  badvaddr);
 
-		++vcpu->stat.tlbmiss_st_exits;
+		++vcpu->common->stat.tlbmiss_st_exits;
 		ret = kvm_mips_callbacks->handle_tlb_st_miss(vcpu);
 		break;
 
@@ -1235,52 +1235,52 @@ static int __kvm_mips_handle_exit(struct kvm_vcpu *vcpu)
 		kvm_debug("TLB LD fault: cause %#x, PC: %p, BadVaddr: %#lx\n",
 			  cause, opc, badvaddr);
 
-		++vcpu->stat.tlbmiss_ld_exits;
+		++vcpu->common->stat.tlbmiss_ld_exits;
 		ret = kvm_mips_callbacks->handle_tlb_ld_miss(vcpu);
 		break;
 
 	case EXCCODE_ADES:
-		++vcpu->stat.addrerr_st_exits;
+		++vcpu->common->stat.addrerr_st_exits;
 		ret = kvm_mips_callbacks->handle_addr_err_st(vcpu);
 		break;
 
 	case EXCCODE_ADEL:
-		++vcpu->stat.addrerr_ld_exits;
+		++vcpu->common->stat.addrerr_ld_exits;
 		ret = kvm_mips_callbacks->handle_addr_err_ld(vcpu);
 		break;
 
 	case EXCCODE_SYS:
-		++vcpu->stat.syscall_exits;
+		++vcpu->common->stat.syscall_exits;
 		ret = kvm_mips_callbacks->handle_syscall(vcpu);
 		break;
 
 	case EXCCODE_RI:
-		++vcpu->stat.resvd_inst_exits;
+		++vcpu->common->stat.resvd_inst_exits;
 		ret = kvm_mips_callbacks->handle_res_inst(vcpu);
 		break;
 
 	case EXCCODE_BP:
-		++vcpu->stat.break_inst_exits;
+		++vcpu->common->stat.break_inst_exits;
 		ret = kvm_mips_callbacks->handle_break(vcpu);
 		break;
 
 	case EXCCODE_TR:
-		++vcpu->stat.trap_inst_exits;
+		++vcpu->common->stat.trap_inst_exits;
 		ret = kvm_mips_callbacks->handle_trap(vcpu);
 		break;
 
 	case EXCCODE_MSAFPE:
-		++vcpu->stat.msa_fpe_exits;
+		++vcpu->common->stat.msa_fpe_exits;
 		ret = kvm_mips_callbacks->handle_msa_fpe(vcpu);
 		break;
 
 	case EXCCODE_FPE:
-		++vcpu->stat.fpe_exits;
+		++vcpu->common->stat.fpe_exits;
 		ret = kvm_mips_callbacks->handle_fpe(vcpu);
 		break;
 
 	case EXCCODE_MSADIS:
-		++vcpu->stat.msa_disabled_exits;
+		++vcpu->common->stat.msa_disabled_exits;
 		ret = kvm_mips_callbacks->handle_msa_disabled(vcpu);
 		break;
 
@@ -1317,7 +1317,7 @@ static int __kvm_mips_handle_exit(struct kvm_vcpu *vcpu)
 		if (signal_pending(current)) {
 			run->exit_reason = KVM_EXIT_INTR;
 			ret = (-EINTR << 2) | RESUME_HOST;
-			++vcpu->stat.signal_exits;
+			++vcpu->common->stat.signal_exits;
 			trace_kvm_exit(vcpu, KVM_TRACE_EXIT_SIGNAL);
 		}
 	}
@@ -1327,11 +1327,11 @@ static int __kvm_mips_handle_exit(struct kvm_vcpu *vcpu)
 
 		/*
 		 * Make sure the read of VCPU requests in vcpu_reenter()
-		 * callback is not reordered ahead of the write to vcpu->mode,
+		 * callback is not reordered ahead of the write to vcpu->common->mode,
 		 * or we could miss a TLB flush request while the requester sees
 		 * the VCPU as outside of guest mode and not needing an IPI.
 		 */
-		smp_store_mb(vcpu->mode, IN_GUEST_MODE);
+		smp_store_mb(vcpu->common->mode, IN_GUEST_MODE);
 
 		kvm_mips_callbacks->vcpu_reenter(vcpu);
 

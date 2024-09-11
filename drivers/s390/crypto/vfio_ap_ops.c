@@ -350,7 +350,7 @@ end_free:
  */
 static int vfio_ap_validate_nib(struct kvm_vcpu *vcpu, dma_addr_t *nib)
 {
-	*nib = vcpu->run->s.regs.gprs[2];
+	*nib = vcpu->common->run->s.regs.gprs[2];
 
 	if (!*nib)
 		return -EINVAL;
@@ -576,7 +576,7 @@ static int handle_pqap(struct kvm_vcpu *vcpu)
 			       .response_code = AP_RESPONSE_Q_NOT_AVAIL, };
 	struct ap_matrix_mdev *matrix_mdev;
 
-	apqn = vcpu->run->s.regs.gprs[0] & 0xffff;
+	apqn = vcpu->common->run->s.regs.gprs[0] & 0xffff;
 
 	/* If we do not use the AIV facility just go to userland */
 	if (!(vcpu->arch.sie_block->eca & ECA_AIV)) {
@@ -615,7 +615,7 @@ static int handle_pqap(struct kvm_vcpu *vcpu)
 		goto out_unlock;
 	}
 
-	status = vcpu->run->s.regs.gprs[1];
+	status = vcpu->common->run->s.regs.gprs[1];
 
 	/* If IR bit(16) is set we enable the interrupt */
 	if ((status >> (63 - 16)) & 0x01)
@@ -624,8 +624,8 @@ static int handle_pqap(struct kvm_vcpu *vcpu)
 		qstatus = vfio_ap_irq_disable(q);
 
 out_unlock:
-	memcpy(&vcpu->run->s.regs.gprs[1], &qstatus, sizeof(qstatus));
-	vcpu->run->s.regs.gprs[1] >>= 32;
+	memcpy(&vcpu->common->run->s.regs.gprs[1], &qstatus, sizeof(qstatus));
+	vcpu->common->run->s.regs.gprs[1] >>= 32;
 	mutex_unlock(&matrix_dev->mdevs_lock);
 	return 0;
 }

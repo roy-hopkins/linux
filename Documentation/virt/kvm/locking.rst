@@ -11,7 +11,7 @@ The acquisition orders for mutexes are as follows:
 
 - cpus_read_lock() is taken outside kvm_lock
 
-- kvm->lock is taken outside vcpu->mutex
+- kvm->lock is taken outside vcpu->common->mutex
 
 - kvm->lock is taken outside kvm->slots_lock and kvm->irq_lock
 
@@ -27,7 +27,7 @@ The acquisition orders for mutexes are as follows:
 For SRCU:
 
 - ``synchronize_srcu(&kvm->srcu)`` is called inside critical sections
-  for kvm->lock, vcpu->mutex and kvm->slots_lock.  These locks _cannot_
+  for kvm->lock, vcpu->common->mutex and kvm->slots_lock.  These locks _cannot_
   be taken inside a kvm->srcu read-side critical section; that is, the
   following is broken::
 
@@ -41,7 +41,7 @@ For SRCU:
 
 On x86:
 
-- vcpu->mutex is taken outside kvm->arch.hyperv.hv_lock and kvm->arch.xen.xen_lock
+- vcpu->common->mutex is taken outside kvm->arch.hyperv.hv_lock and kvm->arch.xen.xen_lock
 
 - kvm->arch.mmu_lock is an rwlock; critical sections for
   kvm->arch.tdp_mmu_pages_lock and kvm->arch.mmu_unsync_pages_lock must

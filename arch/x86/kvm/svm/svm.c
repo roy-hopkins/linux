@@ -1064,7 +1064,7 @@ void disable_nmi_singlestep(struct vcpu_svm *svm)
 {
 	svm->nmi_singlestep = false;
 
-	if (!(svm->vcpu.guest_debug & KVM_GUESTDBG_SINGLESTEP)) {
+	if (!(svm->vcpu.common->guest_debug & KVM_GUESTDBG_SINGLESTEP)) {
 		/* Clear our flags if they were not set by the guest */
 		if (!(svm->nmi_singlestep_guest_rflags & X86_EFLAGS_TF))
 			svm->vmcb->save.rflags &= ~X86_EFLAGS_TF;
@@ -1554,7 +1554,7 @@ static void svm_vcpu_load(struct kvm_vcpu *vcpu, int cpu)
 	struct vcpu_svm *svm = to_svm(vcpu);
 	struct svm_cpu_data *sd = per_cpu_ptr(&svm_data, cpu);
 
-	if (vcpu->scheduled_out && !kvm_pause_in_guest(vcpu->kvm))
+	if (vcpu->common->scheduled_out && !kvm_pause_in_guest(vcpu->kvm))
 		shrink_ple_window(vcpu);
 
 	if (sd->current_vmcb != svm->vmcb) {
@@ -1574,7 +1574,7 @@ static void svm_vcpu_put(struct kvm_vcpu *vcpu)
 
 	svm_prepare_host_switch(vcpu);
 
-	++vcpu->stat.host_state_reload;
+	++vcpu->common->stat.host_state_reload;
 }
 
 static unsigned long svm_get_rflags(struct kvm_vcpu *vcpu)
@@ -1976,8 +1976,8 @@ static void svm_update_exception_bitmap(struct kvm_vcpu *vcpu)
 
 	clr_exception_intercept(svm, BP_VECTOR);
 
-	if (vcpu->guest_debug & KVM_GUESTDBG_ENABLE) {
-		if (vcpu->guest_debug & KVM_GUESTDBG_USE_SW_BP)
+	if (vcpu->common->guest_debug & KVM_GUESTDBG_ENABLE) {
+		if (vcpu->common->guest_debug & KVM_GUESTDBG_USE_SW_BP)
 			set_exception_intercept(svm, BP_VECTOR);
 	}
 }
@@ -2087,10 +2087,10 @@ static int npf_interception(struct kvm_vcpu *vcpu)
 
 static int db_interception(struct kvm_vcpu *vcpu)
 {
-	struct kvm_run *kvm_run = vcpu->run;
+	struct kvm_run *kvm_run = vcpu->common->run;
 	struct vcpu_svm *svm = to_svm(vcpu);
 
-	if (!(vcpu->guest_debug &
+	if (!(vcpu->common->guest_debug &
 	      (KVM_GUESTDBG_SINGLESTEP | KVM_GUESTDBG_USE_HW_BP)) &&
 		!svm->nmi_singlestep) {
 		u32 payload = svm->vmcb->save.dr6 ^ DR6_ACTIVE_LOW;
@@ -2104,7 +2104,7 @@ static int db_interception(struct kvm_vcpu *vcpu)
 		kvm_make_request(KVM_REQ_EVENT, vcpu);
 	}
 
-	if (vcpu->guest_debug &
+	if (vcpu->common->guest_debug &
 	    (KVM_GUESTDBG_SINGLESTEP | KVM_GUESTDBG_USE_HW_BP)) {
 		kvm_run->exit_reason = KVM_EXIT_DEBUG;
 		kvm_run->debug.arch.dr6 = svm->vmcb->save.dr6;
@@ -2121,7 +2121,7 @@ static int db_interception(struct kvm_vcpu *vcpu)
 static int bp_interception(struct kvm_vcpu *vcpu)
 {
 	struct vcpu_svm *svm = to_svm(vcpu);
-	struct kvm_run *kvm_run = vcpu->run;
+	struct kvm_run *kvm_run = vcpu->common->run;
 
 	kvm_run->exit_reason = KVM_EXIT_DEBUG;
 	kvm_run->debug.arch.pc = svm->vmcb->save.cs.base + svm->vmcb->save.rip;
@@ -2207,7 +2207,7 @@ static int mc_interception(struct kvm_vcpu *vcpu)
 
 static int shutdown_interception(struct kvm_vcpu *vcpu)
 {
-	struct kvm_run *kvm_run = vcpu->run;
+	struct kvm_run *kvm_run = vcpu->common->run;
 	struct vcpu_svm *svm = to_svm(vcpu);
 
 
@@ -2238,7 +2238,7 @@ static int io_interception(struct kvm_vcpu *vcpu)
 	int size, in, string;
 	unsigned port;
 
-	++vcpu->stat.io_exits;
+	++vcpu->common->stat.io_exits;
 	string = (io_info & SVM_IOIO_STR_MASK) != 0;
 	in = (io_info & SVM_IOIO_TYPE_MASK) != 0;
 	port = io_info >> 16;
@@ -2268,7 +2268,7 @@ static int smi_interception(struct kvm_vcpu *vcpu)
 
 static int intr_interception(struct kvm_vcpu *vcpu)
 {
-	++vcpu->stat.irq_exits;
+	++vcpu->common->stat.irq_exits;
 	return 1;
 }
 
@@ -2592,7 +2592,7 @@ static int iret_interception(struct kvm_vcpu *vcpu)
 
 	WARN_ON_ONCE(sev_es_guest(vcpu->kvm));
 
-	++vcpu->stat.nmi_window_exits;
+	++vcpu->common->stat.nmi_window_exits;
 	svm->awaiting_iret_completion = true;
 
 	svm_clr_iret_intercept(svm);
@@ -2767,7 +2767,7 @@ static int dr_interception(struct kvm_vcpu *vcpu)
 	if (sev_es_guest(vcpu->kvm))
 		return 1;
 
-	if (vcpu->guest_debug == 0) {
+	if (vcpu->common->guest_debug == 0) {
 		/*
 		 * No more DR vmexits; force a reload of the debug registers
 		 * and reenter on this instruction.  The next vmexit will
@@ -2804,7 +2804,7 @@ static int cr8_write_interception(struct kvm_vcpu *vcpu)
 		return r;
 	if (cr8_prev <= kvm_get_cr8(vcpu))
 		return r;
-	vcpu->run->exit_reason = KVM_EXIT_SET_TPR;
+	vcpu->common->run->exit_reason = KVM_EXIT_SET_TPR;
 	return 0;
 }
 
@@ -3243,7 +3243,7 @@ static int interrupt_window_interception(struct kvm_vcpu *vcpu)
 	 */
 	kvm_clear_apicv_inhibit(vcpu->kvm, APICV_INHIBIT_REASON_IRQWIN);
 
-	++vcpu->stat.irq_window_exits;
+	++vcpu->common->stat.irq_window_exits;
 	return 1;
 }
 
@@ -3494,11 +3494,11 @@ static int svm_handle_invalid_exit(struct kvm_vcpu *vcpu, u64 exit_code)
 {
 	vcpu_unimpl(vcpu, "svm: unexpected exit reason 0x%llx\n", exit_code);
 	dump_vmcb(vcpu);
-	vcpu->run->exit_reason = KVM_EXIT_INTERNAL_ERROR;
-	vcpu->run->internal.suberror = KVM_INTERNAL_ERROR_UNEXPECTED_EXIT_REASON;
-	vcpu->run->internal.ndata = 2;
-	vcpu->run->internal.data[0] = exit_code;
-	vcpu->run->internal.data[1] = vcpu->arch.last_vmentry_cpu;
+	vcpu->common->run->exit_reason = KVM_EXIT_INTERNAL_ERROR;
+	vcpu->common->run->internal.suberror = KVM_INTERNAL_ERROR_UNEXPECTED_EXIT_REASON;
+	vcpu->common->run->internal.ndata = 2;
+	vcpu->common->run->internal.data[0] = exit_code;
+	vcpu->common->run->internal.data[1] = vcpu->arch.last_vmentry_cpu;
 	return 0;
 }
 
@@ -3542,7 +3542,7 @@ static void svm_get_exit_info(struct kvm_vcpu *vcpu, u32 *reason,
 static int svm_handle_exit(struct kvm_vcpu *vcpu, fastpath_t exit_fastpath)
 {
 	struct vcpu_svm *svm = to_svm(vcpu);
-	struct kvm_run *kvm_run = vcpu->run;
+	struct kvm_run *kvm_run = vcpu->common->run;
 	u32 exit_code = svm->vmcb->control.exit_code;
 
 	/* SEV-ES guests must use the CR write traps to track CR registers. */
@@ -3624,7 +3624,7 @@ static void svm_inject_nmi(struct kvm_vcpu *vcpu)
 		svm->nmi_masked = true;
 		svm_set_iret_intercept(svm);
 	}
-	++vcpu->stat.nmi_injections;
+	++vcpu->common->stat.nmi_injections;
 }
 
 static bool svm_is_vnmi_pending(struct kvm_vcpu *vcpu)
@@ -3655,7 +3655,7 @@ static bool svm_set_vnmi_pending(struct kvm_vcpu *vcpu)
 	 * the NMI is "injected", but for all intents and purposes, passing the
 	 * NMI off to hardware counts as injection.
 	 */
-	++vcpu->stat.nmi_injections;
+	++vcpu->common->stat.nmi_injections;
 
 	return true;
 }
@@ -3676,7 +3676,7 @@ static void svm_inject_irq(struct kvm_vcpu *vcpu, bool reinjected)
 
 	trace_kvm_inj_virq(vcpu->arch.interrupt.nr,
 			   vcpu->arch.interrupt.soft, reinjected);
-	++vcpu->stat.irq_injections;
+	++vcpu->common->stat.irq_injections;
 
 	svm->vmcb->control.event_inj = vcpu->arch.interrupt.nr |
 				       SVM_EVTINJ_VALID | type;
@@ -3686,10 +3686,10 @@ void svm_complete_interrupt_delivery(struct kvm_vcpu *vcpu, int delivery_mode,
 				     int trig_mode, int vector)
 {
 	/*
-	 * apic->apicv_active must be read after vcpu->mode.
+	 * apic->apicv_active must be read after vcpu->common->mode.
 	 * Pairs with smp_store_release in vcpu_enter_guest.
 	 */
-	bool in_guest_mode = (smp_load_acquire(&vcpu->mode) == IN_GUEST_MODE);
+	bool in_guest_mode = (smp_load_acquire(&vcpu->common->mode) == IN_GUEST_MODE);
 
 	/* Note, this is called iff the local APIC is in-kernel. */
 	if (!READ_ONCE(vcpu->arch.apic->apicv_active)) {
@@ -4304,7 +4304,7 @@ static __no_kcsan fastpath_t svm_vcpu_run(struct kvm_vcpu *vcpu,
 		/* Track VMRUNs that have made past consistency checking */
 		if (svm->nested.nested_run_pending &&
 		    svm->vmcb->control.exit_code != SVM_EXIT_ERR)
-                        ++vcpu->stat.nested_run;
+                        ++vcpu->common->stat.nested_run;
 
 		svm->nested.nested_run_pending = 0;
 	}

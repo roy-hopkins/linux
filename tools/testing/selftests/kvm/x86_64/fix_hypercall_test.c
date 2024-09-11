@@ -88,7 +88,7 @@ KVM_ONE_VCPU_TEST_SUITE(fix_hypercall);
 
 static void enter_guest(struct kvm_vcpu *vcpu)
 {
-	struct kvm_run *run = vcpu->run;
+	struct kvm_run *run = vcpu->common->run;
 	struct ucall uc;
 
 	vcpu_run(vcpu);

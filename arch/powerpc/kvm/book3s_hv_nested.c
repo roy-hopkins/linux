@@ -203,7 +203,7 @@ static void kvmhv_nested_mmio_needed(struct kvm_vcpu *vcpu, u64 regs_ptr)
 	 * written there in kvmppc_complete_mmio_load()
 	 */
 	if (((vcpu->arch.io_gpr & KVM_MMIO_REG_EXT_MASK) == KVM_MMIO_REG_GPR)
-	    && (vcpu->mmio_is_write == 0)) {
+	    && (vcpu->common->mmio_is_write == 0)) {
 		vcpu->arch.nested_io_gpr = (gpa_t) regs_ptr +
 					   offsetof(struct pt_regs,
 						    gpr[vcpu->arch.io_gpr]);
@@ -420,7 +420,7 @@ long kvmhv_enter_nested_guest(struct kvm_vcpu *vcpu)
 	if (r == -EINTR)
 		return H_INTERRUPT;
 
-	if (vcpu->mmio_needed) {
+	if (vcpu->common->mmio_needed) {
 		kvmhv_nested_mmio_needed(vcpu, regs_ptr);
 		return H_TOO_HARD;
 	}

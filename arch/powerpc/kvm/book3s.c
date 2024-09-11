@@ -178,7 +178,7 @@ void kvmppc_book3s_dequeue_irqprio(struct kvm_vcpu *vcpu,
 
 void kvmppc_book3s_queue_irqprio(struct kvm_vcpu *vcpu, unsigned int vec)
 {
-	vcpu->stat.queue_intr++;
+	vcpu->common->stat.queue_intr++;
 
 	set_bit(kvmppc_book3s_vec2irqprio(vec),
 		&vcpu->arch.pending_exceptions);
@@ -818,7 +818,7 @@ int kvm_arch_vcpu_ioctl_set_guest_debug(struct kvm_vcpu *vcpu,
 					struct kvm_guest_debug *dbg)
 {
 	vcpu_load(vcpu);
-	vcpu->guest_debug = dbg->control;
+	vcpu->common->guest_debug = dbg->control;
 	vcpu_put(vcpu);
 	return 0;
 }

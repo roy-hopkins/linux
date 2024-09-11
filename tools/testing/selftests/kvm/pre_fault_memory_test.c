@@ -104,7 +104,7 @@ static void __test_pre_fault_memory(unsigned long vm_type, bool private)
 	vcpu_args_set(vcpu, 1, guest_test_virt_mem);
 	vcpu_run(vcpu);
 
-	run = vcpu->run;
+	run = vcpu->common->run;
 	TEST_ASSERT(run->exit_reason == KVM_EXIT_IO,
 		    "Wanted KVM_EXIT_IO, got exit reason: %u (%s)",
 		    run->exit_reason, exit_reason_str(run->exit_reason));

@@ -184,7 +184,7 @@ static inline void kvm_xen_runstate_set_preempted(struct kvm_vcpu *vcpu)
 	 * behalf of the vCPU. Only if the VMM does actually block
 	 * does it need to enter RUNSTATE_blocked.
 	 */
-	if (WARN_ON_ONCE(!vcpu->preempted))
+	if (WARN_ON_ONCE(!vcpu->common->preempted))
 		return;
 
 	kvm_xen_update_runstate(vcpu, RUNSTATE_runnable);

@@ -73,7 +73,7 @@ static void compare_sregs(struct kvm_sregs *left, struct kvm_sync_regs *right)
 
 void test_read_invalid(struct kvm_vcpu *vcpu)
 {
-	struct kvm_run *run = vcpu->run;
+	struct kvm_run *run = vcpu->common->run;
 	int rv;
 
 	/* Request reading invalid register set from VCPU. */
@@ -94,7 +94,7 @@ void test_read_invalid(struct kvm_vcpu *vcpu)
 
 void test_set_invalid(struct kvm_vcpu *vcpu)
 {
-	struct kvm_run *run = vcpu->run;
+	struct kvm_run *run = vcpu->common->run;
 	int rv;
 
 	/* Request setting invalid register set into VCPU. */
@@ -115,7 +115,7 @@ void test_set_invalid(struct kvm_vcpu *vcpu)
 
 void test_req_and_verify_all_valid_regs(struct kvm_vcpu *vcpu)
 {
-	struct kvm_run *run = vcpu->run;
+	struct kvm_run *run = vcpu->common->run;
 	struct kvm_sregs sregs;
 	struct kvm_regs regs;
 	int rv;
@@ -141,7 +141,7 @@ void test_req_and_verify_all_valid_regs(struct kvm_vcpu *vcpu)
 
 void test_set_and_verify_various_reg_values(struct kvm_vcpu *vcpu)
 {
-	struct kvm_run *run = vcpu->run;
+	struct kvm_run *run = vcpu->common->run;
 	struct kvm_sregs sregs;
 	struct kvm_regs regs;
 	int rv;
@@ -180,7 +180,7 @@ void test_set_and_verify_various_reg_values(struct kvm_vcpu *vcpu)
 
 void test_clear_kvm_dirty_regs_bits(struct kvm_vcpu *vcpu)
 {
-	struct kvm_run *run = vcpu->run;
+	struct kvm_run *run = vcpu->common->run;
 	int rv;
 
 	/* Clear kvm_dirty_regs bits, verify new s.regs values are

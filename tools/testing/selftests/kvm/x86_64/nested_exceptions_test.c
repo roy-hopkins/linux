@@ -238,7 +238,7 @@ int main(int argc, char *argv[])
 
 	/* Pend #SS and request immediate exit.  #SS should still be pending. */
 	queue_ss_exception(vcpu, false);
-	vcpu->run->immediate_exit = true;
+	vcpu->common->run->immediate_exit = true;
 	vcpu_run_complete_io(vcpu);
 
 	/* Verify the pending events comes back out the same as it went in. */
@@ -254,7 +254,7 @@ int main(int argc, char *argv[])
 	 * Run for real with the pending #SS, L1 should get a VM-Exit due to
 	 * #SS interception and re-enter L2 to request #GP (via injected #SS).
 	 */
-	vcpu->run->immediate_exit = false;
+	vcpu->common->run->immediate_exit = false;
 	vcpu_run(vcpu);
 	assert_ucall_vector(vcpu, GP_VECTOR);
 

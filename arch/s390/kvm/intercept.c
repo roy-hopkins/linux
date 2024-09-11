@@ -56,7 +56,7 @@ static int handle_stop(struct kvm_vcpu *vcpu)
 	int rc = 0;
 	uint8_t flags, stop_pending;
 
-	vcpu->stat.exit_stop_request++;
+	vcpu->common->stat.exit_stop_request++;
 
 	/* delay the stop if any non-stop irq is pending */
 	if (kvm_s390_vcpu_has_irq(vcpu, 1))
@@ -92,7 +92,7 @@ static int handle_validity(struct kvm_vcpu *vcpu)
 {
 	int viwhy = vcpu->arch.sie_block->ipb >> 16;
 
-	vcpu->stat.exit_validity++;
+	vcpu->common->stat.exit_validity++;
 	trace_kvm_s390_intercept_validity(vcpu, viwhy);
 	KVM_EVENT(3, "validity intercept 0x%x for pid %u (kvm 0x%pK)", viwhy,
 		  current->pid, vcpu->kvm);
@@ -105,7 +105,7 @@ static int handle_validity(struct kvm_vcpu *vcpu)
 
 static int handle_instruction(struct kvm_vcpu *vcpu)
 {
-	vcpu->stat.exit_instruction++;
+	vcpu->common->stat.exit_instruction++;
 	trace_kvm_s390_intercept_instruction(vcpu,
 					     vcpu->arch.sie_block->ipa,
 					     vcpu->arch.sie_block->ipb);
@@ -248,7 +248,7 @@ static int handle_prog(struct kvm_vcpu *vcpu)
 	psw_t psw;
 	int rc;
 
-	vcpu->stat.exit_program_interruption++;
+	vcpu->common->stat.exit_program_interruption++;
 
 	/*
 	 * Intercept 8 indicates a loop of specification exceptions
@@ -306,7 +306,7 @@ static int handle_external_interrupt(struct kvm_vcpu *vcpu)
 	psw_t newpsw;
 	int rc;
 
-	vcpu->stat.exit_external_interrupt++;
+	vcpu->common->stat.exit_external_interrupt++;
 
 	if (kvm_s390_pv_cpu_is_protected(vcpu)) {
 		newpsw = vcpu->arch.sie_block->gpsw;
@@ -363,7 +363,7 @@ static int handle_mvpg_pei(struct kvm_vcpu *vcpu)
 	kvm_s390_get_regs_rre(vcpu, &reg1, &reg2);
 
 	/* Ensure that the source is paged-in, no actual access -> no key checking */
-	rc = guest_translate_address_with_key(vcpu, vcpu->run->s.regs.gprs[reg2],
+	rc = guest_translate_address_with_key(vcpu, vcpu->common->run->s.regs.gprs[reg2],
 					      reg2, &srcaddr, GACC_FETCH, 0);
 	if (rc)
 		return kvm_s390_inject_prog_cond(vcpu, rc);
@@ -372,7 +372,7 @@ static int handle_mvpg_pei(struct kvm_vcpu *vcpu)
 		return rc;
 
 	/* Ensure that the source is paged-in, no actual access -> no key checking */
-	rc = guest_translate_address_with_key(vcpu, vcpu->run->s.regs.gprs[reg1],
+	rc = guest_translate_address_with_key(vcpu, vcpu->common->run->s.regs.gprs[reg1],
 					      reg1, &dstaddr, GACC_STORE, 0);
 	if (rc)
 		return kvm_s390_inject_prog_cond(vcpu, rc);
@@ -387,7 +387,7 @@ static int handle_mvpg_pei(struct kvm_vcpu *vcpu)
 
 static int handle_partial_execution(struct kvm_vcpu *vcpu)
 {
-	vcpu->stat.exit_pei++;
+	vcpu->common->stat.exit_pei++;
 
 	if (vcpu->arch.sie_block->ipa == 0xb254)	/* MVPG */
 		return handle_mvpg_pei(vcpu);
@@ -412,10 +412,10 @@ int handle_sthyi(struct kvm_vcpu *vcpu)
 		return kvm_s390_inject_program_int(vcpu, PGM_OPERATION);
 
 	kvm_s390_get_regs_rre(vcpu, &reg1, &reg2);
-	code = vcpu->run->s.regs.gprs[reg1];
-	addr = vcpu->run->s.regs.gprs[reg2];
+	code = vcpu->common->run->s.regs.gprs[reg1];
+	addr = vcpu->common->run->s.regs.gprs[reg2];
 
-	vcpu->stat.instruction_sthyi++;
+	vcpu->common->stat.instruction_sthyi++;
 	VCPU_EVENT(vcpu, 3, "STHYI: fc: %llu addr: 0x%016llx", code, addr);
 	trace_kvm_s390_handle_sthyi(vcpu, code, addr);
 
@@ -454,7 +454,7 @@ out:
 	}
 
 	free_page((unsigned long)sctns);
-	vcpu->run->s.regs.gprs[reg2 + 1] = rc;
+	vcpu->common->run->s.regs.gprs[reg2 + 1] = rc;
 	kvm_s390_set_psw_cc(vcpu, cc);
 	return r;
 }
@@ -464,7 +464,7 @@ static int handle_operexc(struct kvm_vcpu *vcpu)
 	psw_t oldpsw, newpsw;
 	int rc;
 
-	vcpu->stat.exit_operation_exception++;
+	vcpu->common->stat.exit_operation_exception++;
 	trace_kvm_s390_handle_operexc(vcpu, vcpu->arch.sie_block->ipa,
 				      vcpu->arch.sie_block->ipb);
 
@@ -608,10 +608,10 @@ int kvm_handle_sie_intercept(struct kvm_vcpu *vcpu)
 
 	switch (vcpu->arch.sie_block->icptcode) {
 	case ICPT_EXTREQ:
-		vcpu->stat.exit_external_request++;
+		vcpu->common->stat.exit_external_request++;
 		return 0;
 	case ICPT_IOREQ:
-		vcpu->stat.exit_io_request++;
+		vcpu->common->stat.exit_io_request++;
 		return 0;
 	case ICPT_INST:
 		rc = handle_instruction(vcpu);

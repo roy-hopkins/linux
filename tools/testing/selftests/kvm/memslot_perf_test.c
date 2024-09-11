@@ -137,7 +137,7 @@ static void *vcpu_worker(void *__data)
 {
 	struct vm_data *data = __data;
 	struct kvm_vcpu *vcpu = data->vcpu;
-	struct kvm_run *run = vcpu->run;
+	struct kvm_run *run = vcpu->common->run;
 	struct ucall uc;
 
 	while (1) {

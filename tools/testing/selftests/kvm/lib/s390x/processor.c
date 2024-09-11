@@ -157,7 +157,7 @@ void virt_arch_dump(FILE *stream, struct kvm_vm *vm, uint8_t indent)
 
 void vcpu_arch_set_entry_point(struct kvm_vcpu *vcpu, void *guest_code)
 {
-	vcpu->run->psw_addr = (uintptr_t)guest_code;
+	vcpu->common->run->psw_addr = (uintptr_t)guest_code;
 }
 
 struct kvm_vcpu *vm_arch_vcpu_add(struct kvm_vm *vm, uint32_t vcpu_id)
@@ -187,7 +187,7 @@ struct kvm_vcpu *vm_arch_vcpu_add(struct kvm_vm *vm, uint32_t vcpu_id)
 	sregs.crs[1] = vm->pgd | 0xf;		/* Primary region table */
 	vcpu_sregs_set(vcpu, &sregs);
 
-	vcpu->run->psw_mask = 0x0400000180000000ULL;  /* DAT enabled + 64 bit mode */
+	vcpu->common->run->psw_mask = 0x0400000180000000ULL;  /* DAT enabled + 64 bit mode */
 
 	return vcpu;
 }
@@ -215,7 +215,7 @@ void vcpu_args_set(struct kvm_vcpu *vcpu, unsigned int num, ...)
 void vcpu_arch_dump(FILE *stream, struct kvm_vcpu *vcpu, uint8_t indent)
 {
 	fprintf(stream, "%*spstate: psw: 0x%.16llx:0x%.16llx\n",
-		indent, "", vcpu->run->psw_mask, vcpu->run->psw_addr);
+		indent, "", vcpu->common->run->psw_mask, vcpu->common->run->psw_addr);
 }
 
 void assert_on_unhandled_exception(struct kvm_vcpu *vcpu)

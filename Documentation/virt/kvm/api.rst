@@ -7494,7 +7494,7 @@ initial handling in the kernel, KVM exits to user space with
 KVM_EXIT_S390_STSI to allow user space to insert further data.
 
 Before exiting to userspace, kvm handlers should fill in s390_stsi field of
-vcpu->run::
+vcpu->common->run::
 
   struct {
 	__u64 addr;

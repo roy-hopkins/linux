@@ -81,7 +81,7 @@ static int kvm_sbi_hsm_vcpu_get_status(struct kvm_vcpu *vcpu)
 		return SBI_ERR_INVALID_PARAM;
 	if (!kvm_riscv_vcpu_stopped(target_vcpu))
 		return SBI_HSM_STATE_STARTED;
-	else if (vcpu->stat.generic.blocking)
+	else if (vcpu->common->stat.generic.blocking)
 		return SBI_HSM_STATE_SUSPENDED;
 	else
 		return SBI_HSM_STATE_STOPPED;

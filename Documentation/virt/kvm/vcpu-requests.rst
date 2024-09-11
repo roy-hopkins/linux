@@ -63,9 +63,9 @@ are listed below:
 VCPU Mode
 ---------
 
-VCPUs have a mode state, ``vcpu->mode``, that is used to track whether the
+VCPUs have a mode state, ``vcpu->common->mode``, that is used to track whether the
 guest is running in guest mode or not, as well as some specific
-outside guest mode states.  The architecture may use ``vcpu->mode`` to
+outside guest mode states.  The architecture may use ``vcpu->common->mode`` to
 ensure VCPU requests are seen by VCPUs (see "Ensuring Requests Are Seen"),
 as well as to avoid sending unnecessary IPIs (see "IPI Reduction"), and
 even to ensure IPI acknowledgements are waited upon (see "Waiting for
@@ -198,7 +198,7 @@ enter guest mode.  This means that an optimized implementation (see "IPI
 Reduction") must be certain when it's safe to not send the IPI.  One
 solution, which all architectures except s390 apply, is to:
 
-- set ``vcpu->mode`` to IN_GUEST_MODE between disabling the interrupts and
+- set ``vcpu->common->mode`` to IN_GUEST_MODE between disabling the interrupts and
   the last kvm_request_pending() check;
 - enable interrupts atomically when entering the guest.
 
@@ -209,15 +209,15 @@ can exclude the possibility of a VCPU thread observing
 the next request made of it, even if the request is made immediately after
 the check.  This is done by way of the Dekker memory barrier pattern
 (scenario 10 of [lwn-mb]_).  As the Dekker pattern requires two variables,
-this solution pairs ``vcpu->mode`` with ``vcpu->requests``.  Substituting
+this solution pairs ``vcpu->common->mode`` with ``vcpu->requests``.  Substituting
 them into the pattern gives::
 
   CPU1                                    CPU2
   =================                       =================
   local_irq_disable();
-  WRITE_ONCE(vcpu->mode, IN_GUEST_MODE);  kvm_make_request(REQ, vcpu);
+  WRITE_ONCE(vcpu->common->mode, IN_GUEST_MODE);  kvm_make_request(REQ, vcpu);
   smp_mb();                               smp_mb();
-  if (kvm_request_pending(vcpu)) {        if (READ_ONCE(vcpu->mode) ==
+  if (kvm_request_pending(vcpu)) {        if (READ_ONCE(vcpu->common->mode) ==
                                               IN_GUEST_MODE) {
       ...abort guest entry...                 ...send IPI...
   }                                       }
@@ -225,9 +225,9 @@ them into the pattern gives::
 As stated above, the IPI is only useful for VCPU threads in guest mode or
 that have already disabled interrupts.  This is why this specific case of
 the Dekker pattern has been extended to disable interrupts before setting
-``vcpu->mode`` to IN_GUEST_MODE.  WRITE_ONCE() and READ_ONCE() are used to
+``vcpu->common->mode`` to IN_GUEST_MODE.  WRITE_ONCE() and READ_ONCE() are used to
 pedantically implement the memory barrier pattern, guaranteeing the
-compiler doesn't interfere with ``vcpu->mode``'s carefully planned
+compiler doesn't interfere with ``vcpu->common->mode``'s carefully planned
 accesses.
 
 IPI Reduction
@@ -269,8 +269,8 @@ even the request-less VCPU kick is coupled with the same
 local_irq_disable() + smp_mb() pattern described above; the ON bit
 (Outstanding Notification) in the posted interrupt descriptor takes the
 role of ``vcpu->requests``.  When sending a posted interrupt, PIR.ON is
-set before reading ``vcpu->mode``; dually, in the VCPU thread,
-vmx_sync_pir_to_irr() reads PIR after setting ``vcpu->mode`` to
+set before reading ``vcpu->common->mode``; dually, in the VCPU thread,
+vmx_sync_pir_to_irr() reads PIR after setting ``vcpu->common->mode`` to
 IN_GUEST_MODE.
 
 Additional Considerations

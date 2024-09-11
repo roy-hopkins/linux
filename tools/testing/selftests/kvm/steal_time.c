@@ -334,7 +334,7 @@ static void run_vcpu(struct kvm_vcpu *vcpu)
 		REPORT_GUEST_ASSERT(uc);
 	default:
 		TEST_ASSERT(false, "Unexpected exit: %s",
-			    exit_reason_str(vcpu->run->exit_reason));
+			    exit_reason_str(vcpu->common->run->exit_reason));
 	}
 }
 

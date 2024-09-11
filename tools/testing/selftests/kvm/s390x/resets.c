@@ -84,7 +84,7 @@ static void assert_noirq(struct kvm_vcpu *vcpu)
 
 static void assert_clear(struct kvm_vcpu *vcpu)
 {
-	struct kvm_sync_regs *sync_regs = &vcpu->run->s.regs;
+	struct kvm_sync_regs *sync_regs = &vcpu->common->run->s.regs;
 	struct kvm_sregs sregs;
 	struct kvm_regs regs;
 	struct kvm_fpu fpu;
@@ -111,7 +111,7 @@ static void assert_clear(struct kvm_vcpu *vcpu)
 
 static void assert_initial_noclear(struct kvm_vcpu *vcpu)
 {
-	struct kvm_sync_regs *sync_regs = &vcpu->run->s.regs;
+	struct kvm_sync_regs *sync_regs = &vcpu->common->run->s.regs;
 
 	TEST_ASSERT(sync_regs->gprs[0] == 0xffff000000000000UL,
 		    "gpr0 == 0xffff000000000000 (sync_regs)");
@@ -128,7 +128,7 @@ static void assert_initial_noclear(struct kvm_vcpu *vcpu)
 
 static void assert_initial(struct kvm_vcpu *vcpu)
 {
-	struct kvm_sync_regs *sync_regs = &vcpu->run->s.regs;
+	struct kvm_sync_regs *sync_regs = &vcpu->common->run->s.regs;
 	struct kvm_sregs sregs;
 	struct kvm_fpu fpu;
 
@@ -156,8 +156,8 @@ static void assert_initial(struct kvm_vcpu *vcpu)
 	TEST_ASSERT(sync_regs->gbea == 1, "gbea == 1 (sync_regs)");
 
 	/* kvm_run */
-	TEST_ASSERT(vcpu->run->psw_addr == 0, "psw_addr == 0 (kvm_run)");
-	TEST_ASSERT(vcpu->run->psw_mask == 0, "psw_mask == 0 (kvm_run)");
+	TEST_ASSERT(vcpu->common->run->psw_addr == 0, "psw_addr == 0 (kvm_run)");
+	TEST_ASSERT(vcpu->common->run->psw_mask == 0, "psw_mask == 0 (kvm_run)");
 
 	vcpu_fpu_get(vcpu, &fpu);
 	TEST_ASSERT(!fpu.fpc, "fpc == 0");
@@ -171,7 +171,7 @@ static void assert_initial(struct kvm_vcpu *vcpu)
 
 static void assert_normal_noclear(struct kvm_vcpu *vcpu)
 {
-	struct kvm_sync_regs *sync_regs = &vcpu->run->s.regs;
+	struct kvm_sync_regs *sync_regs = &vcpu->common->run->s.regs;
 
 	TEST_ASSERT(sync_regs->crs[2] == 0x10, "cr2 == 10 (sync_regs)");
 	TEST_ASSERT(sync_regs->crs[8] == 1, "cr10 == 1 (sync_regs)");
@@ -182,7 +182,7 @@ static void assert_normal_noclear(struct kvm_vcpu *vcpu)
 static void assert_normal(struct kvm_vcpu *vcpu)
 {
 	test_one_reg(vcpu, KVM_REG_S390_PFTOKEN, KVM_S390_PFAULT_TOKEN_INVALID);
-	TEST_ASSERT(vcpu->run->s.regs.pft == KVM_S390_PFAULT_TOKEN_INVALID,
+	TEST_ASSERT(vcpu->common->run->s.regs.pft == KVM_S390_PFAULT_TOKEN_INVALID,
 			"pft == 0xff.....  (sync_regs)");
 	assert_noirq(vcpu);
 }

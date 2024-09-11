@@ -337,9 +337,9 @@ static int kvm_hv_syndbg_complete_userspace(struct kvm_vcpu *vcpu)
 {
 	struct kvm_hv *hv = to_kvm_hv(vcpu->kvm);
 
-	if (vcpu->run->hyperv.u.syndbg.msr == HV_X64_MSR_SYNDBG_CONTROL)
+	if (vcpu->common->run->hyperv.u.syndbg.msr == HV_X64_MSR_SYNDBG_CONTROL)
 		hv->hv_syndbg.control.status =
-			vcpu->run->hyperv.u.syndbg.status;
+			vcpu->common->run->hyperv.u.syndbg.status;
 	return 1;
 }
 
@@ -1988,7 +1988,7 @@ int kvm_hv_vcpu_flush_tlb(struct kvm_vcpu *vcpu)
 		for (j = 0; j < (entries[i] & ~PAGE_MASK) + 1; j++)
 			kvm_x86_call(flush_tlb_gva)(vcpu, gva + j * PAGE_SIZE);
 
-		++vcpu->stat.tlb_flush;
+		++vcpu->common->stat.tlb_flush;
 	}
 	return 0;
 
@@ -2387,7 +2387,7 @@ static int kvm_hv_hypercall_complete(struct kvm_vcpu *vcpu, u64 result)
 
 	trace_kvm_hv_hypercall_done(result);
 	kvm_hv_hypercall_set_result(vcpu, result);
-	++vcpu->stat.hypercalls;
+	++vcpu->common->stat.hypercalls;
 
 	ret = kvm_skip_emulated_instruction(vcpu);
 
@@ -2399,7 +2399,7 @@ static int kvm_hv_hypercall_complete(struct kvm_vcpu *vcpu, u64 result)
 
 static int kvm_hv_hypercall_complete_userspace(struct kvm_vcpu *vcpu)
 {
-	return kvm_hv_hypercall_complete(vcpu, vcpu->run->hyperv.u.hcall.result);
+	return kvm_hv_hypercall_complete(vcpu, vcpu->common->run->hyperv.u.hcall.result);
 }
 
 static u16 kvm_hvcall_signal_event(struct kvm_vcpu *vcpu, struct kvm_hv_hcall *hc)
@@ -2678,11 +2678,11 @@ hypercall_complete:
 	return kvm_hv_hypercall_complete(vcpu, ret);
 
 hypercall_userspace_exit:
-	vcpu->run->exit_reason = KVM_EXIT_HYPERV;
-	vcpu->run->hyperv.type = KVM_EXIT_HYPERV_HCALL;
-	vcpu->run->hyperv.u.hcall.input = hc.param;
-	vcpu->run->hyperv.u.hcall.params[0] = hc.ingpa;
-	vcpu->run->hyperv.u.hcall.params[1] = hc.outgpa;
+	vcpu->common->run->exit_reason = KVM_EXIT_HYPERV;
+	vcpu->common->run->hyperv.type = KVM_EXIT_HYPERV_HCALL;
+	vcpu->common->run->hyperv.u.hcall.input = hc.param;
+	vcpu->common->run->hyperv.u.hcall.params[0] = hc.ingpa;
+	vcpu->common->run->hyperv.u.hcall.params[1] = hc.outgpa;
 	vcpu->arch.complete_userspace_io = kvm_hv_hypercall_complete_userspace;
 	return 0;
 }

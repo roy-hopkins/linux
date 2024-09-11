@@ -474,7 +474,7 @@ void test_single_step_from_userspace(int test_cnt)
 	struct kvm_guest_debug debug = {};
 
 	vm = vm_create_with_one_vcpu(&vcpu, guest_code_ss);
-	run = vcpu->run;
+	run = vcpu->common->run;
 	vcpu_args_set(vcpu, 1, test_cnt);
 
 	while (1) {

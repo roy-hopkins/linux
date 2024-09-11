@@ -660,7 +660,7 @@ static void vcpu_run_loop(struct kvm_vm *vm, struct kvm_vcpu *vcpu,
 	struct ucall uc;
 	int ret;
 
-	run = vcpu->run;
+	run = vcpu->common->run;
 
 	for (;;) {
 		ret = _vcpu_run(vcpu);

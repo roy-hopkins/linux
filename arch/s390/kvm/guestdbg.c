@@ -370,8 +370,8 @@ static struct kvm_hw_wp_info_arch *any_wp_changed(struct kvm_vcpu *vcpu)
 
 void kvm_s390_prepare_debug_exit(struct kvm_vcpu *vcpu)
 {
-	vcpu->run->exit_reason = KVM_EXIT_DEBUG;
-	vcpu->guest_debug &= ~KVM_GUESTDBG_EXIT_PENDING;
+	vcpu->common->run->exit_reason = KVM_EXIT_DEBUG;
+	vcpu->common->guest_debug &= ~KVM_GUESTDBG_EXIT_PENDING;
 }
 
 #define PER_CODE_MASK		(PER_EVENT_MASK >> 24)
@@ -388,7 +388,7 @@ void kvm_s390_prepare_debug_exit(struct kvm_vcpu *vcpu)
 static int debug_exit_required(struct kvm_vcpu *vcpu, u8 perc,
 			       unsigned long peraddr)
 {
-	struct kvm_debug_exit_arch *debug_exit = &vcpu->run->debug.arch;
+	struct kvm_debug_exit_arch *debug_exit = &vcpu->common->run->debug.arch;
 	struct kvm_hw_wp_info_arch *wp_info = NULL;
 	struct kvm_hw_bp_info_arch *bp_info = NULL;
 	unsigned long addr = vcpu->arch.sie_block->gpsw.addr;
@@ -482,8 +482,8 @@ static int per_fetched_addr(struct kvm_vcpu *vcpu, unsigned long *addr)
 			u32 disp = opcode[1] & 0x0fff;
 			u32 index = opcode[0] & 0x000f;
 
-			*addr = base ? vcpu->run->s.regs.gprs[base] : 0;
-			*addr += index ? vcpu->run->s.regs.gprs[index] : 0;
+			*addr = base ? vcpu->common->run->s.regs.gprs[base] : 0;
+			*addr += index ? vcpu->common->run->s.regs.gprs[index] : 0;
 			*addr += disp;
 		}
 		*addr = kvm_s390_logical_to_effective(vcpu, *addr);
@@ -516,7 +516,7 @@ int kvm_s390_handle_per_ifetch_icpt(struct kvm_vcpu *vcpu)
 		return kvm_s390_inject_prog_irq(vcpu, &pgm_info);
 
 	if (debug_exit_required(vcpu, pgm_info.per_code, pgm_info.per_address))
-		vcpu->guest_debug |= KVM_GUESTDBG_EXIT_PENDING;
+		vcpu->common->guest_debug |= KVM_GUESTDBG_EXIT_PENDING;
 
 	if (!guest_per_enabled(vcpu) ||
 	    !(vcpu->arch.sie_block->gcr[9] & PER_EVENT_IFETCH))
@@ -589,7 +589,7 @@ int kvm_s390_handle_per_event(struct kvm_vcpu *vcpu)
 
 	if (debug_exit_required(vcpu, vcpu->arch.sie_block->perc,
 				vcpu->arch.sie_block->peraddr))
-		vcpu->guest_debug |= KVM_GUESTDBG_EXIT_PENDING;
+		vcpu->common->guest_debug |= KVM_GUESTDBG_EXIT_PENDING;
 
 	rc = filter_guest_per_event(vcpu);
 	if (rc)

@@ -504,7 +504,7 @@ TRACE_EVENT(kvmppc_run_vcpu_exit,
 
 	TP_fast_assign(
 		__entry->vcpu_id  = vcpu->vcpu_id;
-		__entry->exit     = vcpu->run->exit_reason;
+		__entry->exit     = vcpu->common->run->exit_reason;
 		__entry->ret      = vcpu->arch.ret;
 	),
 

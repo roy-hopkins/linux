@@ -1353,17 +1353,17 @@ static void kvmppc_xics_release(struct kvm_device *dev)
 	 */
 	kvm_for_each_vcpu(i, vcpu, kvm) {
 		/*
-		 * Take vcpu->mutex to ensure that no one_reg get/set ioctl
+		 * Take vcpu->common->mutex to ensure that no one_reg get/set ioctl
 		 * (i.e. kvmppc_xics_[gs]et_icp) can be done concurrently.
-		 * Holding the vcpu->mutex also means that execution is
+		 * Holding the vcpu->common->mutex also means that execution is
 		 * excluded for the vcpu until the ICP was freed. When the vcpu
 		 * can execute again, vcpu->arch.icp and vcpu->arch.irq_type
 		 * have been cleared and the vcpu will not be going into the
 		 * XICS code anymore.
 		 */
-		mutex_lock(&vcpu->mutex);
+		mutex_lock(&vcpu->common->mutex);
 		kvmppc_xics_free_icp(vcpu);
-		mutex_unlock(&vcpu->mutex);
+		mutex_unlock(&vcpu->common->mutex);
 	}
 
 	if (kvm)

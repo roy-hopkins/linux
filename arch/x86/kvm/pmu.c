@@ -503,7 +503,7 @@ void kvm_pmu_handle_event(struct kvm_vcpu *vcpu)
 
 	/*
 	 * The reprogramming bitmap can be written asynchronously by something
-	 * other than the task that holds vcpu->mutex, take care to clear only
+	 * other than the task that holds vcpu->common->mutex, take care to clear only
 	 * the bits that will actually processed.
 	 */
 	BUILD_BUG_ON(sizeof(bitmap) != sizeof(atomic64_t));

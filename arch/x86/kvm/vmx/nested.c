@@ -3281,10 +3281,10 @@ static bool nested_get_vmcs12_pages(struct kvm_vcpu *vcpu)
 		} else {
 			pr_debug_ratelimited("%s: no backing for APIC-access address in vmcs12\n",
 					     __func__);
-			vcpu->run->exit_reason = KVM_EXIT_INTERNAL_ERROR;
-			vcpu->run->internal.suberror =
+			vcpu->common->run->exit_reason = KVM_EXIT_INTERNAL_ERROR;
+			vcpu->common->run->internal.suberror =
 				KVM_INTERNAL_ERROR_EMULATION;
-			vcpu->run->internal.ndata = 0;
+			vcpu->common->run->internal.ndata = 0;
 			return false;
 		}
 	}
@@ -3355,10 +3355,10 @@ static bool vmx_get_nested_state_pages(struct kvm_vcpu *vcpu)
 	if (!nested_get_evmcs_page(vcpu)) {
 		pr_debug_ratelimited("%s: enlightened vmptrld failed\n",
 				     __func__);
-		vcpu->run->exit_reason = KVM_EXIT_INTERNAL_ERROR;
-		vcpu->run->internal.suberror =
+		vcpu->common->run->exit_reason = KVM_EXIT_INTERNAL_ERROR;
+		vcpu->common->run->internal.suberror =
 			KVM_INTERNAL_ERROR_EMULATION;
-		vcpu->run->internal.ndata = 0;
+		vcpu->common->run->internal.ndata = 0;
 
 		return false;
 	}
@@ -4733,7 +4733,7 @@ static void nested_vmx_restore_host_state(struct kvm_vcpu *vcpu)
 		 * and vcpu->arch.dr7 is not squirreled away before the
 		 * nested VMENTER (not worth adding a variable in nested_vmx).
 		 */
-		if (vcpu->guest_debug & KVM_GUESTDBG_USE_HW_BP)
+		if (vcpu->common->guest_debug & KVM_GUESTDBG_USE_HW_BP)
 			kvm_set_dr(vcpu, 7, DR7_FIXED_1);
 		else
 			WARN_ON(kvm_set_dr(vcpu, 7, vmcs_readl(GUEST_DR7)));
@@ -6261,11 +6261,11 @@ static bool nested_vmx_l0_wants_exit(struct kvm_vcpu *vcpu,
 			return vcpu->arch.apf.host_apf_flags ||
 			       vmx_need_pf_intercept(vcpu);
 		else if (is_debug(intr_info) &&
-			 vcpu->guest_debug &
+			 vcpu->common->guest_debug &
 			 (KVM_GUESTDBG_SINGLESTEP | KVM_GUESTDBG_USE_HW_BP))
 			return true;
 		else if (is_breakpoint(intr_info) &&
-			 vcpu->guest_debug & KVM_GUESTDBG_USE_SW_BP)
+			 vcpu->common->guest_debug & KVM_GUESTDBG_USE_SW_BP)
 			return true;
 		else if (is_alignment_check(intr_info) &&
 			 !vmx_guest_inject_ac(vcpu))

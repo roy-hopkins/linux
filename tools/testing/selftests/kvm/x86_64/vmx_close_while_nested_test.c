@@ -60,7 +60,7 @@ int main(int argc, char *argv[])
 	vcpu_args_set(vcpu, 1, vmx_pages_gva);
 
 	for (;;) {
-		volatile struct kvm_run *run = vcpu->run;
+		volatile struct kvm_run *run = vcpu->common->run;
 		struct ucall uc;
 
 		vcpu_run(vcpu);

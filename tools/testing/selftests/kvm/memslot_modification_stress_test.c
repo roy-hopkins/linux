@@ -37,7 +37,7 @@ static void vcpu_worker(struct memstress_vcpu_args *vcpu_args)
 	struct kvm_run *run;
 	int ret;
 
-	run = vcpu->run;
+	run = vcpu->common->run;
 
 	/* Let the guest access its memory until a stop signal is received */
 	while (!READ_ONCE(memstress_args.stop_vcpus)) {

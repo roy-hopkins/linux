@@ -288,7 +288,7 @@ static void guest_code(uint64_t base_gpa)
 
 static void handle_exit_hypercall(struct kvm_vcpu *vcpu)
 {
-	struct kvm_run *run = vcpu->run;
+	struct kvm_run *run = vcpu->common->run;
 	uint64_t gpa = run->hypercall.args[0];
 	uint64_t size = run->hypercall.args[1] * PAGE_SIZE;
 	bool set_attributes = run->hypercall.args[2] & MAP_GPA_SET_ATTRIBUTES;
@@ -314,7 +314,7 @@ static bool run_vcpus;
 static void *__test_mem_conversions(void *__vcpu)
 {
 	struct kvm_vcpu *vcpu = __vcpu;
-	struct kvm_run *run = vcpu->run;
+	struct kvm_run *run = vcpu->common->run;
 	struct kvm_vm *vm = vcpu->vm;
 	struct ucall uc;
 

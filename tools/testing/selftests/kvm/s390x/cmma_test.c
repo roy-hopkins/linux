@@ -262,10 +262,10 @@ static void test_get_cmma_basic(void)
 
 static void assert_exit_was_hypercall(struct kvm_vcpu *vcpu)
 {
-	TEST_ASSERT_EQ(vcpu->run->exit_reason, 13);
-	TEST_ASSERT_EQ(vcpu->run->s390_sieic.icptcode, 4);
-	TEST_ASSERT_EQ(vcpu->run->s390_sieic.ipa, 0x8300);
-	TEST_ASSERT_EQ(vcpu->run->s390_sieic.ipb, 0x5010000);
+	TEST_ASSERT_EQ(vcpu->common->run->exit_reason, 13);
+	TEST_ASSERT_EQ(vcpu->common->run->s390_sieic.icptcode, 4);
+	TEST_ASSERT_EQ(vcpu->common->run->s390_sieic.ipa, 0x8300);
+	TEST_ASSERT_EQ(vcpu->common->run->s390_sieic.ipb, 0x5010000);
 }
 
 static void test_migration_mode(void)
@@ -287,7 +287,7 @@ static void test_migration_mode(void)
 
 	enable_cmma(vm);
 	vcpu = vm_vcpu_add(vm, 1, guest_do_one_essa);
-	orig_psw = vcpu->run->psw_addr;
+	orig_psw = vcpu->common->run->psw_addr;
 
 	/*
 	 * Execute one essa instruction in the guest. Otherwise the guest will
@@ -313,7 +313,7 @@ static void test_migration_mode(void)
 	errno = 0;
 
 	/* execute another ESSA instruction to see this goes fine */
-	vcpu->run->psw_addr = orig_psw;
+	vcpu->common->run->psw_addr = orig_psw;
 	vcpu_run(vcpu);
 	assert_exit_was_hypercall(vcpu);
 
@@ -334,7 +334,7 @@ static void test_migration_mode(void)
 		   );
 
 	/* ESSA instructions should still execute fine */
-	vcpu->run->psw_addr = orig_psw;
+	vcpu->common->run->psw_addr = orig_psw;
 	vcpu_run(vcpu);
 	assert_exit_was_hypercall(vcpu);
 
@@ -359,7 +359,7 @@ static void test_migration_mode(void)
 		   );
 
 	/* ESSA instructions should still execute fine */
-	vcpu->run->psw_addr = orig_psw;
+	vcpu->common->run->psw_addr = orig_psw;
 	vcpu_run(vcpu);
 	assert_exit_was_hypercall(vcpu);
 
@@ -510,7 +510,7 @@ static void test_get_skip_holes(void)
 	enable_cmma(vm);
 	vcpu = vm_vcpu_add(vm, 1, guest_dirty_test_data);
 
-	orig_psw = vcpu->run->psw_addr;
+	orig_psw = vcpu->common->run->psw_addr;
 
 	/*
 	 * Execute some essa instructions in the guest. Otherwise the guest will
@@ -526,7 +526,7 @@ static void test_get_skip_holes(void)
 	assert_all_slots_cmma_dirty(vm);
 
 	/* Then, dirty just the TEST_DATA memslot */
-	vcpu->run->psw_addr = orig_psw;
+	vcpu->common->run->psw_addr = orig_psw;
 	vcpu_run(vcpu);
 
 	gfn_offset = TEST_DATA_START_GFN;

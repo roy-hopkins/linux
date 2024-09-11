@@ -85,13 +85,13 @@ int kvm_handle_mmio_return(struct kvm_vcpu *vcpu)
 	int mask;
 
 	/* Detect an already handled MMIO return */
-	if (unlikely(!vcpu->mmio_needed))
+	if (unlikely(!vcpu->common->mmio_needed))
 		return 1;
 
-	vcpu->mmio_needed = 0;
+	vcpu->common->mmio_needed = 0;
 
 	if (!kvm_vcpu_dabt_iswrite(vcpu)) {
-		struct kvm_run *run = vcpu->run;
+		struct kvm_run *run = vcpu->common->run;
 
 		len = kvm_vcpu_dabt_get_as(vcpu);
 		data = kvm_mmio_read_buf(run->mmio.data, len);
@@ -122,7 +122,7 @@ int kvm_handle_mmio_return(struct kvm_vcpu *vcpu)
 
 int io_mem_abort(struct kvm_vcpu *vcpu, phys_addr_t fault_ipa)
 {
-	struct kvm_run *run = vcpu->run;
+	struct kvm_run *run = vcpu->common->run;
 	unsigned long data;
 	unsigned long rt;
 	int ret;
@@ -187,20 +187,20 @@ int io_mem_abort(struct kvm_vcpu *vcpu, phys_addr_t fault_ipa)
 	run->mmio.is_write	= is_write;
 	run->mmio.phys_addr	= fault_ipa;
 	run->mmio.len		= len;
-	vcpu->mmio_needed	= 1;
+	vcpu->common->mmio_needed	= 1;
 
 	if (!ret) {
 		/* We handled the access successfully in the kernel. */
 		if (!is_write)
 			memcpy(run->mmio.data, data_buf, len);
-		vcpu->stat.mmio_exit_kernel++;
+		vcpu->common->stat.mmio_exit_kernel++;
 		kvm_handle_mmio_return(vcpu);
 		return 1;
 	}
 
 	if (is_write)
 		memcpy(run->mmio.data, data_buf, len);
-	vcpu->stat.mmio_exit_user++;
+	vcpu->common->stat.mmio_exit_user++;
 	run->exit_reason	= KVM_EXIT_MMIO;
 	return 0;
 }

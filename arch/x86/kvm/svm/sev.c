@@ -825,7 +825,7 @@ static int sev_es_sync_vmsa(struct vcpu_svm *svm)
 	int i;
 
 	/* Check some debug related fields before encrypting the VMSA */
-	if (svm->vcpu.guest_debug || (svm->vmcb->save.dr7 & ~DR7_FIXED_1))
+	if (svm->vcpu.common->guest_debug || (svm->vmcb->save.dr7 & ~DR7_FIXED_1))
 		return -EINVAL;
 
 	/*
@@ -916,7 +916,7 @@ static int __sev_launch_update_vmsa(struct kvm *kvm, struct kvm_vcpu *vcpu,
 	struct vcpu_svm *svm = to_svm(vcpu);
 	int ret;
 
-	if (vcpu->guest_debug) {
+	if (vcpu->common->guest_debug) {
 		pr_warn_once("KVM_SET_GUEST_DEBUG for SEV-ES guest is not supported");
 		return -EINVAL;
 	}
@@ -970,13 +970,13 @@ static int sev_launch_update_vmsa(struct kvm *kvm, struct kvm_sev_cmd *argp)
 		return -ENOTTY;
 
 	kvm_for_each_vcpu(i, vcpu, kvm) {
-		ret = mutex_lock_killable(&vcpu->mutex);
+		ret = mutex_lock_killable(&vcpu->common->mutex);
 		if (ret)
 			return ret;
 
 		ret = __sev_launch_update_vmsa(kvm, vcpu, &argp->error);
 
-		mutex_unlock(&vcpu->mutex);
+		mutex_unlock(&vcpu->common->mutex);
 		if (ret)
 			return ret;
 	}
@@ -1931,7 +1931,7 @@ static int sev_lock_vcpus_for_migration(struct kvm *kvm,
 	unsigned long i, j;
 
 	kvm_for_each_vcpu(i, vcpu, kvm) {
-		if (mutex_lock_killable_nested(&vcpu->mutex, role))
+		if (mutex_lock_killable_nested(&vcpu->common->mutex, role))
 			goto out_unlock;
 
 #ifdef CONFIG_PROVE_LOCKING
@@ -1942,7 +1942,7 @@ static int sev_lock_vcpus_for_migration(struct kvm *kvm,
 			 */
 			role = SEV_NR_MIGRATION_ROLES;
 		else
-			mutex_release(&vcpu->mutex.dep_map, _THIS_IP_);
+			mutex_release(&vcpu->common->mutex.dep_map, _THIS_IP_);
 #endif
 	}
 
@@ -1956,10 +1956,10 @@ out_unlock:
 
 #ifdef CONFIG_PROVE_LOCKING
 		if (j)
-			mutex_acquire(&vcpu->mutex.dep_map, role, 0, _THIS_IP_);
+			mutex_acquire(&vcpu->common->mutex.dep_map, role, 0, _THIS_IP_);
 #endif
 
-		mutex_unlock(&vcpu->mutex);
+		mutex_unlock(&vcpu->common->mutex);
 	}
 	return -EINTR;
 }
@@ -1974,10 +1974,10 @@ static void sev_unlock_vcpus_for_migration(struct kvm *kvm)
 		if (first)
 			first = false;
 		else
-			mutex_acquire(&vcpu->mutex.dep_map,
+			mutex_acquire(&vcpu->common->mutex.dep_map,
 				      SEV_NR_MIGRATION_ROLES, 0, _THIS_IP_);
 
-		mutex_unlock(&vcpu->mutex);
+		mutex_unlock(&vcpu->common->mutex);
 	}
 }
 
@@ -3698,7 +3698,7 @@ static int snp_complete_psc_msr(struct kvm_vcpu *vcpu)
 {
 	struct vcpu_svm *svm = to_svm(vcpu);
 
-	if (vcpu->run->hypercall.ret)
+	if (vcpu->common->run->hypercall.ret)
 		set_ghcb_msr(svm, GHCB_MSR_PSC_RESP_ERROR);
 	else
 		set_ghcb_msr(svm, GHCB_MSR_PSC_RESP);
@@ -3722,14 +3722,14 @@ static int snp_begin_psc_msr(struct vcpu_svm *svm, u64 ghcb_msr)
 		return 1; /* resume guest */
 	}
 
-	vcpu->run->exit_reason = KVM_EXIT_HYPERCALL;
-	vcpu->run->hypercall.nr = KVM_HC_MAP_GPA_RANGE;
-	vcpu->run->hypercall.args[0] = gpa;
-	vcpu->run->hypercall.args[1] = 1;
-	vcpu->run->hypercall.args[2] = (op == SNP_PAGE_STATE_PRIVATE)
+	vcpu->common->run->exit_reason = KVM_EXIT_HYPERCALL;
+	vcpu->common->run->hypercall.nr = KVM_HC_MAP_GPA_RANGE;
+	vcpu->common->run->hypercall.args[0] = gpa;
+	vcpu->common->run->hypercall.args[1] = 1;
+	vcpu->common->run->hypercall.args[2] = (op == SNP_PAGE_STATE_PRIVATE)
 				       ? KVM_MAP_GPA_RANGE_ENCRYPTED
 				       : KVM_MAP_GPA_RANGE_DECRYPTED;
-	vcpu->run->hypercall.args[2] |= KVM_MAP_GPA_RANGE_PAGE_SZ_4K;
+	vcpu->common->run->hypercall.args[2] |= KVM_MAP_GPA_RANGE_PAGE_SZ_4K;
 
 	vcpu->arch.complete_userspace_io = snp_complete_psc_msr;
 
@@ -3778,7 +3778,7 @@ static int snp_complete_one_psc(struct kvm_vcpu *vcpu)
 	struct vcpu_svm *svm = to_svm(vcpu);
 	struct psc_buffer *psc = svm->sev_es.ghcb_sa;
 
-	if (vcpu->run->hypercall.ret) {
+	if (vcpu->common->run->hypercall.ret) {
 		snp_complete_psc(svm, VMGEXIT_PSC_ERROR_GENERIC);
 		return 1; /* resume guest */
 	}
@@ -3885,14 +3885,14 @@ next_range:
 	switch (entry_start.operation) {
 	case VMGEXIT_PSC_OP_PRIVATE:
 	case VMGEXIT_PSC_OP_SHARED:
-		vcpu->run->exit_reason = KVM_EXIT_HYPERCALL;
-		vcpu->run->hypercall.nr = KVM_HC_MAP_GPA_RANGE;
-		vcpu->run->hypercall.args[0] = gfn_to_gpa(gfn);
-		vcpu->run->hypercall.args[1] = npages;
-		vcpu->run->hypercall.args[2] = entry_start.operation == VMGEXIT_PSC_OP_PRIVATE
+		vcpu->common->run->exit_reason = KVM_EXIT_HYPERCALL;
+		vcpu->common->run->hypercall.nr = KVM_HC_MAP_GPA_RANGE;
+		vcpu->common->run->hypercall.args[0] = gfn_to_gpa(gfn);
+		vcpu->common->run->hypercall.args[1] = npages;
+		vcpu->common->run->hypercall.args[2] = entry_start.operation == VMGEXIT_PSC_OP_PRIVATE
 					       ? KVM_MAP_GPA_RANGE_ENCRYPTED
 					       : KVM_MAP_GPA_RANGE_DECRYPTED;
-		vcpu->run->hypercall.args[2] |= entry_start.pagesize
+		vcpu->common->run->hypercall.args[2] |= entry_start.pagesize
 						? KVM_MAP_GPA_RANGE_PAGE_SZ_2M
 						: KVM_MAP_GPA_RANGE_PAGE_SZ_4K;
 		vcpu->arch.complete_userspace_io = snp_complete_one_psc;
@@ -4579,10 +4579,10 @@ static int sev_handle_vmgexit_msr_protocol(struct vcpu_svm *svm)
 	return ret;
 
 out_terminate:
-	vcpu->run->exit_reason = KVM_EXIT_SYSTEM_EVENT;
-	vcpu->run->system_event.type = KVM_SYSTEM_EVENT_SEV_TERM;
-	vcpu->run->system_event.ndata = 1;
-	vcpu->run->system_event.data[0] = control->ghcb_gpa;
+	vcpu->common->run->exit_reason = KVM_EXIT_SYSTEM_EVENT;
+	vcpu->common->run->system_event.type = KVM_SYSTEM_EVENT_SEV_TERM;
+	vcpu->common->run->system_event.ndata = 1;
+	vcpu->common->run->system_event.data[0] = control->ghcb_gpa;
 
 	return 0;
 }
@@ -4657,7 +4657,7 @@ int sev_handle_vmgexit(struct kvm_vcpu *vcpu)
 					    svm->sev_es.ghcb_sa);
 		break;
 	case SVM_VMGEXIT_NMI_COMPLETE:
-		++vcpu->stat.nmi_window_exits;
+		++vcpu->common->stat.nmi_window_exits;
 		svm->nmi_masked = false;
 		kvm_make_request(KVM_REQ_EVENT, vcpu);
 		ret = 1;
@@ -4696,10 +4696,10 @@ int sev_handle_vmgexit(struct kvm_vcpu *vcpu)
 	case SVM_VMGEXIT_TERM_REQUEST:
 		pr_info("SEV-ES guest requested termination: reason %#llx info %#llx\n",
 			control->exit_info_1, control->exit_info_2);
-		vcpu->run->exit_reason = KVM_EXIT_SYSTEM_EVENT;
-		vcpu->run->system_event.type = KVM_SYSTEM_EVENT_SEV_TERM;
-		vcpu->run->system_event.ndata = 1;
-		vcpu->run->system_event.data[0] = control->ghcb_gpa;
+		vcpu->common->run->exit_reason = KVM_EXIT_SYSTEM_EVENT;
+		vcpu->common->run->system_event.type = KVM_SYSTEM_EVENT_SEV_TERM;
+		vcpu->common->run->system_event.ndata = 1;
+		vcpu->common->run->system_event.data[0] = control->ghcb_gpa;
 		break;
 	case SVM_VMGEXIT_PSC:
 		ret = setup_vmgexit_scratch(svm, true, control->exit_info_2);

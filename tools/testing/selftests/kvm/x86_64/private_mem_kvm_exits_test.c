@@ -34,9 +34,9 @@ static uint32_t run_vcpu_get_exit_reason(struct kvm_vcpu *vcpu)
 	r = _vcpu_run(vcpu);
 	if (r) {
 		TEST_ASSERT(errno == EFAULT, KVM_IOCTL_ERROR(KVM_RUN, r));
-		TEST_ASSERT_EQ(vcpu->run->exit_reason, KVM_EXIT_MEMORY_FAULT);
+		TEST_ASSERT_EQ(vcpu->common->run->exit_reason, KVM_EXIT_MEMORY_FAULT);
 	}
-	return vcpu->run->exit_reason;
+	return vcpu->common->run->exit_reason;
 }
 
 const struct vm_shape protected_vm_shape = {
@@ -75,9 +75,9 @@ static void test_private_access_memslot_deleted(void)
 	exit_reason = (uint32_t)(uint64_t)thread_return;
 
 	TEST_ASSERT_EQ(exit_reason, KVM_EXIT_MEMORY_FAULT);
-	TEST_ASSERT_EQ(vcpu->run->memory_fault.flags, KVM_MEMORY_EXIT_FLAG_PRIVATE);
-	TEST_ASSERT_EQ(vcpu->run->memory_fault.gpa, EXITS_TEST_GPA);
-	TEST_ASSERT_EQ(vcpu->run->memory_fault.size, EXITS_TEST_SIZE);
+	TEST_ASSERT_EQ(vcpu->common->run->memory_fault.flags, KVM_MEMORY_EXIT_FLAG_PRIVATE);
+	TEST_ASSERT_EQ(vcpu->common->run->memory_fault.gpa, EXITS_TEST_GPA);
+	TEST_ASSERT_EQ(vcpu->common->run->memory_fault.size, EXITS_TEST_SIZE);
 
 	kvm_vm_free(vm);
 }
@@ -104,9 +104,9 @@ static void test_private_access_memslot_not_private(void)
 	exit_reason = run_vcpu_get_exit_reason(vcpu);
 
 	TEST_ASSERT_EQ(exit_reason, KVM_EXIT_MEMORY_FAULT);
-	TEST_ASSERT_EQ(vcpu->run->memory_fault.flags, KVM_MEMORY_EXIT_FLAG_PRIVATE);
-	TEST_ASSERT_EQ(vcpu->run->memory_fault.gpa, EXITS_TEST_GPA);
-	TEST_ASSERT_EQ(vcpu->run->memory_fault.size, EXITS_TEST_SIZE);
+	TEST_ASSERT_EQ(vcpu->common->run->memory_fault.flags, KVM_MEMORY_EXIT_FLAG_PRIVATE);
+	TEST_ASSERT_EQ(vcpu->common->run->memory_fault.gpa, EXITS_TEST_GPA);
+	TEST_ASSERT_EQ(vcpu->common->run->memory_fault.size, EXITS_TEST_SIZE);
 
 	kvm_vm_free(vm);
 }

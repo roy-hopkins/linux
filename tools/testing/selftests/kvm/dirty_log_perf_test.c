@@ -77,7 +77,7 @@ static void vcpu_worker(struct memstress_vcpu_args *vcpu_args)
 	struct timespec avg;
 	int ret;
 
-	run = vcpu->run;
+	run = vcpu->common->run;
 
 	while (!READ_ONCE(host_quit)) {
 		int current_iteration = READ_ONCE(iteration);

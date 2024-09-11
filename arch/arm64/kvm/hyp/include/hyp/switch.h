@@ -644,7 +644,7 @@ static inline void synchronize_vcpu_pstate(struct kvm_vcpu *vcpu, u64 *exit_code
 	 * active-not-pending state?
 	 */
 	if (cpus_have_final_cap(ARM64_WORKAROUND_2077057)		&&
-	    vcpu->guest_debug & KVM_GUESTDBG_SINGLESTEP			&&
+	    vcpu->common->guest_debug & KVM_GUESTDBG_SINGLESTEP			&&
 	    *vcpu_cpsr(vcpu) & DBG_SPSR_SS				&&
 	    ESR_ELx_EC(read_sysreg_el2(SYS_ESR)) == ESR_ELx_EC_PAC)
 		write_sysreg_el2(*vcpu_cpsr(vcpu), SYS_SPSR);

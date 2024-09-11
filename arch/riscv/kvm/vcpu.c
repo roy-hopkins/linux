@@ -517,10 +517,10 @@ int kvm_arch_vcpu_ioctl_set_guest_debug(struct kvm_vcpu *vcpu,
 					struct kvm_guest_debug *dbg)
 {
 	if (dbg->control & KVM_GUESTDBG_ENABLE) {
-		vcpu->guest_debug = dbg->control;
+		vcpu->common->guest_debug = dbg->control;
 		vcpu->arch.cfg.hedeleg &= ~BIT(EXC_BREAKPOINT);
 	} else {
-		vcpu->guest_debug = 0;
+		vcpu->common->guest_debug = 0;
 		vcpu->arch.cfg.hedeleg |= BIT(EXC_BREAKPOINT);
 	}
 
@@ -555,7 +555,7 @@ static void kvm_riscv_vcpu_setup_config(struct kvm_vcpu *vcpu)
 	}
 
 	cfg->hedeleg = KVM_HEDELEG_DEFAULT;
-	if (vcpu->guest_debug)
+	if (vcpu->common->guest_debug)
 		cfg->hedeleg &= ~BIT(EXC_BREAKPOINT);
 }
 
@@ -732,7 +732,7 @@ int kvm_arch_vcpu_ioctl_run(struct kvm_vcpu *vcpu)
 {
 	int ret;
 	struct kvm_cpu_trap trap;
-	struct kvm_run *run = vcpu->run;
+	struct kvm_run *run = vcpu->common->run;
 
 	if (!vcpu->arch.ran_atleast_once)
 		kvm_riscv_vcpu_setup_config(vcpu);
@@ -745,15 +745,15 @@ int kvm_arch_vcpu_ioctl_run(struct kvm_vcpu *vcpu)
 	switch (run->exit_reason) {
 	case KVM_EXIT_MMIO:
 		/* Process MMIO value returned from user-space */
-		ret = kvm_riscv_vcpu_mmio_return(vcpu, vcpu->run);
+		ret = kvm_riscv_vcpu_mmio_return(vcpu, vcpu->common->run);
 		break;
 	case KVM_EXIT_RISCV_SBI:
 		/* Process SBI value returned from user-space */
-		ret = kvm_riscv_vcpu_sbi_return(vcpu, vcpu->run);
+		ret = kvm_riscv_vcpu_sbi_return(vcpu, vcpu->common->run);
 		break;
 	case KVM_EXIT_RISCV_CSR:
 		/* Process CSR value returned from user-space */
-		ret = kvm_riscv_vcpu_csr_return(vcpu, vcpu->run);
+		ret = kvm_riscv_vcpu_csr_return(vcpu, vcpu->common->run);
 		break;
 	default:
 		ret = 0;
@@ -764,7 +764,7 @@ int kvm_arch_vcpu_ioctl_run(struct kvm_vcpu *vcpu)
 		return ret;
 	}
 
-	if (!vcpu->wants_to_run) {
+	if (!vcpu->common->wants_to_run) {
 		kvm_vcpu_srcu_read_unlock(vcpu);
 		return -EINTR;
 	}
@@ -803,7 +803,7 @@ int kvm_arch_vcpu_ioctl_run(struct kvm_vcpu *vcpu)
 		 * See the comment in kvm_vcpu_exiting_guest_mode() and
 		 * Documentation/virt/kvm/vcpu-requests.rst
 		 */
-		vcpu->mode = IN_GUEST_MODE;
+		vcpu->common->mode = IN_GUEST_MODE;
 
 		kvm_vcpu_srcu_read_unlock(vcpu);
 		smp_mb__after_srcu_read_unlock();
@@ -820,7 +820,7 @@ int kvm_arch_vcpu_ioctl_run(struct kvm_vcpu *vcpu)
 		if (kvm_riscv_gstage_vmid_ver_changed(&vcpu->kvm->arch.vmid) ||
 		    kvm_request_pending(vcpu) ||
 		    xfer_to_guest_mode_work_pending()) {
-			vcpu->mode = OUTSIDE_GUEST_MODE;
+			vcpu->common->mode = OUTSIDE_GUEST_MODE;
 			local_irq_enable();
 			preempt_enable();
 			kvm_vcpu_srcu_read_lock(vcpu);
@@ -841,8 +841,8 @@ int kvm_arch_vcpu_ioctl_run(struct kvm_vcpu *vcpu)
 
 		kvm_riscv_vcpu_enter_exit(vcpu);
 
-		vcpu->mode = OUTSIDE_GUEST_MODE;
-		vcpu->stat.exits++;
+		vcpu->common->mode = OUTSIDE_GUEST_MODE;
+		vcpu->common->stat.exits++;
 
 		/*
 		 * Save SCAUSE, STVAL, HTVAL, and HTINST because we might

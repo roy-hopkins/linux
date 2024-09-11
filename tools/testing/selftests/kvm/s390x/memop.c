@@ -252,7 +252,7 @@ static struct test_default test_default_init(void *guest_code)
 	t.kvm_vm = vm_create_with_one_vcpu(&vcpu, guest_code);
 	t.vm = (struct test_info) { t.kvm_vm, NULL };
 	t.vcpu = (struct test_info) { t.kvm_vm, vcpu };
-	t.run = vcpu->run;
+	t.run = vcpu->common->run;
 	return t;
 }
 

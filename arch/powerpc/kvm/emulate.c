@@ -272,9 +272,9 @@ int kvmppc_emulate_instruction(struct kvm_vcpu *vcpu)
 		 * these are illegal instructions.
 		 */
 		if (inst == KVMPPC_INST_SW_BREAKPOINT) {
-			vcpu->run->exit_reason = KVM_EXIT_DEBUG;
-			vcpu->run->debug.arch.status = 0;
-			vcpu->run->debug.arch.address = kvmppc_get_pc(vcpu);
+			vcpu->common->run->exit_reason = KVM_EXIT_DEBUG;
+			vcpu->common->run->debug.arch.status = 0;
+			vcpu->common->run->debug.arch.address = kvmppc_get_pc(vcpu);
 			emulated = EMULATE_EXIT_USER;
 			advance = 0;
 		} else

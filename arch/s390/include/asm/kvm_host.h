@@ -708,13 +708,13 @@ struct kvm_hw_bp_info_arch {
 #define KVM_GUESTDBG_EXIT_PENDING 0x10000000
 
 #define guestdbg_enabled(vcpu) \
-		(vcpu->guest_debug & KVM_GUESTDBG_ENABLE)
+		(vcpu->common->guest_debug & KVM_GUESTDBG_ENABLE)
 #define guestdbg_sstep_enabled(vcpu) \
-		(vcpu->guest_debug & KVM_GUESTDBG_SINGLESTEP)
+		(vcpu->common->guest_debug & KVM_GUESTDBG_SINGLESTEP)
 #define guestdbg_hw_bp_enabled(vcpu) \
-		(vcpu->guest_debug & KVM_GUESTDBG_USE_HW_BP)
+		(vcpu->common->guest_debug & KVM_GUESTDBG_USE_HW_BP)
 #define guestdbg_exit_pending(vcpu) (guestdbg_enabled(vcpu) && \
-		(vcpu->guest_debug & KVM_GUESTDBG_EXIT_PENDING))
+		(vcpu->common->guest_debug & KVM_GUESTDBG_EXIT_PENDING))
 
 #define KVM_GUESTDBG_VALID_MASK \
 		(KVM_GUESTDBG_ENABLE | KVM_GUESTDBG_SINGLESTEP |\

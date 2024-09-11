@@ -68,7 +68,7 @@ int main(int argc, char *argv[])
 
 	vcpu_run(vcpu);
 
-	run = vcpu->run;
+	run = vcpu->common->run;
 
 	/*
 	 * The first exit to L0 userspace should be an I/O access from L2.

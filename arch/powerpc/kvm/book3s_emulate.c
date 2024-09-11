@@ -367,13 +367,13 @@ int kvmppc_core_emulate_op_pr(struct kvm_vcpu *vcpu,
 			if (kvmppc_h_pr(vcpu, cmd) == EMULATE_DONE)
 				break;
 
-			vcpu->run->papr_hcall.nr = cmd;
+			vcpu->common->run->papr_hcall.nr = cmd;
 			for (i = 0; i < 9; ++i) {
 				ulong gpr = kvmppc_get_gpr(vcpu, 4 + i);
-				vcpu->run->papr_hcall.args[i] = gpr;
+				vcpu->common->run->papr_hcall.args[i] = gpr;
 			}
 
-			vcpu->run->exit_reason = KVM_EXIT_PAPR_HCALL;
+			vcpu->common->run->exit_reason = KVM_EXIT_PAPR_HCALL;
 			vcpu->arch.hcall_needed = 1;
 			emulated = EMULATE_EXIT_USER;
 			break;

@@ -1510,7 +1510,7 @@ int kvmppc_xive_set_icp(struct kvm_vcpu *vcpu, u64 icpval)
 
 	/*
 	 * We can't update the state of a "pushed" VCPU, but that
-	 * shouldn't happen because the vcpu->mutex makes running a
+	 * shouldn't happen because the vcpu->common->mutex makes running a
 	 * vcpu mutually exclusive with doing one_reg get/set on it.
 	 */
 	if (WARN_ON(vcpu->arch.xive_pushed))
@@ -1770,7 +1770,7 @@ void kvmppc_xive_disable_vcpu_interrupts(struct kvm_vcpu *vcpu)
 
 	/*
 	 * Clear pointers to escalation interrupt ESB.
-	 * This is safe because the vcpu->mutex is held, preventing
+	 * This is safe because the vcpu->common->mutex is held, preventing
 	 * any other CPU from concurrently executing a KVM_RUN ioctl.
 	 */
 	vcpu->arch.xive_esc_vaddr = 0;
@@ -2663,16 +2663,16 @@ static void kvmppc_xive_release(struct kvm_device *dev)
 	 */
 	kvm_for_each_vcpu(i, vcpu, kvm) {
 		/*
-		 * Take vcpu->mutex to ensure that no one_reg get/set ioctl
+		 * Take vcpu->common->mutex to ensure that no one_reg get/set ioctl
 		 * (i.e. kvmppc_xive_[gs]et_icp) can be done concurrently.
-		 * Holding the vcpu->mutex also means that the vcpu cannot
+		 * Holding the vcpu->common->mutex also means that the vcpu cannot
 		 * be executing the KVM_RUN ioctl, and therefore it cannot
 		 * be executing the XIVE push or pull code or accessing
 		 * the XIVE MMIO regions.
 		 */
-		mutex_lock(&vcpu->mutex);
+		mutex_lock(&vcpu->common->mutex);
 		kvmppc_xive_cleanup_vcpu(vcpu);
-		mutex_unlock(&vcpu->mutex);
+		mutex_unlock(&vcpu->common->mutex);
 	}
 
 	/*

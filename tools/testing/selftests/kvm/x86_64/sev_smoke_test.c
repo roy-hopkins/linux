@@ -106,12 +106,12 @@ static void test_sync_vmsa(uint32_t policy)
 
 	vcpu_run(vcpu);
 
-	TEST_ASSERT(vcpu->run->exit_reason == KVM_EXIT_SYSTEM_EVENT,
+	TEST_ASSERT(vcpu->common->run->exit_reason == KVM_EXIT_SYSTEM_EVENT,
 		    "Wanted SYSTEM_EVENT, got %s",
-		    exit_reason_str(vcpu->run->exit_reason));
-	TEST_ASSERT_EQ(vcpu->run->system_event.type, KVM_SYSTEM_EVENT_SEV_TERM);
-	TEST_ASSERT_EQ(vcpu->run->system_event.ndata, 1);
-	TEST_ASSERT_EQ(vcpu->run->system_event.data[0], GHCB_MSR_TERM_REQ);
+		    exit_reason_str(vcpu->common->run->exit_reason));
+	TEST_ASSERT_EQ(vcpu->common->run->system_event.type, KVM_SYSTEM_EVENT_SEV_TERM);
+	TEST_ASSERT_EQ(vcpu->common->run->system_event.ndata, 1);
+	TEST_ASSERT_EQ(vcpu->common->run->system_event.data[0], GHCB_MSR_TERM_REQ);
 
 	compare_xsave((u8 *)&xsave, (u8 *)hva);
 
@@ -135,12 +135,12 @@ static void test_sev(void *guest_code, uint64_t policy)
 		vcpu_run(vcpu);
 
 		if (policy & SEV_POLICY_ES) {
-			TEST_ASSERT(vcpu->run->exit_reason == KVM_EXIT_SYSTEM_EVENT,
+			TEST_ASSERT(vcpu->common->run->exit_reason == KVM_EXIT_SYSTEM_EVENT,
 				    "Wanted SYSTEM_EVENT, got %s",
-				    exit_reason_str(vcpu->run->exit_reason));
-			TEST_ASSERT_EQ(vcpu->run->system_event.type, KVM_SYSTEM_EVENT_SEV_TERM);
-			TEST_ASSERT_EQ(vcpu->run->system_event.ndata, 1);
-			TEST_ASSERT_EQ(vcpu->run->system_event.data[0], GHCB_MSR_TERM_REQ);
+				    exit_reason_str(vcpu->common->run->exit_reason));
+			TEST_ASSERT_EQ(vcpu->common->run->system_event.type, KVM_SYSTEM_EVENT_SEV_TERM);
+			TEST_ASSERT_EQ(vcpu->common->run->system_event.ndata, 1);
+			TEST_ASSERT_EQ(vcpu->common->run->system_event.data[0], GHCB_MSR_TERM_REQ);
 			break;
 		}
 
@@ -153,7 +153,7 @@ static void test_sev(void *guest_code, uint64_t policy)
 			REPORT_GUEST_ASSERT(uc);
 		default:
 			TEST_FAIL("Unexpected exit: %s",
-				  exit_reason_str(vcpu->run->exit_reason));
+				  exit_reason_str(vcpu->common->run->exit_reason));
 		}
 	}
 

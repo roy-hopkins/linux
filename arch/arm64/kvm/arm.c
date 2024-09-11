@@ -457,11 +457,11 @@ int kvm_arch_vcpu_create(struct kvm_vcpu *vcpu)
 	spin_lock_init(&vcpu->arch.mp_state_lock);
 
 #ifdef CONFIG_LOCKDEP
-	/* Inform lockdep that the config_lock is acquired after vcpu->mutex */
-	mutex_lock(&vcpu->mutex);
+	/* Inform lockdep that the config_lock is acquired after vcpu->common->mutex */
+	mutex_lock(&vcpu->common->mutex);
 	mutex_lock(&vcpu->kvm->arch.config_lock);
 	mutex_unlock(&vcpu->kvm->arch.config_lock);
-	mutex_unlock(&vcpu->mutex);
+	mutex_unlock(&vcpu->common->mutex);
 #endif
 
 	/* Force users to call KVM_ARM_VCPU_INIT */
@@ -970,9 +970,9 @@ static int kvm_vcpu_suspend(struct kvm_vcpu *vcpu)
 	 * userspace informing it of the wakeup condition.
 	 */
 	if (kvm_arch_vcpu_runnable(vcpu)) {
-		memset(&vcpu->run->system_event, 0, sizeof(vcpu->run->system_event));
-		vcpu->run->system_event.type = KVM_SYSTEM_EVENT_WAKEUP;
-		vcpu->run->exit_reason = KVM_EXIT_SYSTEM_EVENT;
+		memset(&vcpu->common->run->system_event, 0, sizeof(vcpu->common->run->system_event));
+		vcpu->common->run->system_event.type = KVM_SYSTEM_EVENT_WAKEUP;
+		vcpu->common->run->exit_reason = KVM_EXIT_SYSTEM_EVENT;
 		return 0;
 	}
 
@@ -1062,7 +1062,7 @@ static bool vcpu_mode_is_bad_32bit(struct kvm_vcpu *vcpu)
  */
 static bool kvm_vcpu_exit_request(struct kvm_vcpu *vcpu, int *ret)
 {
-	struct kvm_run *run = vcpu->run;
+	struct kvm_run *run = vcpu->common->run;
 
 	/*
 	 * If we're using a userspace irqchip, then check if we need
@@ -1122,7 +1122,7 @@ static int noinstr kvm_arm_vcpu_enter_exit(struct kvm_vcpu *vcpu)
  */
 int kvm_arch_vcpu_ioctl_run(struct kvm_vcpu *vcpu)
 {
-	struct kvm_run *run = vcpu->run;
+	struct kvm_run *run = vcpu->common->run;
 	int ret;
 
 	if (run->exit_reason == KVM_EXIT_MMIO) {
@@ -1133,7 +1133,7 @@ int kvm_arch_vcpu_ioctl_run(struct kvm_vcpu *vcpu)
 
 	vcpu_load(vcpu);
 
-	if (!vcpu->wants_to_run) {
+	if (!vcpu->common->wants_to_run) {
 		ret = -EINTR;
 		goto out;
 	}
@@ -1187,10 +1187,10 @@ int kvm_arch_vcpu_ioctl_run(struct kvm_vcpu *vcpu)
 		 * See the comment in kvm_vcpu_exiting_guest_mode() and
 		 * Documentation/virt/kvm/vcpu-requests.rst
 		 */
-		smp_store_mb(vcpu->mode, IN_GUEST_MODE);
+		smp_store_mb(vcpu->common->mode, IN_GUEST_MODE);
 
 		if (ret <= 0 || kvm_vcpu_exit_request(vcpu, &ret)) {
-			vcpu->mode = OUTSIDE_GUEST_MODE;
+			vcpu->common->mode = OUTSIDE_GUEST_MODE;
 			isb(); /* Ensure work in x_flush_hwstate is committed */
 			kvm_pmu_sync_hwstate(vcpu);
 			if (static_branch_unlikely(&userspace_irqchip_in_use))
@@ -1212,8 +1212,8 @@ int kvm_arch_vcpu_ioctl_run(struct kvm_vcpu *vcpu)
 
 		ret = kvm_arm_vcpu_enter_exit(vcpu);
 
-		vcpu->mode = OUTSIDE_GUEST_MODE;
-		vcpu->stat.exits++;
+		vcpu->common->mode = OUTSIDE_GUEST_MODE;
+		vcpu->common->stat.exits++;
 		/*
 		 * Back from guest
 		 *************************************************************/
@@ -1915,7 +1915,7 @@ static void unlock_vcpus(struct kvm *kvm, int vcpu_lock_idx)
 
 	for (; vcpu_lock_idx >= 0; vcpu_lock_idx--) {
 		tmp_vcpu = kvm_get_vcpu(kvm, vcpu_lock_idx);
-		mutex_unlock(&tmp_vcpu->mutex);
+		mutex_unlock(&tmp_vcpu->common->mutex);
 	}
 }
 
@@ -1936,13 +1936,13 @@ bool lock_all_vcpus(struct kvm *kvm)
 
 	/*
 	 * Any time a vcpu is in an ioctl (including running), the
-	 * core KVM code tries to grab the vcpu->mutex.
+	 * core KVM code tries to grab the vcpu->common->mutex.
 	 *
-	 * By grabbing the vcpu->mutex of all VCPUs we ensure that no
+	 * By grabbing the vcpu->common->mutex of all VCPUs we ensure that no
 	 * other VCPUs can fiddle with the state while we access it.
 	 */
 	kvm_for_each_vcpu(c, tmp_vcpu, kvm) {
-		if (!mutex_trylock(&tmp_vcpu->mutex)) {
+		if (!mutex_trylock(&tmp_vcpu->common->mutex)) {
 			unlock_vcpus(kvm, c - 1);
 			return false;
 		}

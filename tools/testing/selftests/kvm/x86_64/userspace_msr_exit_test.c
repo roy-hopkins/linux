@@ -379,7 +379,7 @@ static void check_for_guest_assert(struct kvm_vcpu *vcpu)
 {
 	struct ucall uc;
 
-	if (vcpu->run->exit_reason == KVM_EXIT_IO &&
+	if (vcpu->common->run->exit_reason == KVM_EXIT_IO &&
 	    get_ucall(vcpu, &uc) == UCALL_ABORT) {
 		REPORT_GUEST_ASSERT(uc);
 	}
@@ -387,7 +387,7 @@ static void check_for_guest_assert(struct kvm_vcpu *vcpu)
 
 static void process_rdmsr(struct kvm_vcpu *vcpu, uint32_t msr_index)
 {
-	struct kvm_run *run = vcpu->run;
+	struct kvm_run *run = vcpu->common->run;
 
 	check_for_guest_assert(vcpu);
 
@@ -419,7 +419,7 @@ static void process_rdmsr(struct kvm_vcpu *vcpu, uint32_t msr_index)
 
 static void process_wrmsr(struct kvm_vcpu *vcpu, uint32_t msr_index)
 {
-	struct kvm_run *run = vcpu->run;
+	struct kvm_run *run = vcpu->common->run;
 
 	check_for_guest_assert(vcpu);
 
@@ -626,7 +626,7 @@ static void handle_wrmsr(struct kvm_run *run)
 KVM_ONE_VCPU_TEST(user_msr, msr_filter_deny, guest_code_filter_deny)
 {
 	struct kvm_vm *vm = vcpu->vm;
-	struct kvm_run *run = vcpu->run;
+	struct kvm_run *run = vcpu->common->run;
 	int rc;
 
 	rc = kvm_check_cap(KVM_CAP_X86_USER_SPACE_MSR);

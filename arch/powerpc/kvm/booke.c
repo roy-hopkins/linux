@@ -234,7 +234,7 @@ static void kvmppc_vcpu_sync_debug(struct kvm_vcpu *vcpu)
 #endif
 
 	/* Force enable debug interrupts when user space wants to debug */
-	if (vcpu->guest_debug) {
+	if (vcpu->common->guest_debug) {
 #ifdef CONFIG_KVM_BOOKE_HV
 		/*
 		 * Since there is no shadow MSR, sync MSR_DE into the guest
@@ -743,14 +743,14 @@ int kvmppc_core_check_requests(struct kvm_vcpu *vcpu)
 #endif
 
 	if (kvm_check_request(KVM_REQ_WATCHDOG, vcpu)) {
-		vcpu->run->exit_reason = KVM_EXIT_WATCHDOG;
+		vcpu->common->run->exit_reason = KVM_EXIT_WATCHDOG;
 		r = 0;
 	}
 
 	if (kvm_check_request(KVM_REQ_EPR_EXIT, vcpu)) {
-		vcpu->run->epr.epr = 0;
+		vcpu->common->run->epr.epr = 0;
 		vcpu->arch.epr_needed = true;
-		vcpu->run->exit_reason = KVM_EXIT_EPR;
+		vcpu->common->run->exit_reason = KVM_EXIT_EPR;
 		r = 0;
 	}
 
@@ -763,7 +763,7 @@ int kvmppc_vcpu_run(struct kvm_vcpu *vcpu)
 	struct debug_reg debug;
 
 	if (!vcpu->arch.sane) {
-		vcpu->run->exit_reason = KVM_EXIT_INTERNAL_ERROR;
+		vcpu->common->run->exit_reason = KVM_EXIT_INTERNAL_ERROR;
 		return -EINVAL;
 	}
 
@@ -823,7 +823,7 @@ int kvmppc_vcpu_run(struct kvm_vcpu *vcpu)
 #endif
 
 out:
-	vcpu->mode = OUTSIDE_GUEST_MODE;
+	vcpu->common->mode = OUTSIDE_GUEST_MODE;
 	return ret;
 }
 
@@ -848,8 +848,8 @@ static int emulation_exit(struct kvm_vcpu *vcpu)
 		       __func__, vcpu->arch.regs.nip, vcpu->arch.last_inst);
 		/* For debugging, encode the failing instruction and
 		 * report it to userspace. */
-		vcpu->run->hw.hardware_exit_reason = ~0ULL << 32;
-		vcpu->run->hw.hardware_exit_reason |= vcpu->arch.last_inst;
+		vcpu->common->run->hw.hardware_exit_reason = ~0ULL << 32;
+		vcpu->common->run->hw.hardware_exit_reason |= vcpu->arch.last_inst;
 		kvmppc_core_queue_program(vcpu, ESR_PIL);
 		return RESUME_HOST;
 
@@ -863,11 +863,11 @@ static int emulation_exit(struct kvm_vcpu *vcpu)
 
 static int kvmppc_handle_debug(struct kvm_vcpu *vcpu)
 {
-	struct kvm_run *run = vcpu->run;
+	struct kvm_run *run = vcpu->common->run;
 	struct debug_reg *dbg_reg = &(vcpu->arch.dbg_reg);
 	u32 dbsr = vcpu->arch.dbsr;
 
-	if (vcpu->guest_debug == 0) {
+	if (vcpu->common->guest_debug == 0) {
 		/*
 		 * Debug resources belong to Guest.
 		 * Imprecise debug event is not injected
@@ -993,8 +993,8 @@ static int kvmppc_resume_inst_load(struct kvm_vcpu *vcpu,
 		       __func__, vcpu->arch.regs.nip);
 		/* For debugging, encode the failing instruction and
 		 * report it to userspace. */
-		vcpu->run->hw.hardware_exit_reason = ~0ULL << 32;
-		vcpu->run->hw.hardware_exit_reason |= last_inst;
+		vcpu->common->run->hw.hardware_exit_reason = ~0ULL << 32;
+		vcpu->common->run->hw.hardware_exit_reason |= last_inst;
 		kvmppc_core_queue_program(vcpu, ESR_PIL);
 		return RESUME_HOST;
 
@@ -1010,7 +1010,7 @@ static int kvmppc_resume_inst_load(struct kvm_vcpu *vcpu,
  */
 int kvmppc_handle_exit(struct kvm_vcpu *vcpu, unsigned int exit_nr)
 {
-	struct kvm_run *run = vcpu->run;
+	struct kvm_run *run = vcpu->common->run;
 	int r = RESUME_HOST;
 	int s;
 	int idx;
@@ -1040,7 +1040,7 @@ int kvmppc_handle_exit(struct kvm_vcpu *vcpu, unsigned int exit_nr)
 		break;
 	case BOOKE_INTERRUPT_PROGRAM:
 		/* SW breakpoints arrive as illegal instructions on HV */
-		if (vcpu->guest_debug & KVM_GUESTDBG_USE_SW_BP) {
+		if (vcpu->common->guest_debug & KVM_GUESTDBG_USE_SW_BP) {
 			emulated = kvmppc_get_last_inst(vcpu, INST_GENERIC, &pinst);
 			last_inst = ppc_inst_val(pinst);
 		}
@@ -1136,7 +1136,7 @@ int kvmppc_handle_exit(struct kvm_vcpu *vcpu, unsigned int exit_nr)
 		break;
 
 	case BOOKE_INTERRUPT_PROGRAM:
-		if ((vcpu->guest_debug & KVM_GUESTDBG_USE_SW_BP) &&
+		if ((vcpu->common->guest_debug & KVM_GUESTDBG_USE_SW_BP) &&
 			(last_inst == KVMPPC_INST_SW_BREAKPOINT)) {
 			/*
 			 * We are here because of an SW breakpoint instr,
@@ -2039,16 +2039,16 @@ int kvm_arch_vcpu_ioctl_set_guest_debug(struct kvm_vcpu *vcpu,
 
 	if (!(dbg->control & KVM_GUESTDBG_ENABLE)) {
 		vcpu->arch.dbg_reg.dbcr0 = 0;
-		vcpu->guest_debug = 0;
+		vcpu->common->guest_debug = 0;
 		kvm_guest_protect_msr(vcpu, MSR_DE, false);
 		goto out;
 	}
 
 	kvm_guest_protect_msr(vcpu, MSR_DE, true);
-	vcpu->guest_debug = dbg->control;
+	vcpu->common->guest_debug = dbg->control;
 	vcpu->arch.dbg_reg.dbcr0 = 0;
 
-	if (vcpu->guest_debug & KVM_GUESTDBG_SINGLESTEP)
+	if (vcpu->common->guest_debug & KVM_GUESTDBG_SINGLESTEP)
 		vcpu->arch.dbg_reg.dbcr0 |= DBCR0_IDM | DBCR0_IC;
 
 	/* Code below handles only HW breakpoints */
@@ -2072,7 +2072,7 @@ int kvm_arch_vcpu_ioctl_set_guest_debug(struct kvm_vcpu *vcpu,
 	dbg_reg->dbcr2 = DBCR2_DAC1US | DBCR2_DAC2US;
 #endif
 
-	if (!(vcpu->guest_debug & KVM_GUESTDBG_USE_HW_BP))
+	if (!(vcpu->common->guest_debug & KVM_GUESTDBG_USE_HW_BP))
 		goto out;
 
 	ret = -EINVAL;

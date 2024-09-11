@@ -22,7 +22,7 @@ static void guest_code(void)
 
 static void __run_vcpu_with_invalid_state(struct kvm_vcpu *vcpu)
 {
-	struct kvm_run *run = vcpu->run;
+	struct kvm_run *run = vcpu->common->run;
 
 	vcpu_run(vcpu);
 

@@ -21,7 +21,7 @@ void ucall_arch_init(struct kvm_vm *vm, vm_paddr_t mmio_gpa)
 
 void *ucall_arch_get_ucall(struct kvm_vcpu *vcpu)
 {
-	struct kvm_run *run = vcpu->run;
+	struct kvm_run *run = vcpu->common->run;
 
 	if (run->exit_reason == KVM_EXIT_MMIO &&
 	    run->mmio.phys_addr == vcpu->vm->ucall_mmio_addr) {

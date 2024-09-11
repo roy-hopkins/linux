@@ -179,7 +179,7 @@ static inline bool is_error_page(struct page *page)
  * OUTSIDE_GUEST_MODE.  KVM_REQ_OUTSIDE_GUEST_MODE differs from a vCPU "kick"
  * in that it ensures the vCPU has reached OUTSIDE_GUEST_MODE before continuing
  * on.  A kick only guarantees that the vCPU is on its way out, e.g. a previous
- * kick may have set vcpu->mode to EXITING_GUEST_MODE, and so there's no
+ * kick may have set vcpu->common->mode to EXITING_GUEST_MODE, and so there's no
  * guarantee the vCPU received an IPI and has actually exited guest mode.
  */
 #define KVM_REQ_OUTSIDE_GUEST_MODE	(KVM_REQUEST_NO_ACTION | KVM_REQUEST_WAIT | KVM_REQUEST_NO_WAKEUP)
@@ -328,73 +328,81 @@ struct kvm_vcpu {
 	int cpu;
 	int vcpu_id; /* id given by userspace at creation */
 	int vcpu_idx; /* index into kvm->vcpu_array */
-	int ____srcu_idx; /* Don't use this directly.  You've been warned. */
-#ifdef CONFIG_PROVE_RCU
-	int srcu_depth;
-#endif
-	int mode;
+
 	u64 requests;
-	unsigned long guest_debug;
 
-	struct mutex mutex;
-	struct kvm_run *run;
+	struct kvm_vcpu_arch arch;
 
-#ifndef __KVM_HAVE_ARCH_WQP
-	struct rcuwait wait;
+	struct kvm_vcpu_common {
+		int ____srcu_idx; /* Don't use this directly.  You've been warned. */
+#ifdef CONFIG_PROVE_RCU
+		int srcu_depth;
 #endif
-	struct pid __rcu *pid;
-	int sigset_active;
-	sigset_t sigset;
-	unsigned int halt_poll_ns;
-	bool valid_wakeup;
+		int mode;
+		unsigned long guest_debug;
+	
+		struct mutex mutex;
+
+		struct kvm_run *run;
+
+	#ifndef __KVM_HAVE_ARCH_WQP
+		struct rcuwait wait;
+	#endif
+		struct pid __rcu *pid;
+		int sigset_active;
+		sigset_t sigset;
+		unsigned int halt_poll_ns;
+		bool valid_wakeup;
 
 #ifdef CONFIG_HAS_IOMEM
-	int mmio_needed;
-	int mmio_read_completed;
-	int mmio_is_write;
-	int mmio_cur_fragment;
-	int mmio_nr_fragments;
-	struct kvm_mmio_fragment mmio_fragments[KVM_MAX_MMIO_FRAGMENTS];
+		int mmio_needed;
+		int mmio_read_completed;
+		int mmio_is_write;
+		int mmio_cur_fragment;
+		int mmio_nr_fragments;
+		struct kvm_mmio_fragment mmio_fragments[KVM_MAX_MMIO_FRAGMENTS];
 #endif
 
 #ifdef CONFIG_KVM_ASYNC_PF
-	struct {
-		u32 queued;
-		struct list_head queue;
-		struct list_head done;
-		spinlock_t lock;
-	} async_pf;
+		struct {
+			u32 queued;
+			struct list_head queue;
+			struct list_head done;
+			spinlock_t lock;
+		} async_pf;
 #endif
 
 #ifdef CONFIG_HAVE_KVM_CPU_RELAX_INTERCEPT
-	/*
-	 * Cpu relax intercept or pause loop exit optimization
-	 * in_spin_loop: set when a vcpu does a pause loop exit
-	 *  or cpu relax intercepted.
-	 * dy_eligible: indicates whether vcpu is eligible for directed yield.
-	 */
-	struct {
-		bool in_spin_loop;
-		bool dy_eligible;
-	} spin_loop;
+		/*
+		* Cpu relax intercept or pause loop exit optimization
+		* in_spin_loop: set when a vcpu does a pause loop exit
+		*  or cpu relax intercepted.
+		* dy_eligible: indicates whether vcpu is eligible for directed yield.
+		*/
+		struct {
+			bool in_spin_loop;
+			bool dy_eligible;
+		} spin_loop;
 #endif
-	bool wants_to_run;
-	bool preempted;
-	bool ready;
-	bool scheduled_out;
-	struct kvm_vcpu_arch arch;
-	struct kvm_vcpu_stat stat;
-	char stats_id[KVM_STATS_NAME_SIZE];
-	struct kvm_dirty_ring dirty_ring;
+		bool wants_to_run;
+		bool preempted;
+		bool ready;
+		bool scheduled_out;
+		struct kvm_vcpu_stat stat;
+		char stats_id[KVM_STATS_NAME_SIZE];
+		struct kvm_dirty_ring dirty_ring;
 
-	/*
-	 * The most recently used memslot by this vCPU and the slots generation
-	 * for which it is valid.
-	 * No wraparound protection is needed since generations won't overflow in
-	 * thousands of years, even assuming 1M memslot operations per second.
-	 */
-	struct kvm_memory_slot *last_used_slot;
-	u64 last_used_slot_gen;
+		/*
+		* The most recently used memslot by this vCPU and the slots generation
+		* for which it is valid.
+		* No wraparound protection is needed since generations won't overflow in
+		* thousands of years, even assuming 1M memslot operations per second.
+		*/
+		struct kvm_memory_slot *last_used_slot;
+		u64 last_used_slot_gen;
+	} _common;
+
+	struct kvm_vcpu_common *common;
 };
 
 /*
@@ -558,11 +566,11 @@ static inline int kvm_vcpu_exiting_guest_mode(struct kvm_vcpu *vcpu)
 {
 	/*
 	 * The memory barrier ensures a previous write to vcpu->requests cannot
-	 * be reordered with the read of vcpu->mode.  It pairs with the general
-	 * memory barrier following the write of vcpu->mode in VCPU RUN.
+	 * be reordered with the read of vcpu->common->mode.  It pairs with the general
+	 * memory barrier following the write of vcpu->common->mode in VCPU RUN.
 	 */
 	smp_mb__before_atomic();
-	return cmpxchg(&vcpu->mode, IN_GUEST_MODE, EXITING_GUEST_MODE);
+	return cmpxchg(&vcpu->common->mode, IN_GUEST_MODE, EXITING_GUEST_MODE);
 }
 
 /*
@@ -938,19 +946,19 @@ static inline void kvm_vm_bugged(struct kvm *kvm)
 static inline void kvm_vcpu_srcu_read_lock(struct kvm_vcpu *vcpu)
 {
 #ifdef CONFIG_PROVE_RCU
-	WARN_ONCE(vcpu->srcu_depth++,
-		  "KVM: Illegal vCPU srcu_idx LOCK, depth=%d", vcpu->srcu_depth - 1);
+	WARN_ONCE(vcpu->common->srcu_depth++,
+		  "KVM: Illegal vCPU srcu_idx LOCK, depth=%d", vcpu->common->srcu_depth - 1);
 #endif
-	vcpu->____srcu_idx = srcu_read_lock(&vcpu->kvm->srcu);
+	vcpu->common->____srcu_idx = srcu_read_lock(&vcpu->kvm->srcu);
 }
 
 static inline void kvm_vcpu_srcu_read_unlock(struct kvm_vcpu *vcpu)
 {
-	srcu_read_unlock(&vcpu->kvm->srcu, vcpu->____srcu_idx);
+	srcu_read_unlock(&vcpu->kvm->srcu, vcpu->common->____srcu_idx);
 
 #ifdef CONFIG_PROVE_RCU
-	WARN_ONCE(--vcpu->srcu_depth,
-		  "KVM: Illegal vCPU srcu_idx UNLOCK, depth=%d", vcpu->srcu_depth);
+	WARN_ONCE(--vcpu->common->srcu_depth,
+		  "KVM: Illegal vCPU srcu_idx UNLOCK, depth=%d", vcpu->common->srcu_depth);
 #endif
 }
 
@@ -1626,7 +1634,7 @@ static inline struct rcuwait *kvm_arch_vcpu_get_wait(struct kvm_vcpu *vcpu)
 #ifdef __KVM_HAVE_ARCH_WQP
 	return vcpu->arch.waitp;
 #else
-	return &vcpu->wait;
+	return &vcpu->common->wait;
 #endif
 }
 
@@ -2282,11 +2290,11 @@ extern struct kvm_device_ops kvm_arm_vgic_v3_ops;
 
 static inline void kvm_vcpu_set_in_spin_loop(struct kvm_vcpu *vcpu, bool val)
 {
-	vcpu->spin_loop.in_spin_loop = val;
+	vcpu->common->spin_loop.in_spin_loop = val;
 }
 static inline void kvm_vcpu_set_dy_eligible(struct kvm_vcpu *vcpu, bool val)
 {
-	vcpu->spin_loop.dy_eligible = val;
+	vcpu->common->spin_loop.dy_eligible = val;
 }
 
 #else /* !CONFIG_HAVE_KVM_CPU_RELAX_INTERCEPT */
@@ -2327,7 +2335,7 @@ bool kvm_arch_irqfd_route_changed(struct kvm_kernel_irq_routing_entry *,
 /* If we wakeup during the poll time, was it a sucessful poll? */
 static inline bool vcpu_valid_wakeup(struct kvm_vcpu *vcpu)
 {
-	return vcpu->valid_wakeup;
+	return vcpu->common->valid_wakeup;
 }
 
 #else
@@ -2379,8 +2387,8 @@ int kvm_vm_create_worker_thread(struct kvm *kvm, kvm_vm_thread_fn_t thread_fn,
 #ifdef CONFIG_KVM_XFER_TO_GUEST_WORK
 static inline void kvm_handle_signal_exit(struct kvm_vcpu *vcpu)
 {
-	vcpu->run->exit_reason = KVM_EXIT_INTR;
-	vcpu->stat.signal_exits++;
+	vcpu->common->run->exit_reason = KVM_EXIT_INTR;
+	vcpu->common->stat.signal_exits++;
 }
 #endif /* CONFIG_KVM_XFER_TO_GUEST_WORK */
 
@@ -2412,14 +2420,14 @@ static inline void kvm_prepare_memory_fault_exit(struct kvm_vcpu *vcpu,
 						 bool is_write, bool is_exec,
 						 bool is_private)
 {
-	vcpu->run->exit_reason = KVM_EXIT_MEMORY_FAULT;
-	vcpu->run->memory_fault.gpa = gpa;
-	vcpu->run->memory_fault.size = size;
+	vcpu->common->run->exit_reason = KVM_EXIT_MEMORY_FAULT;
+	vcpu->common->run->memory_fault.gpa = gpa;
+	vcpu->common->run->memory_fault.size = size;
 
 	/* RWX flags are not (yet) defined or communicated to userspace. */
-	vcpu->run->memory_fault.flags = 0;
+	vcpu->common->run->memory_fault.flags = 0;
 	if (is_private)
-		vcpu->run->memory_fault.flags |= KVM_MEMORY_EXIT_FLAG_PRIVATE;
+		vcpu->common->run->memory_fault.flags |= KVM_MEMORY_EXIT_FLAG_PRIVATE;
 }
 
 #ifdef CONFIG_KVM_GENERIC_MEMORY_ATTRIBUTES

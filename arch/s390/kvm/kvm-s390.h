@@ -135,7 +135,7 @@ static inline u64 kvm_s390_get_base_disp_s(struct kvm_vcpu *vcpu, u8 *ar)
 	if (ar)
 		*ar = base2;
 
-	return (base2 ? vcpu->run->s.regs.gprs[base2] : 0) + disp2;
+	return (base2 ? vcpu->common->run->s.regs.gprs[base2] : 0) + disp2;
 }
 
 static inline u64 kvm_s390_get_base_disp_siy(struct kvm_vcpu *vcpu, u8 *ar)
@@ -150,7 +150,7 @@ static inline u64 kvm_s390_get_base_disp_siy(struct kvm_vcpu *vcpu, u8 *ar)
 	if (ar)
 		*ar = base1;
 
-	return (base1 ? vcpu->run->s.regs.gprs[base1] : 0) + disp1;
+	return (base1 ? vcpu->common->run->s.regs.gprs[base1] : 0) + disp1;
 }
 
 static inline void kvm_s390_get_base_disp_sse(struct kvm_vcpu *vcpu,
@@ -162,8 +162,8 @@ static inline void kvm_s390_get_base_disp_sse(struct kvm_vcpu *vcpu,
 	u32 base2 = (vcpu->arch.sie_block->ipb & 0xf000) >> 12;
 	u32 disp2 = vcpu->arch.sie_block->ipb & 0x0fff;
 
-	*address1 = (base1 ? vcpu->run->s.regs.gprs[base1] : 0) + disp1;
-	*address2 = (base2 ? vcpu->run->s.regs.gprs[base2] : 0) + disp2;
+	*address1 = (base1 ? vcpu->common->run->s.regs.gprs[base1] : 0) + disp1;
+	*address2 = (base2 ? vcpu->common->run->s.regs.gprs[base2] : 0) + disp2;
 
 	if (ar_b1)
 		*ar_b1 = base1;
@@ -191,7 +191,7 @@ static inline u64 kvm_s390_get_base_disp_rsy(struct kvm_vcpu *vcpu, u8 *ar)
 	if (ar)
 		*ar = base2;
 
-	return (base2 ? vcpu->run->s.regs.gprs[base2] : 0) + (long)(int)disp2;
+	return (base2 ? vcpu->common->run->s.regs.gprs[base2] : 0) + (long)(int)disp2;
 }
 
 static inline u64 kvm_s390_get_base_disp_rs(struct kvm_vcpu *vcpu, u8 *ar)
@@ -202,7 +202,7 @@ static inline u64 kvm_s390_get_base_disp_rs(struct kvm_vcpu *vcpu, u8 *ar)
 	if (ar)
 		*ar = base2;
 
-	return (base2 ? vcpu->run->s.regs.gprs[base2] : 0) + disp2;
+	return (base2 ? vcpu->common->run->s.regs.gprs[base2] : 0) + disp2;
 }
 
 /* Set the condition code in the guest program status word */

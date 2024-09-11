@@ -38,7 +38,7 @@ static int handle_hvc(struct kvm_vcpu *vcpu)
 {
 	trace_kvm_hvc_arm64(*vcpu_pc(vcpu), vcpu_get_reg(vcpu, 0),
 			    kvm_vcpu_hvc_get_imm(vcpu));
-	vcpu->stat.hvc_exit_stat++;
+	vcpu->common->stat.hvc_exit_stat++;
 
 	/* Forward hvc instructions to the virtual EL2 if the guest has EL2. */
 	if (vcpu_has_nv(vcpu)) {
@@ -132,10 +132,10 @@ static int kvm_handle_wfx(struct kvm_vcpu *vcpu)
 
 	if (esr & ESR_ELx_WFx_ISS_WFE) {
 		trace_kvm_wfx_arm64(*vcpu_pc(vcpu), true);
-		vcpu->stat.wfe_exit_stat++;
+		vcpu->common->stat.wfe_exit_stat++;
 	} else {
 		trace_kvm_wfx_arm64(*vcpu_pc(vcpu), false);
-		vcpu->stat.wfi_exit_stat++;
+		vcpu->common->stat.wfi_exit_stat++;
 	}
 
 	if (esr & ESR_ELx_WFx_ISS_WFxT) {
@@ -176,11 +176,11 @@ out:
  * guest and host are using the same debug facilities it will be up to
  * userspace to re-inject the correct exception for guest delivery.
  *
- * @return: 0 (while setting vcpu->run->exit_reason)
+ * @return: 0 (while setting vcpu->common->run->exit_reason)
  */
 static int kvm_handle_guest_debug(struct kvm_vcpu *vcpu)
 {
-	struct kvm_run *run = vcpu->run;
+	struct kvm_run *run = vcpu->common->run;
 	u64 esr = kvm_vcpu_get_esr(vcpu);
 
 	run->exit_reason = KVM_EXIT_DEBUG;
@@ -360,7 +360,7 @@ static int handle_trap_exceptions(struct kvm_vcpu *vcpu)
  */
 int handle_exit(struct kvm_vcpu *vcpu, int exception_index)
 {
-	struct kvm_run *run = vcpu->run;
+	struct kvm_run *run = vcpu->common->run;
 
 	if (ARM_SERROR_PENDING(exception_index)) {
 		/*

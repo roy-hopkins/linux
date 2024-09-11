@@ -18,7 +18,7 @@ static void unlock_vcpus(struct kvm *kvm, int vcpu_lock_idx)
 
 	for (; vcpu_lock_idx >= 0; vcpu_lock_idx--) {
 		tmp_vcpu = kvm_get_vcpu(kvm, vcpu_lock_idx);
-		mutex_unlock(&tmp_vcpu->mutex);
+		mutex_unlock(&tmp_vcpu->common->mutex);
 	}
 }
 
@@ -33,7 +33,7 @@ static bool lock_all_vcpus(struct kvm *kvm)
 	unsigned long c;
 
 	kvm_for_each_vcpu(c, tmp_vcpu, kvm) {
-		if (!mutex_trylock(&tmp_vcpu->mutex)) {
+		if (!mutex_trylock(&tmp_vcpu->common->mutex)) {
 			unlock_vcpus(kvm, c - 1);
 			return false;
 		}
@@ -207,12 +207,12 @@ static int aia_imsic_addr(struct kvm *kvm, u64 *addr,
 			return -EINVAL;
 	}
 
-	mutex_lock(&vcpu->mutex);
+	mutex_lock(&vcpu->common->mutex);
 	if (write)
 		vcpu_aia->imsic_addr = *addr;
 	else
 		*addr = vcpu_aia->imsic_addr;
-	mutex_unlock(&vcpu->mutex);
+	mutex_unlock(&vcpu->common->mutex);
 
 	return 0;
 }

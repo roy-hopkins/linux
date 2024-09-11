@@ -44,7 +44,7 @@ void ucall_arch_do_ucall(vm_vaddr_t uc)
 
 void *ucall_arch_get_ucall(struct kvm_vcpu *vcpu)
 {
-	struct kvm_run *run = vcpu->run;
+	struct kvm_run *run = vcpu->common->run;
 
 	if (run->exit_reason == KVM_EXIT_IO && run->io.port == UCALL_PIO_PORT) {
 		struct kvm_regs regs;

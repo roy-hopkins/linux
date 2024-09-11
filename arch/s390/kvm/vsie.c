@@ -1028,7 +1028,7 @@ static u64 vsie_get_register(struct kvm_vcpu *vcpu, struct vsie_page *vsie_page,
 	case 14:
 		return vsie_page->scb_s.gg14;
 	default:
-		return vcpu->run->s.regs.gprs[reg];
+		return vcpu->common->run->s.regs.gprs[reg];
 	}
 }
 
@@ -1150,7 +1150,7 @@ static int do_vsie_run(struct kvm_vcpu *vcpu, struct vsie_page *vsie_page)
 	vcpu->arch.sie_block->prog0c |= PROG_IN_SIE;
 	barrier();
 	if (!kvm_s390_vcpu_sie_inhibited(vcpu))
-		rc = sie64a(scb_s, vcpu->run->s.regs.gprs, gmap_get_enabled()->asce);
+		rc = sie64a(scb_s, vcpu->common->run->s.regs.gprs, gmap_get_enabled()->asce);
 	barrier();
 	vcpu->arch.sie_block->prog0c &= ~PROG_IN_SIE;
 
@@ -1426,7 +1426,7 @@ int kvm_s390_handle_vsie(struct kvm_vcpu *vcpu)
 	unsigned long scb_addr;
 	int rc;
 
-	vcpu->stat.instruction_sie++;
+	vcpu->common->stat.instruction_sie++;
 	if (!test_kvm_cpu_feat(vcpu->kvm, KVM_S390_VM_CPU_FEAT_SIEF2))
 		return -EOPNOTSUPP;
 	if (vcpu->arch.sie_block->gpsw.mask & PSW_MASK_PSTATE)

@@ -927,16 +927,16 @@ int kvm_arch_vcpu_ioctl_set_guest_debug(struct kvm_vcpu *vcpu,
 	}
 
 	if (dbg->control & KVM_GUESTDBG_ENABLE) {
-		vcpu->guest_debug = dbg->control;
+		vcpu->common->guest_debug = dbg->control;
 
 		/* Hardware assisted Break and Watch points */
-		if (vcpu->guest_debug & KVM_GUESTDBG_USE_HW) {
+		if (vcpu->common->guest_debug & KVM_GUESTDBG_USE_HW) {
 			vcpu->arch.external_debug_state = dbg->arch;
 		}
 
 	} else {
 		/* If not enabled clear all flags */
-		vcpu->guest_debug = 0;
+		vcpu->common->guest_debug = 0;
 		vcpu_clear_flag(vcpu, DBG_SS_ACTIVE_PENDING);
 	}
 

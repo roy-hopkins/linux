@@ -205,7 +205,7 @@ static void *vcpu_worker(void *data)
 		TEST_ASSERT(ret == 0, "vcpu_run failed: %d", ret);
 		TEST_ASSERT(get_ucall(vcpu, NULL) == UCALL_SYNC,
 			    "Invalid guest sync status: exit_reason=%s",
-			    exit_reason_str(vcpu->run->exit_reason));
+			    exit_reason_str(vcpu->common->run->exit_reason));
 
 		pr_debug("Got sync event from vCPU %d\n", vcpu->id);
 		stage = READ_ONCE(*current_stage);

@@ -110,7 +110,7 @@ static void ucall_abort(const char *assert_msg, const char *expected_assert_msg)
 static void run_test(struct kvm_vcpu *vcpu, const char *expected_printf,
 		     const char *expected_assert)
 {
-	struct kvm_run *run = vcpu->run;
+	struct kvm_run *run = vcpu->common->run;
 	struct ucall uc;
 
 	while (1) {
@@ -158,7 +158,7 @@ static void test_limits(void)
 	struct ucall uc;
 
 	vm = vm_create_with_one_vcpu(&vcpu, guest_code_limits);
-	run = vcpu->run;
+	run = vcpu->common->run;
 	vcpu_run(vcpu);
 
 	TEST_ASSERT(run->exit_reason == UCALL_EXIT_REASON,

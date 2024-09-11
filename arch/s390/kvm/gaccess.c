@@ -235,8 +235,8 @@ static int ar_translation(struct kvm_vcpu *vcpu, union asce *asce, u8 ar,
 		return -EINVAL;
 
 	if (vcpu->arch.acrs_loaded)
-		save_access_regs(vcpu->run->s.regs.acrs);
-	alet.val = vcpu->run->s.regs.acrs[ar];
+		save_access_regs(vcpu->common->run->s.regs.acrs);
+	alet.val = vcpu->common->run->s.regs.acrs[ar];
 
 	if (ar == 0 || alet.val == 0) {
 		asce->val = vcpu->arch.sie_block->gcr[1];

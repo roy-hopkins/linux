@@ -306,61 +306,61 @@ static int handle_sigp_dst(struct kvm_vcpu *vcpu, u8 order_code,
 
 	switch (order_code) {
 	case SIGP_SENSE:
-		vcpu->stat.instruction_sigp_sense++;
+		vcpu->common->stat.instruction_sigp_sense++;
 		rc = __sigp_sense(vcpu, dst_vcpu, status_reg);
 		break;
 	case SIGP_EXTERNAL_CALL:
-		vcpu->stat.instruction_sigp_external_call++;
+		vcpu->common->stat.instruction_sigp_external_call++;
 		rc = __sigp_external_call(vcpu, dst_vcpu, status_reg);
 		break;
 	case SIGP_EMERGENCY_SIGNAL:
-		vcpu->stat.instruction_sigp_emergency++;
+		vcpu->common->stat.instruction_sigp_emergency++;
 		rc = __sigp_emergency(vcpu, dst_vcpu);
 		break;
 	case SIGP_STOP:
-		vcpu->stat.instruction_sigp_stop++;
+		vcpu->common->stat.instruction_sigp_stop++;
 		rc = __sigp_stop(vcpu, dst_vcpu);
 		break;
 	case SIGP_STOP_AND_STORE_STATUS:
-		vcpu->stat.instruction_sigp_stop_store_status++;
+		vcpu->common->stat.instruction_sigp_stop_store_status++;
 		rc = __sigp_stop_and_store_status(vcpu, dst_vcpu, status_reg);
 		break;
 	case SIGP_STORE_STATUS_AT_ADDRESS:
-		vcpu->stat.instruction_sigp_store_status++;
+		vcpu->common->stat.instruction_sigp_store_status++;
 		rc = __sigp_store_status_at_addr(vcpu, dst_vcpu, parameter,
 						 status_reg);
 		break;
 	case SIGP_SET_PREFIX:
-		vcpu->stat.instruction_sigp_prefix++;
+		vcpu->common->stat.instruction_sigp_prefix++;
 		rc = __sigp_set_prefix(vcpu, dst_vcpu, parameter, status_reg);
 		break;
 	case SIGP_COND_EMERGENCY_SIGNAL:
-		vcpu->stat.instruction_sigp_cond_emergency++;
+		vcpu->common->stat.instruction_sigp_cond_emergency++;
 		rc = __sigp_conditional_emergency(vcpu, dst_vcpu, parameter,
 						  status_reg);
 		break;
 	case SIGP_SENSE_RUNNING:
-		vcpu->stat.instruction_sigp_sense_running++;
+		vcpu->common->stat.instruction_sigp_sense_running++;
 		rc = __sigp_sense_running(vcpu, dst_vcpu, status_reg);
 		break;
 	case SIGP_START:
-		vcpu->stat.instruction_sigp_start++;
+		vcpu->common->stat.instruction_sigp_start++;
 		rc = __prepare_sigp_re_start(vcpu, dst_vcpu, order_code);
 		break;
 	case SIGP_RESTART:
-		vcpu->stat.instruction_sigp_restart++;
+		vcpu->common->stat.instruction_sigp_restart++;
 		rc = __prepare_sigp_re_start(vcpu, dst_vcpu, order_code);
 		break;
 	case SIGP_INITIAL_CPU_RESET:
-		vcpu->stat.instruction_sigp_init_cpu_reset++;
+		vcpu->common->stat.instruction_sigp_init_cpu_reset++;
 		rc = __prepare_sigp_cpu_reset(vcpu, dst_vcpu, order_code);
 		break;
 	case SIGP_CPU_RESET:
-		vcpu->stat.instruction_sigp_cpu_reset++;
+		vcpu->common->stat.instruction_sigp_cpu_reset++;
 		rc = __prepare_sigp_cpu_reset(vcpu, dst_vcpu, order_code);
 		break;
 	default:
-		vcpu->stat.instruction_sigp_unknown++;
+		vcpu->common->stat.instruction_sigp_unknown++;
 		rc = __prepare_sigp_unknown(vcpu, dst_vcpu);
 	}
 
@@ -387,34 +387,34 @@ static int handle_sigp_order_in_user_space(struct kvm_vcpu *vcpu, u8 order_code,
 		return 0;
 	/* update counters as we're directly dropping to user space */
 	case SIGP_STOP:
-		vcpu->stat.instruction_sigp_stop++;
+		vcpu->common->stat.instruction_sigp_stop++;
 		break;
 	case SIGP_STOP_AND_STORE_STATUS:
-		vcpu->stat.instruction_sigp_stop_store_status++;
+		vcpu->common->stat.instruction_sigp_stop_store_status++;
 		break;
 	case SIGP_STORE_STATUS_AT_ADDRESS:
-		vcpu->stat.instruction_sigp_store_status++;
+		vcpu->common->stat.instruction_sigp_store_status++;
 		break;
 	case SIGP_STORE_ADDITIONAL_STATUS:
-		vcpu->stat.instruction_sigp_store_adtl_status++;
+		vcpu->common->stat.instruction_sigp_store_adtl_status++;
 		break;
 	case SIGP_SET_PREFIX:
-		vcpu->stat.instruction_sigp_prefix++;
+		vcpu->common->stat.instruction_sigp_prefix++;
 		break;
 	case SIGP_START:
-		vcpu->stat.instruction_sigp_start++;
+		vcpu->common->stat.instruction_sigp_start++;
 		break;
 	case SIGP_RESTART:
-		vcpu->stat.instruction_sigp_restart++;
+		vcpu->common->stat.instruction_sigp_restart++;
 		break;
 	case SIGP_INITIAL_CPU_RESET:
-		vcpu->stat.instruction_sigp_init_cpu_reset++;
+		vcpu->common->stat.instruction_sigp_init_cpu_reset++;
 		break;
 	case SIGP_CPU_RESET:
-		vcpu->stat.instruction_sigp_cpu_reset++;
+		vcpu->common->stat.instruction_sigp_cpu_reset++;
 		break;
 	default:
-		vcpu->stat.instruction_sigp_unknown++;
+		vcpu->common->stat.instruction_sigp_unknown++;
 	}
 	VCPU_EVENT(vcpu, 3, "SIGP: order %u for CPU %d handled in userspace",
 		   order_code, cpu_addr);
@@ -427,7 +427,7 @@ int kvm_s390_handle_sigp(struct kvm_vcpu *vcpu)
 	int r1 = (vcpu->arch.sie_block->ipa & 0x00f0) >> 4;
 	int r3 = vcpu->arch.sie_block->ipa & 0x000f;
 	u32 parameter;
-	u16 cpu_addr = vcpu->run->s.regs.gprs[r3];
+	u16 cpu_addr = vcpu->common->run->s.regs.gprs[r3];
 	u8 order_code;
 	int rc;
 
@@ -440,21 +440,21 @@ int kvm_s390_handle_sigp(struct kvm_vcpu *vcpu)
 		return -EOPNOTSUPP;
 
 	if (r1 % 2)
-		parameter = vcpu->run->s.regs.gprs[r1];
+		parameter = vcpu->common->run->s.regs.gprs[r1];
 	else
-		parameter = vcpu->run->s.regs.gprs[r1 + 1];
+		parameter = vcpu->common->run->s.regs.gprs[r1 + 1];
 
 	trace_kvm_s390_handle_sigp(vcpu, order_code, cpu_addr, parameter);
 	switch (order_code) {
 	case SIGP_SET_ARCHITECTURE:
-		vcpu->stat.instruction_sigp_arch++;
+		vcpu->common->stat.instruction_sigp_arch++;
 		rc = __sigp_set_arch(vcpu, parameter,
-				     &vcpu->run->s.regs.gprs[r1]);
+				     &vcpu->common->run->s.regs.gprs[r1]);
 		break;
 	default:
 		rc = handle_sigp_dst(vcpu, order_code, cpu_addr,
 				     parameter,
-				     &vcpu->run->s.regs.gprs[r1]);
+				     &vcpu->common->run->s.regs.gprs[r1]);
 	}
 
 	if (rc < 0)
@@ -476,7 +476,7 @@ int kvm_s390_handle_sigp(struct kvm_vcpu *vcpu)
 int kvm_s390_handle_sigp_pei(struct kvm_vcpu *vcpu)
 {
 	int r3 = vcpu->arch.sie_block->ipa & 0x000f;
-	u16 cpu_addr = vcpu->run->s.regs.gprs[r3];
+	u16 cpu_addr = vcpu->common->run->s.regs.gprs[r3];
 	struct kvm_vcpu *dest_vcpu;
 	u8 order_code = kvm_s390_get_base_disp_rs(vcpu, NULL);
 

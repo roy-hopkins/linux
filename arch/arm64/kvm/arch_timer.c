@@ -431,7 +431,7 @@ void kvm_timer_update_run(struct kvm_vcpu *vcpu)
 {
 	struct arch_timer_context *vtimer = vcpu_vtimer(vcpu);
 	struct arch_timer_context *ptimer = vcpu_ptimer(vcpu);
-	struct kvm_sync_regs *regs = &vcpu->run->s.regs;
+	struct kvm_sync_regs *regs = &vcpu->common->run->s.regs;
 
 	/* Populate the device bitmap with the timer states */
 	regs->device_irq_level &= ~(KVM_ARM_DEV_EL1_VTIMER |
@@ -861,7 +861,7 @@ bool kvm_timer_should_notify_user(struct kvm_vcpu *vcpu)
 {
 	struct arch_timer_context *vtimer = vcpu_vtimer(vcpu);
 	struct arch_timer_context *ptimer = vcpu_ptimer(vcpu);
-	struct kvm_sync_regs *sregs = &vcpu->run->s.regs;
+	struct kvm_sync_regs *sregs = &vcpu->common->run->s.regs;
 	bool vlevel, plevel;
 
 	if (likely(irqchip_in_kernel(vcpu->kvm)))

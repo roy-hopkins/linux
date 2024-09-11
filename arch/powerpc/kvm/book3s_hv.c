@@ -238,7 +238,7 @@ static void kvmppc_fast_vcpu_kick_hv(struct kvm_vcpu *vcpu)
 
 	waitp = kvm_arch_vcpu_get_wait(vcpu);
 	if (rcuwait_wake_up(waitp))
-		++vcpu->stat.generic.halt_wakeup;
+		++vcpu->common->stat.generic.halt_wakeup;
 
 	cpu = READ_ONCE(vcpu->arch.thread_cpu);
 	if (cpu >= 0 && kvmppc_ipi_thread(cpu))
@@ -1482,8 +1482,8 @@ static int kvmppc_emulate_debug_inst(struct kvm_vcpu *vcpu)
 	}
 
 	if (ppc_inst_val(last_inst) == KVMPPC_INST_SW_BREAKPOINT) {
-		vcpu->run->exit_reason = KVM_EXIT_DEBUG;
-		vcpu->run->debug.arch.address = kvmppc_get_pc(vcpu);
+		vcpu->common->run->exit_reason = KVM_EXIT_DEBUG;
+		vcpu->common->run->debug.arch.address = kvmppc_get_pc(vcpu);
 		return RESUME_HOST;
 	} else {
 		kvmppc_core_queue_program(vcpu, SRR1_PROGILL |
@@ -1627,10 +1627,10 @@ static int kvmppc_tm_unavailable(struct kvm_vcpu *vcpu)
 static int kvmppc_handle_exit_hv(struct kvm_vcpu *vcpu,
 				 struct task_struct *tsk)
 {
-	struct kvm_run *run = vcpu->run;
+	struct kvm_run *run = vcpu->common->run;
 	int r = RESUME_HOST;
 
-	vcpu->stat.sum_exits++;
+	vcpu->common->stat.sum_exits++;
 
 	/*
 	 * This can happen if an interrupt occurs in the last stages
@@ -1659,13 +1659,13 @@ static int kvmppc_handle_exit_hv(struct kvm_vcpu *vcpu,
 		vcpu->arch.trap = BOOK3S_INTERRUPT_HV_DECREMENTER;
 		fallthrough;
 	case BOOK3S_INTERRUPT_HV_DECREMENTER:
-		vcpu->stat.dec_exits++;
+		vcpu->common->stat.dec_exits++;
 		r = RESUME_GUEST;
 		break;
 	case BOOK3S_INTERRUPT_EXTERNAL:
 	case BOOK3S_INTERRUPT_H_DOORBELL:
 	case BOOK3S_INTERRUPT_H_VIRT:
-		vcpu->stat.ext_intr_exits++;
+		vcpu->common->stat.ext_intr_exits++;
 		r = RESUME_GUEST;
 		break;
 	/* SR/HMI/PMI are HV interrupts that host has handled. Resume guest.*/
@@ -1887,7 +1887,7 @@ static int kvmppc_handle_exit_hv(struct kvm_vcpu *vcpu,
 			vcpu->arch.last_inst = kvmppc_need_byteswap(vcpu) ?
 				swab32(vcpu->arch.emul_inst) :
 				vcpu->arch.emul_inst;
-		if (vcpu->guest_debug & KVM_GUESTDBG_USE_SW_BP) {
+		if (vcpu->common->guest_debug & KVM_GUESTDBG_USE_SW_BP) {
 			r = kvmppc_emulate_debug_inst(vcpu);
 		} else {
 			kvmppc_core_queue_program(vcpu, SRR1_PROGILL |
@@ -1960,7 +1960,7 @@ static int kvmppc_handle_nested_exit(struct kvm_vcpu *vcpu)
 	int r;
 	int srcu_idx;
 
-	vcpu->stat.sum_exits++;
+	vcpu->common->stat.sum_exits++;
 
 	/*
 	 * This can happen if an interrupt occurs in the last stages
@@ -1981,22 +1981,22 @@ static int kvmppc_handle_nested_exit(struct kvm_vcpu *vcpu)
 	switch (vcpu->arch.trap) {
 	/* We're good on these - the host merely wanted to get our attention */
 	case BOOK3S_INTERRUPT_HV_DECREMENTER:
-		vcpu->stat.dec_exits++;
+		vcpu->common->stat.dec_exits++;
 		r = RESUME_GUEST;
 		break;
 	case BOOK3S_INTERRUPT_EXTERNAL:
-		vcpu->stat.ext_intr_exits++;
+		vcpu->common->stat.ext_intr_exits++;
 		r = RESUME_HOST;
 		break;
 	case BOOK3S_INTERRUPT_H_DOORBELL:
 	case BOOK3S_INTERRUPT_H_VIRT:
-		vcpu->stat.ext_intr_exits++;
+		vcpu->common->stat.ext_intr_exits++;
 		r = RESUME_GUEST;
 		break;
 	/* These need to go to the nested HV */
 	case BOOK3S_INTERRUPT_NESTED_HV_DECREMENTER:
 		vcpu->arch.trap = BOOK3S_INTERRUPT_HV_DECREMENTER;
-		vcpu->stat.dec_exits++;
+		vcpu->common->stat.dec_exits++;
 		r = RESUME_HOST;
 		break;
 	/* SR/HMI/PMI are HV interrupts that host has handled. Resume guest.*/
@@ -4679,7 +4679,7 @@ static int kvmhv_setup_mmu(struct kvm_vcpu *vcpu)
 
 static int kvmppc_run_vcpu(struct kvm_vcpu *vcpu)
 {
-	struct kvm_run *run = vcpu->run;
+	struct kvm_run *run = vcpu->common->run;
 	int n_ceded, i, r;
 	struct kvmppc_vcore *vc;
 	struct kvm_vcpu *v;
@@ -4790,7 +4790,7 @@ static int kvmppc_run_vcpu(struct kvm_vcpu *vcpu)
 
 	if (vcpu->arch.state == KVMPPC_VCPU_RUNNABLE) {
 		kvmppc_remove_runnable(vc, vcpu, mftb());
-		vcpu->stat.signal_exits++;
+		vcpu->common->stat.signal_exits++;
 		run->exit_reason = KVM_EXIT_INTR;
 		vcpu->arch.ret = -EINTR;
 	}
@@ -4811,7 +4811,7 @@ int kvmhv_run_single_vcpu(struct kvm_vcpu *vcpu, u64 time_limit,
 			  unsigned long lpcr)
 {
 	struct rcuwait *wait = kvm_arch_vcpu_get_wait(vcpu);
-	struct kvm_run *run = vcpu->run;
+	struct kvm_run *run = vcpu->common->run;
 	int trap, r, pcpu;
 	int srcu_idx;
 	struct kvmppc_vcore *vc;
@@ -4978,7 +4978,7 @@ int kvmhv_run_single_vcpu(struct kvm_vcpu *vcpu, u64 time_limit,
 		for (;;) {
 			set_current_state(TASK_INTERRUPTIBLE);
 			if (signal_pending(current)) {
-				vcpu->stat.signal_exits++;
+				vcpu->common->stat.signal_exits++;
 				run->exit_reason = KVM_EXIT_INTR;
 				vcpu->arch.ret = -EINTR;
 				break;
@@ -5001,7 +5001,7 @@ int kvmhv_run_single_vcpu(struct kvm_vcpu *vcpu, u64 time_limit,
 	return vcpu->arch.ret;
 
  sigpend:
-	vcpu->stat.signal_exits++;
+	vcpu->common->stat.signal_exits++;
 	run->exit_reason = KVM_EXIT_INTR;
 	vcpu->arch.ret = -EINTR;
  out:
@@ -5015,7 +5015,7 @@ int kvmhv_run_single_vcpu(struct kvm_vcpu *vcpu, u64 time_limit,
 
 static int kvmppc_vcpu_run_hv(struct kvm_vcpu *vcpu)
 {
-	struct kvm_run *run = vcpu->run;
+	struct kvm_run *run = vcpu->common->run;
 	int r;
 	int srcu_idx;
 	struct kvm *kvm;

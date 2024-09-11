@@ -31,7 +31,7 @@ static int kvm_emu_cpucfg(struct kvm_vcpu *vcpu, larch_inst inst)
 
 	rd = inst.reg2_format.rd;
 	rj = inst.reg2_format.rj;
-	++vcpu->stat.cpucfg_exits;
+	++vcpu->common->stat.cpucfg_exits;
 	index = vcpu->arch.gprs[rj];
 
 	/*
@@ -241,7 +241,7 @@ int kvm_complete_iocsr_read(struct kvm_vcpu *vcpu, struct kvm_run *run)
 
 int kvm_emu_idle(struct kvm_vcpu *vcpu)
 {
-	++vcpu->stat.idle_exits;
+	++vcpu->common->stat.idle_exits;
 	trace_kvm_exit_idle(vcpu, KVM_TRACE_EXIT_IDLE);
 
 	if (!kvm_arch_vcpu_runnable(vcpu))
@@ -255,7 +255,7 @@ static int kvm_trap_handle_gspr(struct kvm_vcpu *vcpu)
 	unsigned long curr_pc;
 	larch_inst inst;
 	enum emulation_result er = EMULATE_DONE;
-	struct kvm_run *run = vcpu->run;
+	struct kvm_run *run = vcpu->common->run;
 
 	/* Fetch the instruction */
 	inst.word = vcpu->arch.badi;
@@ -328,10 +328,10 @@ static int kvm_handle_gspr(struct kvm_vcpu *vcpu)
 	if (er == EMULATE_DONE) {
 		ret = RESUME_GUEST;
 	} else if (er == EMULATE_DO_MMIO) {
-		vcpu->run->exit_reason = KVM_EXIT_MMIO;
+		vcpu->common->run->exit_reason = KVM_EXIT_MMIO;
 		ret = RESUME_HOST;
 	} else if (er == EMULATE_DO_IOCSR) {
-		vcpu->run->exit_reason = KVM_EXIT_LOONGARCH_IOCSR;
+		vcpu->common->run->exit_reason = KVM_EXIT_LOONGARCH_IOCSR;
 		ret = RESUME_HOST;
 	} else {
 		kvm_queue_exception(vcpu, EXCCODE_INE, 0);
@@ -345,10 +345,10 @@ int kvm_emu_mmio_read(struct kvm_vcpu *vcpu, larch_inst inst)
 {
 	int ret;
 	unsigned int op8, opcode, rd;
-	struct kvm_run *run = vcpu->run;
+	struct kvm_run *run = vcpu->common->run;
 
 	run->mmio.phys_addr = vcpu->arch.badv;
-	vcpu->mmio_needed = 2;	/* signed */
+	vcpu->common->mmio_needed = 2;	/* signed */
 	op8 = (inst.word >> 24) & 0xff;
 	ret = EMULATE_DO_MMIO;
 
@@ -377,21 +377,21 @@ int kvm_emu_mmio_read(struct kvm_vcpu *vcpu, larch_inst inst)
 			run->mmio.len = 1;
 			break;
 		case ldbu_op:
-			vcpu->mmio_needed = 1;	/* unsigned */
+			vcpu->common->mmio_needed = 1;	/* unsigned */
 			run->mmio.len = 1;
 			break;
 		case ldh_op:
 			run->mmio.len = 2;
 			break;
 		case ldhu_op:
-			vcpu->mmio_needed = 1;	/* unsigned */
+			vcpu->common->mmio_needed = 1;	/* unsigned */
 			run->mmio.len = 2;
 			break;
 		case ldw_op:
 			run->mmio.len = 4;
 			break;
 		case ldwu_op:
-			vcpu->mmio_needed = 1;	/* unsigned */
+			vcpu->common->mmio_needed = 1;	/* unsigned */
 			run->mmio.len = 4;
 			break;
 		case ldd_op:
@@ -412,21 +412,21 @@ int kvm_emu_mmio_read(struct kvm_vcpu *vcpu, larch_inst inst)
 			break;
 		case ldxbu_op:
 			run->mmio.len = 1;
-			vcpu->mmio_needed = 1;	/* unsigned */
+			vcpu->common->mmio_needed = 1;	/* unsigned */
 			break;
 		case ldxh_op:
 			run->mmio.len = 2;
 			break;
 		case ldxhu_op:
 			run->mmio.len = 2;
-			vcpu->mmio_needed = 1;	/* unsigned */
+			vcpu->common->mmio_needed = 1;	/* unsigned */
 			break;
 		case ldxw_op:
 			run->mmio.len = 4;
 			break;
 		case ldxwu_op:
 			run->mmio.len = 4;
-			vcpu->mmio_needed = 1;	/* unsigned */
+			vcpu->common->mmio_needed = 1;	/* unsigned */
 			break;
 		case ldxd_op:
 			run->mmio.len = 8;
@@ -444,14 +444,14 @@ int kvm_emu_mmio_read(struct kvm_vcpu *vcpu, larch_inst inst)
 		/* Set for kvm_complete_mmio_read() use */
 		vcpu->arch.io_gpr = rd;
 		run->mmio.is_write = 0;
-		vcpu->mmio_is_write = 0;
+		vcpu->common->mmio_is_write = 0;
 		trace_kvm_mmio(KVM_TRACE_MMIO_READ_UNSATISFIED, run->mmio.len,
 				run->mmio.phys_addr, NULL);
 	} else {
 		kvm_err("Read not supported Inst=0x%08x @%lx BadVaddr:%#lx\n",
 			inst.word, vcpu->arch.pc, vcpu->arch.badv);
 		kvm_arch_vcpu_dump_regs(vcpu);
-		vcpu->mmio_needed = 0;
+		vcpu->common->mmio_needed = 0;
 	}
 
 	return ret;
@@ -466,19 +466,19 @@ int kvm_complete_mmio_read(struct kvm_vcpu *vcpu, struct kvm_run *run)
 	update_pc(&vcpu->arch);
 	switch (run->mmio.len) {
 	case 1:
-		if (vcpu->mmio_needed == 2)
+		if (vcpu->common->mmio_needed == 2)
 			*gpr = *(s8 *)run->mmio.data;
 		else
 			*gpr = *(u8 *)run->mmio.data;
 		break;
 	case 2:
-		if (vcpu->mmio_needed == 2)
+		if (vcpu->common->mmio_needed == 2)
 			*gpr = *(s16 *)run->mmio.data;
 		else
 			*gpr = *(u16 *)run->mmio.data;
 		break;
 	case 4:
-		if (vcpu->mmio_needed == 2)
+		if (vcpu->common->mmio_needed == 2)
 			*gpr = *(s32 *)run->mmio.data;
 		else
 			*gpr = *(u32 *)run->mmio.data;
@@ -504,7 +504,7 @@ int kvm_emu_mmio_write(struct kvm_vcpu *vcpu, larch_inst inst)
 	int ret;
 	unsigned int rd, op8, opcode;
 	unsigned long curr_pc, rd_val = 0;
-	struct kvm_run *run = vcpu->run;
+	struct kvm_run *run = vcpu->common->run;
 	void *data = run->mmio.data;
 
 	/*
@@ -595,8 +595,8 @@ int kvm_emu_mmio_write(struct kvm_vcpu *vcpu, larch_inst inst)
 
 	if (ret == EMULATE_DO_MMIO) {
 		run->mmio.is_write = 1;
-		vcpu->mmio_needed = 1;
-		vcpu->mmio_is_write = 1;
+		vcpu->common->mmio_needed = 1;
+		vcpu->common->mmio_is_write = 1;
 		trace_kvm_mmio(KVM_TRACE_MMIO_WRITE, run->mmio.len,
 				run->mmio.phys_addr, data);
 	} else {
@@ -615,7 +615,7 @@ static int kvm_handle_rdwr_fault(struct kvm_vcpu *vcpu, bool write)
 	int ret;
 	larch_inst inst;
 	enum emulation_result er = EMULATE_DONE;
-	struct kvm_run *run = vcpu->run;
+	struct kvm_run *run = vcpu->common->run;
 	unsigned long badv = vcpu->arch.badv;
 
 	ret = kvm_handle_mm_fault(vcpu, badv, write);
@@ -667,7 +667,7 @@ static int kvm_handle_write_fault(struct kvm_vcpu *vcpu)
  */
 static int kvm_handle_fpu_disabled(struct kvm_vcpu *vcpu)
 {
-	struct kvm_run *run = vcpu->run;
+	struct kvm_run *run = vcpu->common->run;
 
 	if (!kvm_guest_has_fpu(&vcpu->arch)) {
 		kvm_queue_exception(vcpu, EXCCODE_INE, 0);
@@ -812,13 +812,13 @@ static int kvm_handle_hypercall(struct kvm_vcpu *vcpu)
 
 	switch (code) {
 	case KVM_HCALL_SERVICE:
-		vcpu->stat.hypercall_exits++;
+		vcpu->common->stat.hypercall_exits++;
 		kvm_handle_service(vcpu);
 		break;
 	case KVM_HCALL_SWDBG:
 		/* KVM_HCALL_SWDBG only in effective when SW_BP is enabled */
-		if (vcpu->guest_debug & KVM_GUESTDBG_SW_BP_MASK) {
-			vcpu->run->exit_reason = KVM_EXIT_DEBUG;
+		if (vcpu->common->guest_debug & KVM_GUESTDBG_SW_BP_MASK) {
+			vcpu->common->run->exit_reason = KVM_EXIT_DEBUG;
 			ret = RESUME_HOST;
 			break;
 		}

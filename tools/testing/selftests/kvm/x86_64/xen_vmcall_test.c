@@ -102,7 +102,7 @@ int main(int argc, char *argv[])
 	virt_map(vm, HCALL_REGION_GPA, HCALL_REGION_GPA, 2);
 
 	for (;;) {
-		volatile struct kvm_run *run = vcpu->run;
+		volatile struct kvm_run *run = vcpu->common->run;
 		struct ucall uc;
 
 		vcpu_run(vcpu);

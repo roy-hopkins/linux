@@ -22,9 +22,9 @@ static int diag_release_pages(struct kvm_vcpu *vcpu)
 	unsigned long start, end;
 	unsigned long prefix  = kvm_s390_get_prefix(vcpu);
 
-	start = vcpu->run->s.regs.gprs[(vcpu->arch.sie_block->ipa & 0xf0) >> 4];
-	end = vcpu->run->s.regs.gprs[vcpu->arch.sie_block->ipa & 0xf] + PAGE_SIZE;
-	vcpu->stat.instruction_diagnose_10++;
+	start = vcpu->common->run->s.regs.gprs[(vcpu->arch.sie_block->ipa & 0xf0) >> 4];
+	end = vcpu->common->run->s.regs.gprs[vcpu->arch.sie_block->ipa & 0xf] + PAGE_SIZE;
+	vcpu->common->stat.instruction_diagnose_10++;
 
 	if (start & ~PAGE_MASK || end & ~PAGE_MASK || start >= end
 	    || start < 2 * PAGE_SIZE)
@@ -73,11 +73,11 @@ static int __diag_page_ref_service(struct kvm_vcpu *vcpu)
 	u16 ry = (vcpu->arch.sie_block->ipa & 0x0f);
 
 	VCPU_EVENT(vcpu, 3, "diag page reference parameter block at 0x%llx",
-		   vcpu->run->s.regs.gprs[rx]);
-	vcpu->stat.instruction_diagnose_258++;
-	if (vcpu->run->s.regs.gprs[rx] & 7)
+		   vcpu->common->run->s.regs.gprs[rx]);
+	vcpu->common->stat.instruction_diagnose_258++;
+	if (vcpu->common->run->s.regs.gprs[rx] & 7)
 		return kvm_s390_inject_program_int(vcpu, PGM_SPECIFICATION);
-	rc = read_guest(vcpu, vcpu->run->s.regs.gprs[rx], rx, &parm, sizeof(parm));
+	rc = read_guest(vcpu, vcpu->common->run->s.regs.gprs[rx], rx, &parm, sizeof(parm));
 	if (rc)
 		return kvm_s390_inject_prog_cond(vcpu, rc);
 	if (parm.parm_version != 2 || parm.parm_len < 5 || parm.code != 0x258)
@@ -94,7 +94,7 @@ static int __diag_page_ref_service(struct kvm_vcpu *vcpu)
 			 * the token must not be changed.  We have to return
 			 * decimal 8 instead, as mandated in SC24-6084.
 			 */
-			vcpu->run->s.regs.gprs[ry] = 8;
+			vcpu->common->run->s.regs.gprs[ry] = 8;
 			return 0;
 		}
 
@@ -108,7 +108,7 @@ static int __diag_page_ref_service(struct kvm_vcpu *vcpu)
 		vcpu->arch.pfault_token = parm.token_addr;
 		vcpu->arch.pfault_select = parm.select_mask;
 		vcpu->arch.pfault_compare = parm.compare_mask;
-		vcpu->run->s.regs.gprs[ry] = 0;
+		vcpu->common->run->s.regs.gprs[ry] = 0;
 		rc = 0;
 		break;
 	case 1: /*
@@ -122,13 +122,13 @@ static int __diag_page_ref_service(struct kvm_vcpu *vcpu)
 		    parm.compare_mask || parm.zarch)
 			return kvm_s390_inject_program_int(vcpu, PGM_SPECIFICATION);
 
-		vcpu->run->s.regs.gprs[ry] = 0;
+		vcpu->common->run->s.regs.gprs[ry] = 0;
 		/*
 		 * If the pfault handling was not established or is already
 		 * canceled SC24-6084 requests to return decimal 4.
 		 */
 		if (vcpu->arch.pfault_token == KVM_S390_PFAULT_TOKEN_INVALID)
-			vcpu->run->s.regs.gprs[ry] = 4;
+			vcpu->common->run->s.regs.gprs[ry] = 4;
 		else
 			vcpu->arch.pfault_token = KVM_S390_PFAULT_TOKEN_INVALID;
 
@@ -145,7 +145,7 @@ static int __diag_page_ref_service(struct kvm_vcpu *vcpu)
 static int __diag_time_slice_end(struct kvm_vcpu *vcpu)
 {
 	VCPU_EVENT(vcpu, 5, "%s", "diag time slice end");
-	vcpu->stat.instruction_diagnose_44++;
+	vcpu->common->stat.instruction_diagnose_44++;
 	kvm_vcpu_on_spin(vcpu, true);
 	return 0;
 }
@@ -169,8 +169,8 @@ static int __diag_time_slice_end_directed(struct kvm_vcpu *vcpu)
 	int tcpu_cpu;
 	int tid;
 
-	tid = vcpu->run->s.regs.gprs[(vcpu->arch.sie_block->ipa & 0xf0) >> 4];
-	vcpu->stat.instruction_diagnose_9c++;
+	tid = vcpu->common->run->s.regs.gprs[(vcpu->arch.sie_block->ipa & 0xf0) >> 4];
+	vcpu->common->stat.instruction_diagnose_9c++;
 
 	/* yield to self */
 	if (tid == vcpu->vcpu_id)
@@ -194,7 +194,7 @@ static int __diag_time_slice_end_directed(struct kvm_vcpu *vcpu)
 		VCPU_EVENT(vcpu, 5,
 			   "diag time slice end directed to %d: yield forwarded",
 			   tid);
-		vcpu->stat.diag_9c_forward++;
+		vcpu->common->stat.diag_9c_forward++;
 		return 0;
 	}
 
@@ -205,23 +205,23 @@ static int __diag_time_slice_end_directed(struct kvm_vcpu *vcpu)
 	return 0;
 no_yield:
 	VCPU_EVENT(vcpu, 5, "diag time slice end directed to %d: ignored", tid);
-	vcpu->stat.diag_9c_ignored++;
+	vcpu->common->stat.diag_9c_ignored++;
 	return 0;
 }
 
 static int __diag_ipl_functions(struct kvm_vcpu *vcpu)
 {
 	unsigned int reg = vcpu->arch.sie_block->ipa & 0xf;
-	unsigned long subcode = vcpu->run->s.regs.gprs[reg] & 0xffff;
+	unsigned long subcode = vcpu->common->run->s.regs.gprs[reg] & 0xffff;
 
 	VCPU_EVENT(vcpu, 3, "diag ipl functions, subcode %lx", subcode);
-	vcpu->stat.instruction_diagnose_308++;
+	vcpu->common->stat.instruction_diagnose_308++;
 	switch (subcode) {
 	case 3:
-		vcpu->run->s390_reset_flags = KVM_S390_RESET_CLEAR;
+		vcpu->common->run->s390_reset_flags = KVM_S390_RESET_CLEAR;
 		break;
 	case 4:
-		vcpu->run->s390_reset_flags = 0;
+		vcpu->common->run->s390_reset_flags = 0;
 		break;
 	default:
 		return -EOPNOTSUPP;
@@ -233,13 +233,13 @@ static int __diag_ipl_functions(struct kvm_vcpu *vcpu)
 	 */
 	if (!kvm_s390_user_cpu_state_ctrl(vcpu->kvm))
 		kvm_s390_vcpu_stop(vcpu);
-	vcpu->run->s390_reset_flags |= KVM_S390_RESET_SUBSYSTEM;
-	vcpu->run->s390_reset_flags |= KVM_S390_RESET_IPL;
-	vcpu->run->s390_reset_flags |= KVM_S390_RESET_CPU_INIT;
-	vcpu->run->exit_reason = KVM_EXIT_S390_RESET;
+	vcpu->common->run->s390_reset_flags |= KVM_S390_RESET_SUBSYSTEM;
+	vcpu->common->run->s390_reset_flags |= KVM_S390_RESET_IPL;
+	vcpu->common->run->s390_reset_flags |= KVM_S390_RESET_CPU_INIT;
+	vcpu->common->run->exit_reason = KVM_EXIT_S390_RESET;
 	VCPU_EVENT(vcpu, 3, "requesting userspace resets %llx",
-	  vcpu->run->s390_reset_flags);
-	trace_kvm_s390_request_resets(vcpu->run->s390_reset_flags);
+	  vcpu->common->run->s390_reset_flags);
+	trace_kvm_s390_request_resets(vcpu->common->run->s390_reset_flags);
 	return -EREMOTE;
 }
 
@@ -247,16 +247,16 @@ static int __diag_virtio_hypercall(struct kvm_vcpu *vcpu)
 {
 	int ret;
 
-	vcpu->stat.instruction_diagnose_500++;
+	vcpu->common->stat.instruction_diagnose_500++;
 	/* No virtio-ccw notification? Get out quickly. */
 	if (!vcpu->kvm->arch.css_support ||
-	    (vcpu->run->s.regs.gprs[1] != KVM_S390_VIRTIO_CCW_NOTIFY))
+	    (vcpu->common->run->s.regs.gprs[1] != KVM_S390_VIRTIO_CCW_NOTIFY))
 		return -EOPNOTSUPP;
 
 	VCPU_EVENT(vcpu, 4, "diag 0x500 schid 0x%8.8x queue 0x%x cookie 0x%llx",
-			    (u32) vcpu->run->s.regs.gprs[2],
-			    (u32) vcpu->run->s.regs.gprs[3],
-			    vcpu->run->s.regs.gprs[4]);
+			    (u32) vcpu->common->run->s.regs.gprs[2],
+			    (u32) vcpu->common->run->s.regs.gprs[3],
+			    vcpu->common->run->s.regs.gprs[4]);
 
 	/*
 	 * The layout is as follows:
@@ -265,16 +265,16 @@ static int __diag_virtio_hypercall(struct kvm_vcpu *vcpu)
 	 * - gpr 4 contains the index on the bus (optionally)
 	 */
 	ret = kvm_io_bus_write_cookie(vcpu, KVM_VIRTIO_CCW_NOTIFY_BUS,
-				      vcpu->run->s.regs.gprs[2] & 0xffffffff,
-				      8, &vcpu->run->s.regs.gprs[3],
-				      vcpu->run->s.regs.gprs[4]);
+				      vcpu->common->run->s.regs.gprs[2] & 0xffffffff,
+				      8, &vcpu->common->run->s.regs.gprs[3],
+				      vcpu->common->run->s.regs.gprs[4]);
 
 	/*
 	 * Return cookie in gpr 2, but don't overwrite the register if the
 	 * diagnose will be handled by userspace.
 	 */
 	if (ret != -EOPNOTSUPP)
-		vcpu->run->s.regs.gprs[2] = ret;
+		vcpu->common->run->s.regs.gprs[2] = ret;
 	/* kvm_io_bus_write_cookie returns -EOPNOTSUPP if it found no match. */
 	return ret < 0 ? ret : 0;
 }
@@ -301,7 +301,7 @@ int kvm_s390_handle_diag(struct kvm_vcpu *vcpu)
 	case 0x500:
 		return __diag_virtio_hypercall(vcpu);
 	default:
-		vcpu->stat.instruction_diagnose_other++;
+		vcpu->common->stat.instruction_diagnose_other++;
 		return -EOPNOTSUPP;
 	}
 }
