@@ -320,6 +320,8 @@ struct kvm_mmio_fragment {
 	unsigned len;
 };
 
+struct kvm_vcpu_vmpl_state;
+
 struct kvm_vcpu {
 	struct kvm *kvm;
 #ifdef CONFIG_PREEMPT_NOTIFIERS
@@ -403,6 +405,21 @@ struct kvm_vcpu {
 	} _common;
 
 	struct kvm_vcpu_common *common;
+
+	struct kvm_vcpu_vmpl_state *vcpu_parent;
+	int vmpl;
+};
+
+struct kvm_vcpu_vmpl_state {
+	/*
+	 * TODO: This array needs to be dynamically allocated to store the
+	 * required number of VMPLs based on the architecture. This has been
+	 * hardcoded to 4 for this RFC for SEV-SNP.
+	 */
+	struct kvm_vcpu *vcpu_vmpl[4];
+	int max_vmpl;
+	int current_vmpl;
+	int target_vmpl;
 };
 
 /*

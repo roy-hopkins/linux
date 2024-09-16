@@ -437,51 +437,57 @@ static int kvm_set_cpuid(struct kvm_vcpu *vcpu, struct kvm_cpuid_entry2 *e2,
                         int nent)
 {
 	int r;
+	int vmpl;
+	struct kvm_vcpu_vmpl_state *vcpu_parent = vcpu->vcpu_parent;
 
-	__kvm_update_cpuid_runtime(vcpu, e2, nent);
+	for (vmpl = 0; vmpl <= vcpu_parent->max_vmpl; ++vmpl) {
+		vcpu = vcpu_parent->vcpu_vmpl[vmpl];
+		__kvm_update_cpuid_runtime(vcpu, e2, nent);
 
-	/*
-	 * KVM does not correctly handle changing guest CPUID after KVM_RUN, as
-	 * MAXPHYADDR, GBPAGES support, AMD reserved bit behavior, etc.. aren't
-	 * tracked in kvm_mmu_page_role.  As a result, KVM may miss guest page
-	 * faults due to reusing SPs/SPTEs. In practice no sane VMM mucks with
-	 * the core vCPU model on the fly. It would've been better to forbid any
-	 * KVM_SET_CPUID{,2} calls after KVM_RUN altogether but unfortunately
-	 * some VMMs (e.g. QEMU) reuse vCPU fds for CPU hotplug/unplug and do
-	 * KVM_SET_CPUID{,2} again. To support this legacy behavior, check
-	 * whether the supplied CPUID data is equal to what's already set.
-	 */
-	if (kvm_vcpu_has_run(vcpu)) {
-		r = kvm_cpuid_check_equal(vcpu, e2, nent);
-		if (r)
-			return r;
+		/*
+		* KVM does not correctly handle changing guest CPUID after KVM_RUN, as
+		* MAXPHYADDR, GBPAGES support, AMD reserved bit behavior, etc.. aren't
+		* tracked in kvm_mmu_page_role.  As a result, KVM may miss guest page
+		* faults due to reusing SPs/SPTEs. In practice no sane VMM mucks with
+		* the core vCPU model on the fly. It would've been better to forbid any
+		* KVM_SET_CPUID{,2} calls after KVM_RUN altogether but unfortunately
+		* some VMMs (e.g. QEMU) reuse vCPU fds for CPU hotplug/unplug and do
+		* KVM_SET_CPUID{,2} again. To support this legacy behavior, check
+		* whether the supplied CPUID data is equal to what's already set.
+		*/
+		if (kvm_vcpu_has_run(vcpu)) {
+			r = kvm_cpuid_check_equal(vcpu, e2, nent);
+			if (r)
+				return r;
 
-		kvfree(e2);
-		return 0;
-	}
+			kvfree(e2);
+			return 0;
+		}
 
 #ifdef CONFIG_KVM_HYPERV
-	if (kvm_cpuid_has_hyperv(e2, nent)) {
-		r = kvm_hv_vcpu_init(vcpu);
+		if (kvm_cpuid_has_hyperv(e2, nent)) {
+			r = kvm_hv_vcpu_init(vcpu);
+			if (r)
+				return r;
+		}
+#endif
+
+		r = kvm_check_cpuid(vcpu, e2, nent);
 		if (r)
 			return r;
+
+		if (vmpl == 0)
+			kvfree(vcpu->arch.cpuid_entries);
+
+		vcpu->arch.cpuid_entries = e2;
+		vcpu->arch.cpuid_nent = nent;
+
+		vcpu->arch.kvm_cpuid = kvm_get_hypervisor_cpuid(vcpu, KVM_SIGNATURE);
+	#ifdef CONFIG_KVM_XEN
+		vcpu->arch.xen.cpuid = kvm_get_hypervisor_cpuid(vcpu, XEN_SIGNATURE);
+	#endif
+		kvm_vcpu_after_set_cpuid(vcpu);
 	}
-#endif
-
-	r = kvm_check_cpuid(vcpu, e2, nent);
-	if (r)
-		return r;
-
-	kvfree(vcpu->arch.cpuid_entries);
-	vcpu->arch.cpuid_entries = e2;
-	vcpu->arch.cpuid_nent = nent;
-
-	vcpu->arch.kvm_cpuid = kvm_get_hypervisor_cpuid(vcpu, KVM_SIGNATURE);
-#ifdef CONFIG_KVM_XEN
-	vcpu->arch.xen.cpuid = kvm_get_hypervisor_cpuid(vcpu, XEN_SIGNATURE);
-#endif
-	kvm_vcpu_after_set_cpuid(vcpu);
-
 	return 0;
 }
 

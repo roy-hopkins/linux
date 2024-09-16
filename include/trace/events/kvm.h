@@ -489,6 +489,30 @@ TRACE_EVENT(kvm_test_age_hva,
 	TP_printk("mmu notifier test age hva: %#016lx", __entry->hva)
 );
 
+
+TRACE_EVENT(kvm_arch_vcpu_ioctl_run_vmpl_switch,
+	TP_PROTO(struct kvm_vcpu_vmpl_state *vcpu_parent),
+	TP_ARGS(vcpu_parent),
+
+	TP_STRUCT__entry(
+		__field(unsigned int, vcpu_id)
+		__field(unsigned int, current_vmpl)
+		__field(unsigned int, target_vmpl)
+	),
+
+	TP_fast_assign(
+		__entry->vcpu_id	= vcpu_parent->vcpu_vmpl[0]->vcpu_id;
+		__entry->current_vmpl	= vcpu_parent->current_vmpl;
+		__entry->target_vmpl	= vcpu_parent->target_vmpl;
+	),
+
+	TP_printk("vcpu %u: current_vmpl %d, target vtl %d",
+			__entry->vcpu_id,
+			__entry->current_vmpl,
+			__entry->target_vmpl)
+);
+
+
 #endif /* _TRACE_KVM_MAIN_H */
 
 /* This part must be outside protection */
