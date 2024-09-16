@@ -20,18 +20,26 @@ TRACE_EVENT(kvm_entry,
 
 	TP_STRUCT__entry(
 		__field(	unsigned int,	vcpu_id		)
+		__field(	unsigned int,	vcpu_vmpl	)
+		__field(	unsigned int,	current_vmpl	)
+		__field(	unsigned int,	target_vmpl	)
 		__field(	unsigned long,	rip		)
 		__field(	bool,		immediate_exit	)
 	),
 
 	TP_fast_assign(
 		__entry->vcpu_id        = vcpu->vcpu_id;
+		__entry->vcpu_vmpl	= vcpu->vmpl;
+		__entry->current_vmpl	= vcpu->vcpu_parent->current_vmpl;
+		__entry->target_vmpl	= vcpu->vcpu_parent->target_vmpl;
 		__entry->rip		= kvm_rip_read(vcpu);
 		__entry->immediate_exit	= force_immediate_exit;
 	),
 
-	TP_printk("vcpu %u, rip 0x%lx%s", __entry->vcpu_id, __entry->rip,
-		  __entry->immediate_exit ? "[immediate exit]" : "")
+	TP_printk("vcpu %u, rip 0x%lx%s, vcpu_vmpl %d, current_vmpl %d, target_vmpl %d",
+		  __entry->vcpu_id, __entry->rip, __entry->immediate_exit ? "[immediate exit]" : "",
+		  __entry->vcpu_vmpl, __entry->current_vmpl, __entry->target_vmpl
+		  )
 );
 
 /*

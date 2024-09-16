@@ -11301,6 +11301,7 @@ static inline bool kvm_vcpu_running(struct kvm_vcpu *vcpu)
 static int vcpu_run(struct kvm_vcpu *vcpu)
 {
 	int r;
+	struct kvm_vcpu_vmpl_state *vcpu_parent = vcpu->vcpu_parent;
 
 	vcpu->common->run->exit_reason = KVM_EXIT_UNKNOWN;
 
@@ -11343,6 +11344,10 @@ static int vcpu_run(struct kvm_vcpu *vcpu)
 			if (r)
 				return r;
 		}
+
+		/* If the exit code results in a VTL switch then let the caller handle it */
+		if (vcpu_parent->target_vmpl != vcpu_parent->current_vmpl)
+			break;
 	}
 
 	return r;
@@ -11439,7 +11444,7 @@ static void kvm_put_guest_fpu(struct kvm_vcpu *vcpu)
 	trace_kvm_fpu(0);
 }
 
-int kvm_arch_vcpu_ioctl_run(struct kvm_vcpu *vcpu)
+static int kvm_arch_vcpu_ioctl_run_vmpl(struct kvm_vcpu *vcpu)
 {
 	struct kvm_queued_exception *ex = &vcpu->arch.exception;
 	struct kvm_run *kvm_run = vcpu->common->run;
@@ -11559,6 +11564,28 @@ out:
 
 	kvm_sigset_deactivate(vcpu);
 	vcpu_put(vcpu);
+	return r;
+}
+
+int kvm_arch_vcpu_ioctl_run(struct kvm_vcpu *vcpu)
+{
+	int r;
+	struct kvm_vcpu_vmpl_state *vcpu_parent = vcpu->vcpu_parent;
+	struct kvm_vcpu *vcpu_current_vtl;
+
+	for (;;) {
+		/* Select the correct structure for the current VTL */
+		vcpu_parent->current_vmpl = vcpu_parent->target_vmpl;
+		vcpu_current_vtl = vcpu_parent->vcpu_vmpl[vcpu_parent->current_vmpl];
+
+		r = kvm_arch_vcpu_ioctl_run_vmpl(vcpu_current_vtl);
+		if ((r < 0) || (vcpu_parent->current_vmpl == vcpu_parent->target_vmpl)) {
+			break;
+		}
+		/* Continue around again if there is a VTL switch */
+		trace_kvm_arch_vcpu_ioctl_run_vmpl_switch(vcpu_parent);
+	} 
+
 	return r;
 }
 
@@ -12248,7 +12275,10 @@ int kvm_arch_vcpu_create(struct kvm_vcpu *vcpu)
 	page = alloc_page(GFP_KERNEL_ACCOUNT | __GFP_ZERO);
 	if (!page)
 		goto fail_free_lapic;
-	vcpu->arch.pio_data = page_address(page);
+	if (vcpu->vmpl == 0)
+		vcpu->arch.pio_data = page_address(page);
+	else
+		vcpu->arch.pio_data = vcpu->vcpu_parent->vcpu_vmpl[0]->arch.pio_data;
 
 	vcpu->arch.mce_banks = kcalloc(KVM_MAX_MCE_BANKS * 4, sizeof(u64),
 				       GFP_KERNEL_ACCOUNT);
@@ -12310,7 +12340,8 @@ free_wbinvd_dirty_mask:
 fail_free_mce_banks:
 	kfree(vcpu->arch.mce_banks);
 	kfree(vcpu->arch.mci_ctl2_banks);
-	free_page((unsigned long)vcpu->arch.pio_data);
+	if (vcpu->vmpl == 0)
+		free_page((unsigned long)vcpu->arch.pio_data);
 fail_free_lapic:
 	kvm_free_lapic(vcpu);
 fail_mmu_destroy:
@@ -12359,8 +12390,10 @@ void kvm_arch_vcpu_destroy(struct kvm_vcpu *vcpu)
 	idx = srcu_read_lock(&vcpu->kvm->srcu);
 	kvm_mmu_destroy(vcpu);
 	srcu_read_unlock(&vcpu->kvm->srcu, idx);
-	free_page((unsigned long)vcpu->arch.pio_data);
-	kvfree(vcpu->arch.cpuid_entries);
+	if (vcpu->vmpl == 0) {
+		free_page((unsigned long)vcpu->arch.pio_data);
+		kvfree(vcpu->arch.cpuid_entries);
+	}
 }
 
 void kvm_vcpu_reset(struct kvm_vcpu *vcpu, bool init_event)

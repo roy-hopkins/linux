@@ -481,7 +481,10 @@ void *kvm_mmu_memory_cache_alloc(struct kvm_mmu_memory_cache *mc)
 
 static void kvm_vcpu_init(struct kvm_vcpu *vcpu, struct kvm *kvm, unsigned id)
 {
-	vcpu->common = &vcpu->_common;
+	if (vcpu->vmpl == 0)
+		vcpu->common = &vcpu->_common;
+	else
+		vcpu->common = vcpu->vcpu_parent->vcpu_vmpl[0]->common;
 
 	mutex_init(&vcpu->common->mutex);
 	vcpu->cpu = -1;
@@ -507,18 +510,28 @@ static void kvm_vcpu_init(struct kvm_vcpu *vcpu, struct kvm *kvm, unsigned id)
 
 static void kvm_vcpu_destroy(struct kvm_vcpu *vcpu)
 {
-	kvm_arch_vcpu_destroy(vcpu);
-	kvm_dirty_ring_free(&vcpu->common->dirty_ring);
+	int vmpl;
+	struct kvm_vcpu_vmpl_state *vcpu_parent = vcpu->vcpu_parent;
+	for (vmpl = 0; vmpl <= vcpu_parent->max_vmpl; ++vmpl) {
+		struct kvm_vcpu *vcpu_free = vcpu_parent->vcpu_vmpl[vmpl];
 
-	/*
-	 * No need for rcu_read_lock as VCPU_RUN is the only place that changes
-	 * the vcpu->pid pointer, and at destruction time all file descriptors
-	 * are already gone.
-	 */
-	put_pid(rcu_dereference_protected(vcpu->common->pid, 1));
+		if (vmpl == 0) {
+			/*
+			* No need for rcu_read_lock as VCPU_RUN is the only place that changes
+			* the vcpu->pid pointer, and at destruction time all file descriptors
+			* are already gone.
+			*/
+			put_pid(rcu_dereference_protected(vcpu_free->common->pid, 1));
 
-	free_page((unsigned long)vcpu->common->run);
-	kmem_cache_free(kvm_vcpu_cache, vcpu);
+			free_page((unsigned long)vcpu_free->common->run);
+			kvm_dirty_ring_free(&vcpu_free->common->dirty_ring);
+		}
+
+		kvm_arch_vcpu_destroy(vcpu_free);
+
+		kmem_cache_free(kvm_vcpu_cache, vcpu_free);
+	}
+	kfree(vcpu_parent);
 }
 
 void kvm_destroy_vcpus(struct kvm *kvm)
@@ -3741,7 +3754,11 @@ bool kvm_vcpu_block(struct kvm_vcpu *vcpu)
 		if (kvm_vcpu_check_block(vcpu) < 0)
 			break;
 
+		if (vcpu->vcpu_parent->current_vmpl != vcpu->vcpu_parent->target_vmpl)
+			break;
+
 		waited = true;
+
 		schedule();
 	}
 
@@ -4210,8 +4227,10 @@ static void kvm_create_vcpu_debugfs(struct kvm_vcpu *vcpu)
 static int kvm_vm_ioctl_create_vcpu(struct kvm *kvm, unsigned long id)
 {
 	int r;
-	struct kvm_vcpu *vcpu;
-	struct page *page;
+	struct kvm_vcpu_vmpl_state *vcpu_parent;
+	struct page *kvm_run_page;
+	int vmpl;
+	int vcpu_idx;
 
 	/*
 	 * KVM tracks vCPU IDs as 'int', be kind to userspace and reject
@@ -4240,29 +4259,45 @@ static int kvm_vm_ioctl_create_vcpu(struct kvm *kvm, unsigned long id)
 	kvm->created_vcpus++;
 	mutex_unlock(&kvm->lock);
 
-	vcpu = kmem_cache_zalloc(kvm_vcpu_cache, GFP_KERNEL_ACCOUNT);
-	if (!vcpu) {
+	vcpu_parent = kzalloc(sizeof(struct kvm_vcpu_vmpl_state), GFP_KERNEL_ACCOUNT);
+	if (!vcpu_parent) {
 		r = -ENOMEM;
 		goto vcpu_decrement;
 	}
 
-	kvm_vcpu_init(vcpu, kvm, id);
+	/* 
+	 * TODO: The max_vmpl needs to be determined for the current architecture. This
+	 * has been hardcoded to 3 for this RFC to match the maximum VMPL for SEV-SNP
+	 */
+	vcpu_parent->max_vmpl = 3;
+	for (vmpl = 0; vmpl <= vcpu_parent->max_vmpl; ++vmpl) {
+		vcpu_parent->vcpu_vmpl[vmpl] = kmem_cache_zalloc(kvm_vcpu_cache, GFP_KERNEL_ACCOUNT);
+		// TODO: Fix cleanup here
+		if (!vcpu_parent->vcpu_vmpl[vmpl]) {
+			r = -ENOMEM;
+			goto vcpu_decrement;
+		}
+		vcpu_parent->vcpu_vmpl[vmpl]->vcpu_parent = vcpu_parent;
+		vcpu_parent->vcpu_vmpl[vmpl]->vmpl = vmpl;
+
+		kvm_vcpu_init(vcpu_parent->vcpu_vmpl[vmpl], kvm, id);
+
+		r = kvm_arch_vcpu_create(vcpu_parent->vcpu_vmpl[vmpl]);
+		if (r)
+			goto vcpu_free_run_page;
+	}
 
 	BUILD_BUG_ON(sizeof(struct kvm_run) > PAGE_SIZE);
-	page = alloc_page(GFP_KERNEL_ACCOUNT | __GFP_ZERO);
-	if (!page) {
+	kvm_run_page = alloc_page(GFP_KERNEL_ACCOUNT | __GFP_ZERO);
+	if (!kvm_run_page) {
 		r = -ENOMEM;
 		goto vcpu_free;
 	}
-	vcpu->common->run = page_address(page);
-
-	r = kvm_arch_vcpu_create(vcpu);
-	if (r)
-		goto vcpu_free_run_page;
+	vcpu_parent->vcpu_vmpl[0]->common->run = page_address(kvm_run_page);
 
 	if (kvm->dirty_ring_size) {
-		r = kvm_dirty_ring_alloc(&vcpu->common->dirty_ring,
-					 id, kvm->dirty_ring_size);
+		r = kvm_dirty_ring_alloc(&vcpu_parent->vcpu_vmpl[0]->common->dirty_ring,
+					id, kvm->dirty_ring_size);
 		if (r)
 			goto arch_vcpu_destroy;
 	}
@@ -4280,18 +4315,21 @@ static int kvm_vm_ioctl_create_vcpu(struct kvm *kvm, unsigned long id)
 		goto unlock_vcpu_destroy;
 	}
 
-	vcpu->vcpu_idx = atomic_read(&kvm->online_vcpus);
-	r = xa_reserve(&kvm->vcpu_array, vcpu->vcpu_idx, GFP_KERNEL_ACCOUNT);
+	vcpu_idx = atomic_read(&kvm->online_vcpus);
+	for (vmpl = 0; vmpl <= vcpu_parent->max_vmpl; ++vmpl) {
+		vcpu_parent->vcpu_vmpl[vmpl]->vcpu_idx = vcpu_idx;
+	}
+	r = xa_reserve(&kvm->vcpu_array, vcpu_idx, GFP_KERNEL_ACCOUNT);
 	if (r)
 		goto unlock_vcpu_destroy;
 
 	/* Now it's all set up, let userspace reach it */
 	kvm_get_kvm(kvm);
-	r = create_vcpu_fd(vcpu);
+	r = create_vcpu_fd(vcpu_parent->vcpu_vmpl[0]);
 	if (r < 0)
 		goto kvm_put_xa_release;
 
-	if (KVM_BUG_ON(xa_store(&kvm->vcpu_array, vcpu->vcpu_idx, vcpu, 0), kvm)) {
+	if (KVM_BUG_ON(xa_store(&kvm->vcpu_array, vcpu_idx, vcpu_parent->vcpu_vmpl[0], 0), kvm)) {
 		r = -EINVAL;
 		goto kvm_put_xa_release;
 	}
@@ -4304,22 +4342,28 @@ static int kvm_vm_ioctl_create_vcpu(struct kvm *kvm, unsigned long id)
 	atomic_inc(&kvm->online_vcpus);
 
 	mutex_unlock(&kvm->lock);
-	kvm_arch_vcpu_postcreate(vcpu);
-	kvm_create_vcpu_debugfs(vcpu);
+	for (vmpl = 0; vmpl <= vcpu_parent->max_vmpl; ++vmpl) {
+		kvm_arch_vcpu_postcreate(vcpu_parent->vcpu_vmpl[vmpl]);
+	}
+	kvm_create_vcpu_debugfs(vcpu_parent->vcpu_vmpl[0]);
 	return r;
 
 kvm_put_xa_release:
 	kvm_put_kvm_no_destroy(kvm);
-	xa_release(&kvm->vcpu_array, vcpu->vcpu_idx);
+	xa_release(&kvm->vcpu_array, vcpu_idx);
 unlock_vcpu_destroy:
 	mutex_unlock(&kvm->lock);
-	kvm_dirty_ring_free(&vcpu->common->dirty_ring);
+	kvm_dirty_ring_free(&vcpu_parent->vcpu_vmpl[0]->common->dirty_ring);
 arch_vcpu_destroy:
-	kvm_arch_vcpu_destroy(vcpu);
+	for (vmpl = 0; vmpl <= vcpu_parent->max_vmpl; ++vmpl) {
+		kvm_arch_vcpu_destroy(vcpu_parent->vcpu_vmpl[vmpl]);
+	}
 vcpu_free_run_page:
-	free_page((unsigned long)vcpu->common->run);
+	free_page((unsigned long)vcpu_parent->vcpu_vmpl[0]->common->run);
 vcpu_free:
-	kmem_cache_free(kvm_vcpu_cache, vcpu);
+	for (vmpl = 0; vmpl <= vcpu_parent->max_vmpl; ++vmpl) {
+		kmem_cache_free(kvm_vcpu_cache, vcpu_parent->vcpu_vmpl[vmpl]);
+	}
 vcpu_decrement:
 	mutex_lock(&kvm->lock);
 	kvm->created_vcpus--;
