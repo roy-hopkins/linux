@@ -10638,12 +10638,12 @@ int kvm_get_nr_pending_nmis(struct kvm_vcpu *vcpu)
 void kvm_make_scan_ioapic_request_mask(struct kvm *kvm,
 				       unsigned long *vcpu_bitmap)
 {
-	kvm_make_vcpus_request_mask(kvm, KVM_REQ_SCAN_IOAPIC, vcpu_bitmap);
+	kvm_make_vcpus_request_mask_vmpl(kvm, KVM_REQ_SCAN_IOAPIC, vcpu_bitmap, kvm->arch.default_irq_vmpl);
 }
 
 void kvm_make_scan_ioapic_request(struct kvm *kvm)
 {
-	kvm_make_all_cpus_request(kvm, KVM_REQ_SCAN_IOAPIC);
+	kvm_make_all_cpus_request_vmpl(kvm, KVM_REQ_SCAN_IOAPIC, kvm->arch.default_irq_vmpl);
 }
 
 void __kvm_vcpu_update_apicv(struct kvm_vcpu *vcpu)
@@ -10761,6 +10761,7 @@ EXPORT_SYMBOL_GPL(kvm_set_or_clear_apicv_inhibit);
 
 static void vcpu_scan_ioapic(struct kvm_vcpu *vcpu)
 {
+	vcpu = vcpu->vcpu_parent->vcpu_vmpl[vcpu->kvm->arch.default_irq_vmpl];
 	if (!kvm_apic_present(vcpu))
 		return;
 
