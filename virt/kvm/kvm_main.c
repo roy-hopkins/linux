@@ -282,8 +282,8 @@ static void kvm_make_vcpu_request(struct kvm_vcpu *vcpu, unsigned int req,
 	}
 }
 
-bool kvm_make_vcpus_request_mask(struct kvm *kvm, unsigned int req,
-				 unsigned long *vcpu_bitmap)
+bool kvm_make_vcpus_request_mask_vmpl(struct kvm *kvm, unsigned int req,
+				 unsigned long *vcpu_bitmap, int vmpl)
 {
 	struct kvm_vcpu *vcpu;
 	struct cpumask *cpus;
@@ -299,6 +299,39 @@ bool kvm_make_vcpus_request_mask(struct kvm *kvm, unsigned int req,
 		vcpu = kvm_get_vcpu(kvm, i);
 		if (!vcpu)
 			continue;
+		if (unlikely(vmpl != 0))
+			vcpu = vcpu->vcpu_parent->vcpu_vmpl[vmpl];
+		kvm_make_vcpu_request(vcpu, req, cpus, me);
+	}
+	
+	called = kvm_kick_many_cpus(cpus, !!(req & KVM_REQUEST_WAIT));
+	put_cpu();
+
+	return called;
+}
+
+bool kvm_make_vcpus_request_mask(struct kvm *kvm, unsigned int req,
+				 unsigned long *vcpu_bitmap)
+{
+	return kvm_make_vcpus_request_mask_vmpl(kvm, req, vcpu_bitmap, 0);
+}
+
+bool kvm_make_all_cpus_request_vmpl(struct kvm *kvm, unsigned int req, int vmpl)
+{
+	struct kvm_vcpu *vcpu;
+	struct cpumask *cpus;
+	unsigned long i;
+	int me;
+	bool called;
+
+	me = get_cpu();
+
+	cpus = this_cpu_cpumask_var_ptr(cpu_kick_mask);
+	cpumask_clear(cpus);
+
+	kvm_for_each_vcpu(i, vcpu, kvm) {
+		if (unlikely(vmpl != 0))
+			vcpu = vcpu->vcpu_parent->vcpu_vmpl[vmpl];
 		kvm_make_vcpu_request(vcpu, req, cpus, me);
 	}
 
@@ -307,27 +340,11 @@ bool kvm_make_vcpus_request_mask(struct kvm *kvm, unsigned int req,
 
 	return called;
 }
+EXPORT_SYMBOL_GPL(kvm_make_all_cpus_request_vmpl);
 
 bool kvm_make_all_cpus_request(struct kvm *kvm, unsigned int req)
 {
-	struct kvm_vcpu *vcpu;
-	struct cpumask *cpus;
-	unsigned long i;
-	bool called;
-	int me;
-
-	me = get_cpu();
-
-	cpus = this_cpu_cpumask_var_ptr(cpu_kick_mask);
-	cpumask_clear(cpus);
-
-	kvm_for_each_vcpu(i, vcpu, kvm)
-		kvm_make_vcpu_request(vcpu, req, cpus, me);
-
-	called = kvm_kick_many_cpus(cpus, !!(req & KVM_REQUEST_WAIT));
-	put_cpu();
-
-	return called;
+	return kvm_make_all_cpus_request_vmpl(kvm, req, 0);
 }
 EXPORT_SYMBOL_GPL(kvm_make_all_cpus_request);
 
