@@ -2586,7 +2586,7 @@ static bool __kvm_mmu_prepare_zap_page(struct kvm *kvm,
 	 * invalid, otherwise other vCPUs may not see it as invalid.
 	 */
 	if (zapped_root)
-		kvm_make_all_cpus_request(kvm, KVM_REQ_MMU_FREE_OBSOLETE_ROOTS);
+		kvm_make_all_cpus_request_vmpl(kvm, KVM_REQ_MMU_FREE_OBSOLETE_ROOTS, -1);
 	return list_unstable;
 }
 
@@ -6448,7 +6448,7 @@ static void kvm_mmu_zap_all_fast(struct kvm *kvm)
 	 * Note: we need to do this under the protection of mmu_lock,
 	 * otherwise, vcpu would purge shadow page but miss tlb flush.
 	 */
-	kvm_make_all_cpus_request(kvm, KVM_REQ_MMU_FREE_OBSOLETE_ROOTS);
+	kvm_make_all_cpus_request_vmpl(kvm, KVM_REQ_MMU_FREE_OBSOLETE_ROOTS, -1);
 
 	kvm_zap_obsolete_pages(kvm);
 
