@@ -10501,8 +10501,8 @@ static int kvm_check_and_inject_events(struct kvm_vcpu *vcpu,
 		vcpu->arch.exception.injected = true;
 
 		can_inject = false;
-out_except:
 	}
+out_except:
 
 	/* Don't inject interrupts if the user asked to avoid doing so */
 	if (vcpu->common->guest_debug & KVM_GUESTDBG_BLOCKIRQ)
