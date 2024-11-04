@@ -5322,3 +5322,9 @@ bool sev_snp_interrupt_blocked(struct kvm_vcpu *vcpu)
 	/* Interrupts are blocked when restricted injection is active */
 	return true;
 }
+
+int sev_max_vmpl(struct kvm *kvm) {
+	if (sev_snp_guest(kvm))
+		return 3;
+	return 0;
+}
